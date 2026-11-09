@@ -30,6 +30,7 @@ export default defineConfig(({ mode }) => {
         input: {
           index: desdeRaiz("./index.html"),
           catalogo: desdeRaiz("./src/pages/client/catalogo/catalogo.html"),
+          libros: desdeRaiz("./src/pages/admin/libros/libros.html"),
         },
       },
     },

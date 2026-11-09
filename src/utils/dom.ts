@@ -63,3 +63,27 @@ export function arrancar(
     else console.error(texto);
   });
 }
+
+/** Reemplaza las opciones de un `select`: una primera opción vacía y una por registro. */
+export function llenarSelect(
+  select: HTMLSelectElement,
+  textoDeLaPrimera: string,
+  registros: readonly { id: number; nombre: string }[],
+): void {
+  vaciarNodo(select);
+  const primera = document.createElement("option");
+  primera.value = "";
+  primera.textContent = textoDeLaPrimera;
+  select.appendChild(primera);
+  for (const registro of registros) {
+    const opcion = document.createElement("option");
+    opcion.value = String(registro.id);
+    opcion.textContent = registro.nombre;
+    select.appendChild(opcion);
+  }
+}
+
+/** Convierte el valor de un control en un identificador, o `null` si está vacío. */
+export function idDeValor(valor: string): number | null {
+  return valor.trim() === "" ? null : Number(valor);
+}

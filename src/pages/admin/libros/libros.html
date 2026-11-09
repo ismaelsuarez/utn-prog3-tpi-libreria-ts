@@ -5,17 +5,12 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <title>Libros · Librería El Faro</title>
-<link href="src/styles/base.css" rel="stylesheet"/>
-<link href="src/styles/disposicion.css" rel="stylesheet"/>
-<link href="src/styles/componentes.css" rel="stylesheet"/>
-<script src="js/datos/datos-iniciales.js" defer></script>
-<script src="js/logica/texto.js" defer></script>
-<script src="js/logica/catalogo.js" defer></script>
-<script src="js/logica/libros.js" defer></script>
-<script src="js/almacen.js" defer></script>
-<script src="js/interfaz.js" defer></script>
-<script src="js/paginas/libros.js" defer></script>
-  <link rel="stylesheet" href="src/styles/vista-inmersiva.css">
+<link rel="icon" href="data:,"/>
+<link href="../../../styles/base.css" rel="stylesheet"/>
+<link href="../../../styles/disposicion.css" rel="stylesheet"/>
+<link href="../../../styles/componentes.css" rel="stylesheet"/>
+<link href="../../../styles/vista-inmersiva.css" rel="stylesheet"/>
+<script type="module" src="./libros.ts"></script>
 </head>
 <body>
 <header class="encabezado">
@@ -26,11 +21,11 @@
 </div>
 <nav aria-label="Principal" class="navegacion">
 <ul class="navegacion__lista">
-<li><a class="navegacion__enlace" href="src/pages/client/catalogo/catalogo.html">Catálogo</a></li>
-<li><a aria-current="page" class="navegacion__enlace" href="libros.html">Libros</a></li>
-<li><a class="navegacion__enlace" href="clientes.html">Clientes</a></li>
-<li><a class="navegacion__enlace" href="ventas.html">Ventas</a></li>
-<li><a class="navegacion__enlace" href="historial.html">Historial</a></li>
+<li><a class="navegacion__enlace" href="../../client/catalogo/catalogo.html">Catálogo</a></li>
+<li><a class="navegacion__enlace" href="libros.html" aria-current="page">Libros</a></li>
+<li><a class="navegacion__enlace" href="../../../../clientes.html">Clientes</a></li>
+<li><a class="navegacion__enlace" href="../../../../ventas.html">Ventas</a></li>
+<li><a class="navegacion__enlace" href="../../../../historial.html">Historial</a></li>
 </ul>
 </nav>
 </div>
@@ -65,8 +60,6 @@
 <label class="campo__etiqueta" for="libro-editorial">Editorial</label>
 <select aria-describedby="error-libro-editorial" class="campo__control" id="libro-editorial" name="editorial">
 <option value="">Elegir una editorial</option>
-<option value="editorial-1">Ediciones del Puerto</option>
-<option value="editorial-2">Editorial Brújula</option>
 </select>
 <p class="campo__error" id="error-libro-editorial"></p>
 </div>
@@ -74,16 +67,11 @@
 <label class="campo__etiqueta" for="libro-genero">Género</label>
 <select aria-describedby="error-libro-genero" class="campo__control" id="libro-genero" name="genero">
 <option value="">Sin clasificar</option>
-<option value="genero-1">Novela</option>
-<option value="genero-2">Ensayo</option>
 </select>
 <p class="campo__error" id="error-libro-genero"></p>
 </div>
 <fieldset aria-describedby="error-libro-autores" class="grupo-opciones" id="libro-autores">
 <legend>Autores</legend>
-<label class="grupo-opciones__opcion"><input name="autores" type="checkbox" value="autor-1"/> <span data-campo="nombre">Marta Ibáñez</span></label>
-<label class="grupo-opciones__opcion"><input name="autores" type="checkbox" value="autor-2"/> <span data-campo="nombre">Tomás Quiroga</span></label>
-<label class="grupo-opciones__opcion"><input name="autores" type="checkbox" value="autor-3"/> <span data-campo="nombre">Elena Varela</span></label>
 </fieldset>
 <p class="campo__error" id="error-libro-autores"></p>
 <button class="boton boton--primario" type="submit">Registrar libro</button>
@@ -106,54 +94,6 @@
 </tr>
 </thead>
 <tbody id="filas-libros">
-<tr>
-<td data-campo="titulo">El faro de los vientos</td>
-<td data-campo="isbn">978-987-000-001-1</td>
-<td data-campo="editorial">Ediciones del Puerto</td>
-<td class="tabla__genero" data-campo="genero">Novela</td>
-<td data-campo="autores">Marta Ibáñez</td>
-<td data-campo="precio">$ 1500,00</td>
-</tr>
-<tr>
-<td data-campo="titulo">Cartas desde el sur</td>
-<td data-campo="isbn">978-987-000-002-8</td>
-<td data-campo="editorial">Editorial Brújula</td>
-<td class="tabla__genero" data-campo="genero">Novela</td>
-<td data-campo="autores">Tomás Quiroga</td>
-<td data-campo="precio">$ 2000,00</td>
-</tr>
-<tr>
-<td data-campo="titulo">Mapas para perderse</td>
-<td data-campo="isbn">978-987-000-003-5</td>
-<td data-campo="editorial">Editorial Brújula</td>
-<td class="tabla__genero" data-campo="genero">Ensayo</td>
-<td data-campo="autores">Elena Varela, Tomás Quiroga</td>
-<td data-campo="precio">$ 2350,50</td>
-</tr>
-<tr>
-<td data-campo="titulo">La casa del río</td>
-<td data-campo="isbn">978-987-000-004-2</td>
-<td data-campo="editorial">Ediciones del Puerto</td>
-<td class="tabla__genero" data-campo="genero">Sin clasificar</td>
-<td data-campo="autores">Marta Ibáñez</td>
-<td data-campo="precio">$ 1800,00</td>
-</tr>
-<tr>
-<td data-campo="titulo">Breve historia del silencio</td>
-<td data-campo="isbn">978-987-000-005-9</td>
-<td data-campo="editorial">Ediciones del Puerto</td>
-<td class="tabla__genero" data-campo="genero">Ensayo</td>
-<td data-campo="autores">Elena Varela</td>
-<td data-campo="precio">$ 2750,00</td>
-</tr>
-<tr>
-<td data-campo="titulo">Los días contados</td>
-<td data-campo="isbn">978-987-000-006-6</td>
-<td data-campo="editorial">Editorial Brújula</td>
-<td class="tabla__genero" data-campo="genero">Novela</td>
-<td data-campo="autores">Tomás Quiroga</td>
-<td data-campo="precio">$ 1990,90</td>
-</tr>
 </tbody>
 </table>
 </div>
