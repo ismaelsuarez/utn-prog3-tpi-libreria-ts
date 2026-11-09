@@ -1,6 +1,7 @@
 // Lógica pura del alta y edición de clientes (RN-CL-01 a RN-CL-04). No toca el
 // DOM ni el almacenamiento. El formato del email se valida con una expresión
 // simple tras normalizar (SU-07 / PA-11).
+import type { Cliente, ClienteNuevo, PerfilNuevo } from "../types/cliente";
 import type { ErrorDeCampo } from "../types/formulario";
 import type { Id } from "../types/primitivos";
 import { LARGO_MAXIMO } from "./limites";
@@ -88,4 +89,66 @@ export function validarCliente(
   errores.push(...validarPerfil(datos));
 
   return errores;
+}
+
+/**
+ * Cuerpo del perfil a partir de lo escrito: teléfono recortado y con los
+ * espacios juntos, dirección recortada; vacía o ausente se envía como `null`.
+ */
+export function perfilNuevoDesdeBorrador(datos: BorradorPerfil): PerfilNuevo {
+  const direccion = (datos.direccion ?? "").trim();
+  return {
+    telefono: (datos.telefono ?? "").trim().replace(/\s+/g, " "),
+    direccion: direccion === "" ? null : direccion,
+  };
+}
+
+/** Las dos escrituras del alta, tal como las ofrece el repositorio de clientes. */
+export interface EscrituraDeClientes {
+  crear(cliente: ClienteNuevo): Promise<Cliente>;
+  crearPerfil(id: Id, perfil: PerfilNuevo): Promise<unknown>;
+}
+
+export type ResultadoDeAlta =
+  /** Cliente y perfil registrados. */
+  | { tipo: "completo"; cliente: Cliente }
+  /** El cliente se rechazó: no se envió el perfil. */
+  | { tipo: "rechazado"; error: unknown }
+  /** El cliente quedó registrado pero el perfil falló; no se repite ninguna escritura. */
+  | { tipo: "sin-perfil"; cliente: Cliente; error: unknown };
+
+/**
+ * Alta en dos escrituras (D6): primero el cliente y, solo si se registró, su
+ * perfil. Cada escritura se envía una sola vez; si el perfil falla no se
+ * «deshace» nada (la API no tiene `DELETE`) y el cliente puede completarlo luego.
+ */
+export async function registrarClienteConPerfil(
+  repositorio: EscrituraDeClientes,
+  datos: BorradorCliente,
+): Promise<ResultadoDeAlta> {
+  let cliente: Cliente;
+  try {
+    cliente = await repositorio.crear({
+      nombre: datos.nombre.trim(),
+      email: normalizarEmail(datos.email),
+    });
+  } catch (error) {
+    return { tipo: "rechazado", error };
+  }
+  try {
+    await repositorio.crearPerfil(cliente.id, perfilNuevoDesdeBorrador(datos));
+  } catch (error) {
+    return { tipo: "sin-perfil", cliente, error };
+  }
+  return { tipo: "completo", cliente };
+}
+
+/** Mensaje de un alta cuyo cliente quedó registrado pero sin perfil. */
+export function mensajeDePerfilFallido(error: unknown): string {
+  const motivo =
+    error instanceof Error && error.message !== "" ? error.message : "Ocurrió un error inesperado.";
+  return (
+    `El cliente se registró, pero no se pudo guardar su teléfono y dirección: ${motivo.replace(/\.+$/, "")}. ` +
+    "Podés completarlos con «Completar perfil»."
+  );
 }

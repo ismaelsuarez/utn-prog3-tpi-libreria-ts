@@ -190,17 +190,34 @@ repite al recargar y al volver atrás con el historial. La sesión solo vale si
 
 ### Clientes
 
-- Alta con **nombre completo, email y teléfono**:
+- Alta con **nombre completo, email, teléfono y dirección**. Se hace en dos
+  escrituras: primero el cliente (`POST /clientes/`) y, solo si se registró, su
+  perfil con teléfono y dirección (`POST /clientes/{id}/perfil`):
 
   | Campo | Regla |
   |---|---|
-  | Nombre completo | Obligatorio |
-  | Email | Obligatorio, con formato válido y sin repetir (se compara sin espacios exteriores y sin distinguir mayúsculas) |
-  | Teléfono | Obligatorio, de 7 a 15 dígitos; admite `+`, espacios, guiones, puntos y paréntesis |
+  | Nombre completo | Obligatorio, hasta 100 caracteres |
+  | Email | Obligatorio, con formato válido, hasta 255 caracteres y sin repetir (se compara sin espacios exteriores y sin distinguir mayúsculas) |
+  | Teléfono | Obligatorio, de 7 a 15 dígitos y hasta 30 caracteres; admite `+`, espacios, guiones, puntos y paréntesis |
+  | Dirección | Opcional, hasta 255 caracteres; vacía se envía como `null` |
 
-- **Edición de datos de contacto** desde el botón «Editar» de cada fila, con
-  las mismas validaciones. Las ventas ya confirmadas conservan los datos del
-  cliente que tenían al confirmarse.
+- **El perfil se guarda una sola vez**: la API no permite modificarlo. Un cliente
+  con perfil muestra su teléfono y dirección sin ningún control de edición; uno
+  sin perfil (se ve «—») ofrece el botón «Completar perfil de <nombre>», que
+  registra teléfono y dirección una única vez con las mismas reglas del alta. Si
+  el cliente se registra pero el perfil falla, se avisa que quedó sin perfil y
+  se ofrece completarlo; nunca se repite ninguna escritura sola. Un `409` del
+  perfil («El cliente ya tiene un perfil») se muestra y se vuelve a leer el
+  listado.
+- Un `409` del alta del cliente (email ya registrado en la API) se muestra junto
+  al email y el formulario conserva lo escrito.
+- **No hay edición ni borrado de clientes** (regla dura 9). Quien necesite
+  corregir un dato debe hacerlo en la API fuera de esta aplicación.
+- **Limitación del listado**: la API no tiene `GET /clientes/`, así que el listado
+  se arma consultando `GET /clientes/1`, `/2`, `/3`… hasta encontrar 10 ausentes
+  seguidos pasado el mayor cliente que mencionan las ventas. Más de 10 altas
+  fallidas seguidas sin un alta posterior exitosa ocultarían a los clientes
+  siguientes hasta que una venta los mencione.
 
 ### Ventas
 

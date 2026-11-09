@@ -68,6 +68,8 @@ export function erroresDeFormulario(
 export interface FalloDeOperacion extends ErroresDeFormulario {
   /** Verdadero si la escritura no obtuvo respuesta: no se sabe si el servidor la registró. */
   resultadoIncierto: boolean;
+  /** Código HTTP del rechazo, o `null` si no hubo respuesta o el error no es de la API. */
+  estado: number | null;
 }
 
 function esErrorDeOperacion(valor: unknown): valor is ErrorDeOperacion & { resultadoIncierto?: boolean } {
@@ -91,9 +93,10 @@ export function describirFallo(
     return {
       ...erroresDeFormulario(error, mapaDeCampos, campoDelConflicto),
       resultadoIncierto: error.resultadoIncierto === true,
+      estado: error.estado ?? null,
     };
   }
   const mensaje =
     error instanceof Error && error.message !== "" ? error.message : "Ocurrió un error inesperado.";
-  return { porCampo: [], deLaOperacion: mensaje, resultadoIncierto: false };
+  return { porCampo: [], deLaOperacion: mensaje, resultadoIncierto: false, estado: null };
 }

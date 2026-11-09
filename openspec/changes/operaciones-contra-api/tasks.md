@@ -67,10 +67,10 @@ Gobernanza ALTO: ninguna tarea de los grupos 1 a 10 empieza antes de cerrar el g
 
 ## 7. Vista Clientes
 
-- [ ] 7.1 `clientes.html`: campo dirección, columna dirección, botón «Completar perfil de <nombre>» por cliente sin perfil y diálogo reutilizado solo para el perfil (sin edición de nombre ni email, según D7); verificar en el navegador a 320 px y 1280 px, con teclado y foco visible
-- [ ] 7.2 `clientes.ts`: listado por sondeo; alta en dos escrituras con el mensaje de perfil fallido de D6; 409 del alta junto al email; «Completar perfil» con su 409; envío único en ambos formularios; verificar con `npm run build` y los casos del grupo 10
-- [ ] 7.3 README, sección Clientes: teléfono y dirección de una sola vez, «Completar perfil», ausencia de edición y la limitación del sondeo; verificar que coincide con la spec `clientes`
-- [ ] 7.4 Commit `feat(clientes): register clients with a one-time profile in the API`
+- [x] 7.1 `clientes.html`: campo dirección, columna dirección, botón «Completar perfil de <nombre>» por cliente sin perfil y diálogo reutilizado solo para el perfil (sin edición de nombre ni email, según D7); verificar en el navegador a 320 px y 1280 px, con teclado y foco visible
+- [x] 7.2 `clientes.ts`: listado por sondeo; alta en dos escrituras con el mensaje de perfil fallido de D6; 409 del alta junto al email; «Completar perfil» con su 409; envío único en ambos formularios; verificar con `npm run build` y los casos del grupo 10
+- [x] 7.3 README, sección Clientes: teléfono y dirección de una sola vez, «Completar perfil», ausencia de edición y la limitación del sondeo; verificar que coincide con la spec `clientes`
+- [x] 7.4 Commit `feat(clientes): register clients with a one-time profile in the API`
 
 ## 8. Ventas e Historial
 

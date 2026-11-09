@@ -1,5 +1,13 @@
 import { describe, expect, test } from "vitest";
-import { validarCliente, validarPerfil, type BorradorCliente } from "../../src/logica/clientes";
+import {
+  mensajeDePerfilFallido,
+  perfilNuevoDesdeBorrador,
+  registrarClienteConPerfil,
+  validarCliente,
+  validarPerfil,
+  type BorradorCliente,
+} from "../../src/logica/clientes";
+import type { ClienteNuevo, PerfilNuevo } from "../../src/types/cliente";
 
 const guardadosDeEjemplo = [
   { id: 1, email: "laura.mendoza@correo.test" },
@@ -232,5 +240,100 @@ describe("validarPerfil (para «Completar perfil»)", () => {
   test("validarCliente y validarPerfil dan el mismo error de teléfono", () => {
     const delAlta = validar({ ...datosValidos(), telefono: "12" }).filter((e) => e.campo === "telefono");
     expect(validarPerfil({ telefono: "12" })).toEqual(delAlta);
+  });
+});
+
+describe("perfilNuevoDesdeBorrador", () => {
+  test("recorta el teléfono, junta sus espacios y envía la dirección recortada", () => {
+    expect(perfilNuevoDesdeBorrador({ telefono: "  +54  9 261   123 4567 ", direccion: "  Calle 1, Mendoza " })).toEqual({
+      telefono: "+54 9 261 123 4567",
+      direccion: "Calle 1, Mendoza",
+    });
+  });
+
+  test("una dirección vacía, en blanco o ausente se envía como null", () => {
+    expect(perfilNuevoDesdeBorrador({ telefono: "11 5555-0123", direccion: "" }).direccion).toBeNull();
+    expect(perfilNuevoDesdeBorrador({ telefono: "11 5555-0123", direccion: "   " }).direccion).toBeNull();
+    expect(perfilNuevoDesdeBorrador({ telefono: "11 5555-0123" }).direccion).toBeNull();
+  });
+});
+
+describe("registrarClienteConPerfil: alta en dos escrituras", () => {
+  /** Repositorio simulado: registra cada llamada y responde (o rechaza) a pedido. */
+  function repositorio(opciones: { rechazarCliente?: Error; rechazarPerfil?: Error } = {}) {
+    const clientes: ClienteNuevo[] = [];
+    const perfiles: { id: number; perfil: PerfilNuevo }[] = [];
+    return {
+      clientes,
+      perfiles,
+      crear: (cliente: ClienteNuevo) => {
+        clientes.push(cliente);
+        return opciones.rechazarCliente
+          ? Promise.reject(opciones.rechazarCliente)
+          : Promise.resolve({ id: 7, nombre: cliente.nombre, email: cliente.email, perfil: null });
+      },
+      crearPerfil: (id: number, perfil: PerfilNuevo) => {
+        perfiles.push({ id, perfil });
+        return opciones.rechazarPerfil
+          ? Promise.reject(opciones.rechazarPerfil)
+          : Promise.resolve({ id: 1, cliente_id: id, telefono: perfil.telefono ?? null, direccion: perfil.direccion ?? null });
+      },
+    };
+  }
+
+  const datos = { nombre: "  Ana Sosa ", email: " Ana.Sosa@Correo.Test ", telefono: " 11  5555-0123", direccion: " Calle 1 " };
+
+  test("registra el cliente y, con su identificador, el perfil", async () => {
+    const repo = repositorio();
+    const resultado = await registrarClienteConPerfil(repo, datos);
+    expect(resultado.tipo).toBe("completo");
+    expect(repo.clientes).toEqual([{ nombre: "Ana Sosa", email: "ana.sosa@correo.test" }]);
+    expect(repo.perfiles).toEqual([{ id: 7, perfil: { telefono: "11 5555-0123", direccion: "Calle 1" } }]);
+    if (resultado.tipo === "completo") expect(resultado.cliente.id).toBe(7);
+  });
+
+  test("con la dirección vacía el perfil se envía con dirección null", async () => {
+    const repo = repositorio();
+    await registrarClienteConPerfil(repo, { ...datos, direccion: "" });
+    expect(repo.perfiles[0]?.perfil.direccion).toBeNull();
+  });
+
+  test("si el cliente se rechaza no se envía el perfil y se devuelve el error", async () => {
+    const error = new Error("Ya existe un cliente con ese email");
+    const repo = repositorio({ rechazarCliente: error });
+    const resultado = await registrarClienteConPerfil(repo, datos);
+    expect(resultado).toEqual({ tipo: "rechazado", error });
+    expect(repo.clientes).toHaveLength(1);
+    expect(repo.perfiles).toHaveLength(0);
+  });
+
+  test("si el perfil falla el cliente queda registrado y no se repite ningún alta", async () => {
+    const error = new Error("El servidor respondió con un error (500).");
+    const repo = repositorio({ rechazarPerfil: error });
+    const resultado = await registrarClienteConPerfil(repo, datos);
+    expect(resultado.tipo).toBe("sin-perfil");
+    if (resultado.tipo === "sin-perfil") {
+      expect(resultado.cliente.id).toBe(7);
+      expect(resultado.error).toBe(error);
+    }
+    expect(repo.clientes).toHaveLength(1);
+    expect(repo.perfiles).toHaveLength(1);
+  });
+});
+
+describe("mensajeDePerfilFallido", () => {
+  test("informa que el cliente se registró, el motivo y cómo completar el perfil", () => {
+    expect(mensajeDePerfilFallido(new Error("El servidor respondió con un error (500)."))).toBe(
+      "El cliente se registró, pero no se pudo guardar su teléfono y dirección: El servidor respondió con un error (500). " +
+        "Podés completarlos con «Completar perfil».",
+    );
+  });
+
+  test("un motivo sin punto final recibe uno, y nunca queda un doble punto", () => {
+    expect(mensajeDePerfilFallido(new Error("Sin conexión"))).toContain("dirección: Sin conexión. Podés");
+  });
+
+  test("un valor que no es un error usa el mensaje genérico como motivo", () => {
+    expect(mensajeDePerfilFallido("x")).toContain("Ocurrió un error inesperado.");
   });
 });

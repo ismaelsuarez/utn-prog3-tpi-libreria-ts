@@ -23,6 +23,7 @@ import {
   type BorradorLibro,
   type CatalogosDeLibros,
 } from "../../../logica/libros";
+import { conPuntoFinal } from "../../../logica/texto";
 import type { Autor } from "../../../types/autor";
 import type { ErrorDeCampo } from "../../../types/formulario";
 import type { LibroDetalle } from "../../../types/libro";
@@ -179,7 +180,7 @@ async function iniciar(): Promise<void> {
     if (fallo.porCampo.length > 0) mostrarErrores(fallo.porCampo);
     if (fallo.deLaOperacion !== null) {
       const resumen = fallo.porCampo.length > 0 ? `${mensajeError.textContent ?? ""} ` : "";
-      mostrarMensaje(mensajeError, `${resumen}No se registró el libro. ${fallo.deLaOperacion}`.trim());
+      mostrarMensaje(mensajeError, `${resumen}No se registró el libro. ${conPuntoFinal(fallo.deLaOperacion)}`.trim());
     }
   }
 
@@ -211,7 +212,7 @@ async function iniciar(): Promise<void> {
         const releido = await releerListado();
         mostrarMensaje(
           mensajeError,
-          `${fallo.deLaOperacion ?? ""} ` +
+          `${conPuntoFinal(fallo.deLaOperacion ?? "")} ` +
             (releido
               ? "Se volvió a leer el listado: comprobá si el libro figura antes de reintentar."
               : "Tampoco se pudo volver a leer el listado."),

@@ -140,6 +140,7 @@ describe("describirFallo", () => {
       porCampo: [{ campo: "stock", mensaje: "Field required" }],
       deLaOperacion: null,
       resultadoIncierto: false,
+      estado: 422,
     });
   });
 
@@ -151,6 +152,7 @@ describe("describirFallo", () => {
     );
     expect(resultado.porCampo).toEqual([{ campo: "email", mensaje: "Ya existe un cliente con ese email" }]);
     expect(resultado.resultadoIncierto).toBe(false);
+    expect(resultado.estado).toBe(409);
   });
 
   test("un resultado incierto lo declara y conserva el mensaje de la operación", () => {
@@ -159,7 +161,7 @@ describe("describirFallo", () => {
       CAMPOS_DE_LIBRO,
       "email",
     );
-    expect(resultado).toEqual({ porCampo: [], deLaOperacion: MENSAJE_INCIERTO, resultadoIncierto: true });
+    expect(resultado).toEqual({ porCampo: [], deLaOperacion: MENSAJE_INCIERTO, resultadoIncierto: true, estado: null });
   });
 
   test("un Error común es un error de la operación con su mensaje", () => {
@@ -167,6 +169,7 @@ describe("describirFallo", () => {
       porCampo: [],
       deLaOperacion: "El precio no es un importe válido.",
       resultadoIncierto: false,
+      estado: null,
     });
   });
 
@@ -176,6 +179,7 @@ describe("describirFallo", () => {
         porCampo: [],
         deLaOperacion: "Ocurrió un error inesperado.",
         resultadoIncierto: false,
+        estado: null,
       });
     }
   });
