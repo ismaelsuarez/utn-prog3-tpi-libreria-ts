@@ -58,6 +58,7 @@ TypeScript estricto y compilado con Vite.
 - [Casos manuales: resultado observado](#casos-manuales-resultado-observado)
 - [Imágenes y recursos](#imágenes-y-recursos)
 - [Estructura de carpetas](#estructura-de-carpetas)
+- [Despliegue](#despliegue)
 - [Entrega](#entrega)
 - [Backend local para verificar escrituras](#backend-local-para-verificar-escrituras)
 - [Para quienes desarrollan](#para-quienes-desarrollan)
@@ -538,6 +539,32 @@ ventas ilegible) se corrió contra una copia del commit anterior al change y
 contra la versión nueva, con perfiles nuevos: las salidas son idénticas (fechas
 normalizadas).
 
+### Casos manuales del contenedor (`despliegue-frontend`)
+
+**Ejecución del 2026-11-09**: la imagen construida con el `Dockerfile` (nginx 1.30.6,
+Node 22.23.4) corrida en Docker local. Los recorridos del navegador son
+automatizados en Google Chrome 157 (modo headless, protocolo de herramientas de
+desarrollo), con un perfil nuevo, **a través del contenedor** y no del servidor de
+Vite. Las escrituras fueron **solo contra el backend local** (clon del backend en
+`469b8db`, PostgreSQL 17, sembrado dentro del contenedor local); antes de escribir,
+`GET /api/health/ready` por el contenedor respondió `{"estado":"ok","base":"disponible"}`
+y el registro del backend local mostró esa solicitud. Contra producción
+(`API_UPSTREAM=https://api.ismaelsuarez.me`) solo se enviaron `GET` (el registro de nginx
+no muestra ningún otro método). **No ejecutado**: la entrada a través del dominio real
+con HTTPS (`https://libreria.ismaelsuarez.me`, a cargo del usuario); el nombre
+`libreria_api` de Easypanel (se reprodujo con un alias de red de Docker, no se
+comprobó en Easypanel); una pasada visual en el navegador habitual de cada integrante
+y una auditoría con lector de pantalla.
+
+| Caso | Resultado esperado | Resultado observado | Estado |
+|---|---|---|---|
+| **CM-25** Contenedor: salud, entrada, caché y cabeceras | `/healthz` 200; `/` y `/index.html` redirigen al login con ruta relativa; cabeceras de seguridad en toda respuesta; `no-cache` en el HTML e `immutable` en `assets/`; gzip; 404 sin respaldo de SPA; proceso sin `root`; imagen saludable y sin código fuente ni `.env` | `sh despliegue/comprobar.sh` en verde (44 de 44 casos) contra el destino por defecto resuelto por el alias, contra `API_UPSTREAM=https://api.ismaelsuarez.me` y con una barra final en el valor. `docker exec … id -u` → `101`; estado `healthy`; lo servido son `index.html`, `assets/` y `src/pages/**.html` (ningún `.ts`, `node_modules/`, `tests/` ni `.env`) y `grep` de `api.ismaelsuarez` en lo servido, sin resultados; `/src/pages/auth/login` sin barra responde 404 | Aprobado |
+| **CM-26** Contenedor: reenvío de lecturas y escrituras al backend local | `POST /api/clientes/` llega como `POST /clientes/` y devuelve 201; `/apiclientes/` 404 sin llegar al backend; `GET /api/clientes` → 307 con `Location: /api/clientes/`; cuerpo de más de 64 KiB → 413 sin llegar; una escritura no se repite; el destino lento se espera | `POST /api/clientes/` → 201 (id 4) y la línea `POST /clientes/ 201` en el registro del backend; con 60 KiB válidos → 201; con 65 KiB (66 593 bytes) → 413 y el registro del backend no cambió; `POST /apiclientes/` → 404 sin línea nueva; `307` con `Location: /api/clientes/` (el backend envió `http://libreria_api:8000/clientes/`); consulta `?limit=100&offset=0&titulo=r%C3%ADo` llegó idéntica; con un destino que corta la conexión, `POST /api/ventas/` → 502 en 2 ms y el destino recibió **una** conexión; un destino que tarda 12 s (más que los 10 s del cliente) → 200 a los 12,0 s. Con el backend detenido, `POST /api/ventas/` → **504 a los 5 s** mientras la caché de nombres (30 s) conservaba la dirección vieja, y **502 inmediato** al vencer. Por eso el detenido no es «502 inmediato» como preveía la tarea: el cliente trata ambos como resultado incierto | Aprobado (con la salvedad del 504) |
+| **CM-27** Contenedor: destino que no resuelve | El contenedor arranca, queda saludable y sirve las páginas; `/api/…` responde 502 enseguida; al aparecer el nombre, funciona sin reiniciar | En una red sin el alias: estado `healthy`, 0 reinicios, `/healthz` 200 y login 200; `GET /api/health/ready` → 502 en 1,7 ms (`libreria_api could not be resolved`); `comprobar.sh` 38 de 44 (fallan solo los 6 casos que necesitan la API). Al conectar el alias a esa red, las tres solicitudes siguientes → 200 sin reiniciar. Con la API detenida y reiniciada, el frontend (sin reiniciar) volvió a responder 200 | Aprobado |
+| **CM-28** Contenedor en el navegador, con el backend local | La raíz lleva al login; el administrador llega a Libros; un `client` no llega a `/admin/`; las siete páginas se ven a 1280 px y a 320 px sin violaciones de CSP ni errores y sin desplazamiento horizontal; un alta de cliente aparece en el listado | 41 de 41 comprobaciones: raíz → login; registro de un usuario nuevo → login → Catálogo (rol `client`); desde allí `/admin/libros/` vuelve al Catálogo; administrador → Libros; Catálogo, Libros, Clientes, Ventas e Historial (y login y registro) a 1280 px y a 320 px sin eventos de política de seguridad de contenido ni errores de consola (los 404 del sondeo por identificador de autores y clientes son esperados), sin desplazamiento horizontal; Catálogo con 5 tarjetas; alta de «Cliente Navegador T06» con teléfono y dirección → «Cliente registrado correctamente.» y aparece en el listado; todas las solicitudes al mismo origen (`GET` y `POST`) | Aprobado |
+| **CM-29** Contenedor en el navegador, con lecturas de producción | Entrada, ingreso y Catálogo con los libros de producción; ninguna escritura; todo al mismo origen | 8 de 8 comprobaciones con `API_UPSTREAM=https://api.ismaelsuarez.me`: raíz → login, administrador → Libros, Catálogo con 5 tarjetas, sin errores ni violaciones de CSP, 6 solicitudes a `/api` todas `GET` y al mismo origen | Aprobado |
+| **CM-30** Paquete de entrega | `npm run entrega` deja un `.zip` con una sola carpeta raíz, lo incluido y nada de lo excluido; los cambios sin commit no entran; desde el `.zip` corren `npm ci`, `npm run build` y `npm test` y la imagen se construye | Código 0; una única carpeta raíz `utn-prog3-tpi-libreria-ts/` (149 archivos: `index.html`, `src/`, `tests/`, los archivos de configuración, `.env.example`, `README.md`, `Dockerfile`, `.dockerignore` y `despliegue/`); ninguno de `node_modules/`, `dist/`, `.git/`, `.engram/`, `.githooks/`, `.claude/`, `.atl/`, `openspec/`, `knowledge-base/`, `discovery/`, `docs/`, `CHANGES.md`, `AGENTS.md`, `CLAUDE.md` ni `.zip`. Un cambio en `index.html` sin commit no apareció en el `.zip`. Descomprimido en una carpeta vacía: `npm ci` 0, `npm run build` 0 (`dist/` con la entrada y las vistas), `npm test` 626 de 626 y `docker build` 0 | Aprobado |
+
 ---
 
 ## Imágenes y recursos
@@ -556,6 +583,8 @@ cubierta de respaldo con el título.
 ```text
 index.html                  redirige al login (ruta relativa)
 package.json, tsconfig.json, vite.config.ts, .env.example
+Dockerfile, .dockerignore   imagen de producción (Node compila, nginx sirve en el puerto 8080)
+despliegue/                 nginx/ (plantilla y cabeceras), comprobar.sh (solo lectura) y DESPLIEGUE.md (pasos de Easypanel)
 src/
 ├── main.ts                 entrada común, importada primero por cada vista
 ├── pages/                  una carpeta por zona y vista: <vista>.html + <vista>.ts
@@ -571,19 +600,119 @@ src/
 ├── utils/                  dom.ts (mensajes, errores de campo, cierre de sesión), auth.ts y navigate.ts (sesión y navegación)
 ├── styles/                 estilos: base, disposición, componentes y uno por función
 └── assets/                 estanteria.webp y portadas/
-tests/                      pruebas de Vitest (lógica, almacén, repositorios, fixtures de la API)
+tests/                      pruebas de Vitest (lógica, almacén, repositorios, fixtures de la API); van en la entrega
 ```
+
+## Despliegue
+
+La aplicación se publica como un contenedor: una imagen de varias etapas
+(`Dockerfile` en la raíz) compila con Node 22 (`npm ci` y `npm run build`) y sirve
+`dist/` con nginx sin privilegios (usuario `nginx`, puerto interno **8080**, sin
+TLS: lo termina el proxy de la plataforma). La imagen se construye sin variables
+de entorno ni secretos y no contiene el código fuente ni `node_modules/`.
+
+**Dirección prevista**: `https://libreria.ismaelsuarez.me` (VPS con Easypanel, App
+`web` del proyecto `libreria`, rama `main`). Todavía **no está publicada**: los
+pasos que ejecuta una persona en Easypanel y en el DNS, la comprobación del nombre
+interno de la API, la prueba de humo y el registro del sexto libro están en
+[`despliegue/DESPLIEGUE.md`](despliegue/DESPLIEGUE.md).
+
+Construir y probar en local (requiere Docker):
+
+```bash
+docker build -t tpi-libreria-web .
+docker run -d --name tpi-libreria-web -p 127.0.0.1:8080:8080 tpi-libreria-web
+sh despliegue/comprobar.sh http://127.0.0.1:8080   # una línea por caso; código distinto de 0 si alguno falla
+docker rm -f tpi-libreria-web
+```
+
+`despliegue/comprobar.sh <base>` solo envía `GET` y `HEAD`, de modo que sirve igual
+contra el contenedor local y contra el sitio publicado. Comprueba la salud
+(`/healthz`, respondida por nginx sin consultar la API), la entrada (`/` y
+`/index.html` redirigen al login con una ruta relativa al origen), las cabeceras
+de seguridad (política de contenido estricta, `nosniff`, `Referrer-Policy`), la
+caché (`no-cache` para el HTML, un año e `immutable` para `assets/`), gzip y el
+404 de toda ruta que no sea un archivo (la aplicación es multipágina, sin
+respaldo de SPA). Los casos de `/api` se explican abajo.
+
+### Reenvío de `/api` y variable `API_UPSTREAM`
+
+El navegador solo habla con su propio origen: la API de producción no envía
+cabeceras CORS. Por eso nginx reenvía toda ruta que empieza con `/api/` al destino
+de la variable `API_UPSTREAM`, que se lee **al iniciar el contenedor** (no hace
+falta reconstruir la imagen) y nunca llega al código del navegador. Se quita el
+prefijo (`/api/libros/?limit=1` llega como `/libros/?limit=1`), se conservan
+método, cuerpo y parámetros, y las redirecciones del destino (el `307` por una
+barra final) vuelven como `/api/…` del mismo origen. A diferencia de
+`npm run dev`, el servidor de producción **sí reenvía las escrituras**.
+
+| `API_UPSTREAM` | Cuándo |
+|---|---|
+| `http://libreria_api:8000` (valor por defecto) | En Easypanel: la API del proyecto `libreria` por la red interna, sin TLS ni salto por el proxy público |
+| `https://api.ismaelsuarez.me` | Alternativa si el nombre interno no resuelve; nginx presenta el nombre por SNI y verifica el certificado |
+| `http://<alias>:<puerto>` | Un backend local en una red de Docker (ver abajo) |
+
+El nombre del destino se resuelve **en cada solicitud** (con el DNS de Docker): el
+contenedor arranca y queda saludable aunque el destino todavía no exista, y mientras
+no resuelve `/api/…` responde `502` enseguida. Solo se reenvían las rutas que
+empiezan exactamente con `/api/` (`/api` y `/apiclientes/` son `404`); nginx no
+reintenta una solicitud, espera al destino hasta 30 s (más que los 10 s del cliente)
+y rechaza con `413` los cuerpos de más de 64 KiB.
+
+**Lecturas contra producción** (solo `GET`; no hay que escribir nunca contra
+`https://api.ismaelsuarez.me` desde una prueba):
+
+```bash
+docker run -d --name tpi-libreria-web-prod -e API_UPSTREAM=https://api.ismaelsuarez.me -p 127.0.0.1:8080:8080 tpi-libreria-web
+sh despliegue/comprobar.sh http://127.0.0.1:8080   # incluye /api/health/ready y el 307 de /api/libros
+docker rm -f tpi-libreria-web-prod
+```
+
+**Escrituras: solo contra el backend local.** Con el backend local de [Backend
+local para verificar escrituras](#backend-local-para-verificar-escrituras) en marcha
+(su contenedor lleva el alias de red `libreria_api`, que es el destino por defecto,
+así se prueba la imagen sin cambiar su configuración):
+
+```bash
+docker run -d --name tpi-libreria-web-local --network tpi-libreria-red -p 127.0.0.1:8081:8080 tpi-libreria-web
+curl -s http://127.0.0.1:8081/api/health/ready      # {"estado":"ok","base":"disponible"}
+docker logs tpi-libreria-api | tail -n 3             # debe mostrar esa solicitud: es el backend local
+curl -s -X POST http://127.0.0.1:8081/api/clientes/ -H 'Content-Type: application/json' \
+  -d '{"nombre":"Cliente de prueba","email":"prueba@example.test"}'   # 201 del backend local
+docker rm -f tpi-libreria-web-local
+```
+
+Antes de escribir se comprueba siempre el destino (la segunda y la tercera línea).
+
+---
 
 ## Entrega
 
-Se entrega el código fuente del proyecto: `index.html`, `src/`, `package.json`,
-`package-lock.json`, `tsconfig.json`, `vite.config.ts`, `.env.example` y
-`README.md`; la compilación (`npm run build`) genera `dist/`, que se sirve desde
-cualquier subruta. No incluye `node_modules/` ni `dist/`.
+La entrega es un archivo `.zip` que genera un comando, a partir del **último
+commit** (los cambios sin commit no entran):
 
-Quedan fuera: `tests/`, `docs/`, `discovery/`, `knowledge-base/`, `openspec/`,
-`.atl/`, `.claude/`, `.engram/`, `.githooks/`, `.git/`, `.gitignore`,
-`CHANGES.md`, `AGENTS.md`, `CLAUDE.md` y `.active-orchestrator-state.json`.
+```bash
+npm run entrega     # deja utn-prog3-tpi-libreria-ts.zip en la raíz (requiere Git)
+```
+
+El `.zip` tiene una única carpeta raíz, `utn-prog3-tpi-libreria-ts/`, con la
+estructura de carpetas del repositorio. Contiene: `index.html`, `src/`, `tests/`,
+`package.json`, `package-lock.json`, `tsconfig.json`, `vite.config.ts`,
+`.env.example`, `README.md`, `Dockerfile`, `.dockerignore` y `despliegue/`. Con
+`tests/` dentro, `npm test` funciona también desde el `.zip`; la compilación
+(`npm run build`) genera `dist/`, que se sirve desde cualquier subruta.
+
+Quedan fuera: `node_modules/`, `dist/`, `.git/`, `.engram/`, `.githooks/`,
+`.claude/`, `.atl/`, `openspec/`, `knowledge-base/`, `discovery/`, `docs/`,
+`CHANGES.md`, `AGENTS.md`, `CLAUDE.md`, `.gitignore` y todo archivo `.zip`.
+
+Cómo se comprueba (en una carpeta vacía fuera del repositorio):
+
+```bash
+unzip -l utn-prog3-tpi-libreria-ts.zip      # una sola carpeta raíz y la lista de arriba
+unzip -q utn-prog3-tpi-libreria-ts.zip -d "$(mktemp -d)"   # luego, dentro de esa carpeta:
+npm ci && npm run build && npm test         # los tres terminan con código 0
+```
 
 ---
 
@@ -621,6 +750,7 @@ en Docker. Requiere Docker y Git; nada de esto forma parte de la entrega.
    docker build -t tpi-libreria-api "$BACKEND/repo/despliegue"
    docker run -d --name tpi-libreria-api --network tpi-libreria-red \
      -e DATABASE_URL=postgresql+asyncpg://libreria:solo-local@tpi-libreria-pg:5432/libreria \
+     --network-alias libreria_api \
      -e ECHO_SQL=false -p 127.0.0.1:8000:8000 tpi-libreria-api
    until [ "$(docker inspect -f '{{.State.Health.Status}}' tpi-libreria-api)" = healthy ]; do sleep 1; done
    ```
@@ -677,7 +807,7 @@ npx tsc          # comprobación de tipos de src/ y tests/
 ```
 
 Las pruebas no necesitan navegador y no sustituyen los recorridos manuales
-(CM-1 a CM-24).
+(CM-1 a CM-30).
 
 ### Memoria compartida (Engram)
 

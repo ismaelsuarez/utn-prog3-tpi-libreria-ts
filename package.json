@@ -10,7 +10,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "entrega": "git archive --format=zip --prefix=utn-prog3-tpi-libreria-ts/ --output=utn-prog3-tpi-libreria-ts.zip HEAD -- index.html src tests package.json package-lock.json tsconfig.json vite.config.ts .env.example README.md Dockerfile .dockerignore despliegue"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",

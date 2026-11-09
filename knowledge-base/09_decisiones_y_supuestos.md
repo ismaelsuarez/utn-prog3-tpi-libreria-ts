@@ -30,7 +30,7 @@
 **Contexto**: el equipo trabaja con desarrollo guiado por pruebas, pero la consigna prohíbe dependencias y herramientas de compilación en la entrega.
 **Alternativas consideradas**: verificar solo con los casos manuales.
 **Justificación**: decisión del equipo; obliga a separar la lógica del DOM, que la consigna valora, y da una red de seguridad sin instalar nada.
-**Trade-offs aceptados**: Node es un requisito de desarrollo (no de uso); la carpeta `tests/` se excluye de la entrega; el DOM y `localStorage` quedan cubiertos solo por los casos manuales.
+**Trade-offs aceptados**: Node es un requisito de desarrollo (no de uso); la carpeta `tests/` se excluía de la entrega hasta `despliegue-frontend`, que la incluye (DD-33); el DOM y `localStorage` quedan cubiertos solo por los casos manuales.
 
 ### DD-05 — Identidad visual con CSS propio y local
 **Decisión**: estilos escritos por el equipo, sin librerías externas; tipografías e imágenes incluidas en el proyecto.
@@ -241,6 +241,25 @@
 **Justificación**: es lo que la API garantiza; el README y las specs `ventas` e `historial` lo declaran.
 **Trade-offs aceptados**: un cliente o libro dado de alta en otra pestaña aparece al reabrir Ventas; un título renombrado se ve con su nombre nuevo en ventas antiguas.
 **Origen**: change `operaciones-contra-api`, decisiones D10 y D13.
+
+### DD-32 — Contenedor nginx para producción
+**Decisión**: la aplicación se publica en una imagen de dos etapas (Node 22 compila, `nginx-unprivileged` sirve en el puerto 8080 como usuario no `root`) con etiquetas exactas, sin variables de entorno ni secretos incorporados, y con una comprobación de salud propia (`/healthz`). La entrada la redirige el servidor (`302` de `/` y `/index.html` al login), la política de contenido es estricta (`default-src 'self'`) y no hay respaldo de SPA: una ruta que no es un archivo es `404`.
+**Contexto**: la API de producción no envía cabeceras CORS, así que la aplicación solo funciona desde el mismo origen que reenvíe `/api`; `npm run preview` no está hecho para producción.
+**Alternativas consideradas**: `npm run preview` como servidor (su guarda bloquearía las escrituras legítimas); `nginx` oficial (proceso maestro como `root`, puerto 80); Caddy; el generador estático de Easypanel más un proxy aparte; versionar `dist/`; un hash en la política para el script en línea de `index.html` (se rompe con cualquier edición) o `'unsafe-inline'` (debilita todas las páginas).
+**Justificación**: reproducible desde el repositorio, mínimo privilegio y sin tocar `src/`.
+**Trade-offs aceptados**: las etiquetas fijas no reciben parches solas; sin HSTS (el TLS lo gestiona la plataforma).
+**Origen**: change `despliegue-frontend`, decisiones D1 y D3.
+
+El reenvío de `/api` de producción lo tomó la misma entrega (decisión del usuario, 2026-11-09): nginx reenvía al destino de `API_UPSTREAM` (por defecto `http://libreria_api:8000`, la API por la red interna de Easypanel; alternativa `https://api.ismaelsuarez.me`), con el nombre resuelto en cada solicitud para que el contenedor arranque aunque el destino no exista; sin reintentos; con reescritura de las `Location` del destino; con límite de cuerpo de 64 KiB; y **reenviando las escrituras**, porque la guarda de desarrollo vive en el servidor de Vite. Las pruebas de escritura del contenedor van solo contra un backend local. **Alternativas descartadas**: fallar al arrancar con un nombre literal (reinicios en bucle que ocultan la causa), la API pública por defecto (salto TLS y vuelta por el proxy del propio VPS).
+**Trade-offs aceptados**: el nombre `libreria_api` está inferido del patrón `<proyecto>_<servicio>` y debe comprobarse en Easypanel; un nombre mal escrito se ve como `502` en `/api/health/ready`, no como un contenedor caído.
+
+### DD-33 — Paquete de entrega con `git archive`
+**Decisión**: `npm run entrega` genera `utn-prog3-tpi-libreria-ts.zip` con `git archive` del último commit, bajo una única carpeta raíz, con una lista explícita de rutas incluidas (`index.html`, `src/`, `tests/`, `package.json`, `package-lock.json`, `tsconfig.json`, `vite.config.ts`, `.env.example`, `README.md`, `Dockerfile`, `.dockerignore`, `despliegue/`). `tests/` va dentro, para que `npm test` funcione desde el `.zip` (decisión del usuario, 2026-11-09, que cambia la lista de entrega anterior); el nombre del archivo es un supuesto hasta conocer el canal y el formato de entrega (PA-02).
+**Contexto**: la consigna califica un `.zip` «correctamente comprimido y con estructura de carpetas respetada» y un proyecto que ejecuta.
+**Alternativas consideradas**: `zip -r` con exclusiones (no viene en Windows y toma archivos no versionados); un script de Node con una librería de compresión (dependencia nueva, regla dura 1); «Download ZIP» de GitHub (incluye todo); `export-ignore` en `.gitattributes` (cambia también las descargas de GitHub).
+**Justificación**: toma solo lo versionado, nunca `node_modules/`, `dist/` ni `.env` reales; funciona igual en Linux, macOS y Windows con Git; sin dependencias nuevas.
+**Trade-offs aceptados**: lo que no está en un commit no entra al `.zip`; el `.zip` generado no está ignorado por Git hasta que se agregue `*.zip` a `.gitignore`.
+**Origen**: change `despliegue-frontend`, decisión D7.
 
 ## Supuestos inferidos
 

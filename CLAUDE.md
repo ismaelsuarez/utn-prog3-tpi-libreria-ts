@@ -20,8 +20,9 @@ Integrantes: Avalos Pablo, Blangetti Sofia, Suarez Ismael.
 | Presentación | CSS propio en archivos externos (`src/styles/`) | Flexbox o Grid; sin frameworks ni CDNs; tipografías e imágenes locales |
 | Comportamiento | TypeScript estricto, módulos ES (`<script type="module">`) | Sin librerías de ejecución; Vite 7 compila y sirve |
 | Datos | Repositorios asíncronos (`src/datos/repositorios.ts`) con forma de la API de producción | Todos los datos de negocio (libros, editoriales, géneros, autores, clientes y ventas) salen de la API `https://api.ismaelsuarez.me` por la base `/api` del mismo origen (`VITE_API_BASE`), con el cliente HTTP de `src/datos/api/` (solo `GET` y `POST`, sin reintentos). `npm run dev` y `npm run preview` reenvían `/api` pero **rechazan con `403` toda escritura hacia producción**; las escrituras se prueban con un backend local en Docker (`API_PROXY_TARGET`, ver README). Usuarios y sesión (`users`, `userData`) siguen en `localStorage` |
-| Verificación de desarrollo | Vitest (`npm test`) y `tsc` | Las pruebas viven en `tests/`, fuera de la entrega |
-| Verificación de entrega | Casos manuales en el navegador | Veinticuatro casos (CM-1 a CM-24) registrados en el README |
+| Despliegue | Contenedor: `Dockerfile` multietapa (Node 22 compila, nginx sin privilegios sirve en el puerto 8080) | Dirección prevista `https://libreria.ismaelsuarez.me`, pendiente del despliegue que hace el humano (Easypanel, proyecto `libreria`, App `web`, rama `main`). nginx reenvía `/api/` a `API_UPSTREAM` (por defecto `http://libreria_api:8000`; alternativa `https://api.ismaelsuarez.me`) **y sí reenvía las escrituras**. Pasos del humano en `despliegue/DESPLIEGUE.md`; comprobación de solo lectura con `sh despliegue/comprobar.sh <base>` |
+| Verificación de desarrollo | Vitest (`npm test`) y `tsc` | Las pruebas viven en `tests/` y van en la entrega (`npm test` funciona desde el `.zip`) |
+| Verificación de entrega | Casos manuales en el navegador | Treinta casos (CM-1 a CM-30) registrados en el README |
 
 Requiere Node 20.19+ o 22.12+ (exigencia de Vite 7) y npm. La aplicación ya no se
 abre desde `file://`: se ejecuta con `npm run dev` o con la compilación servida.
@@ -39,6 +40,7 @@ npm run dev        # servidor de desarrollo (reenvía /api; bloquea escrituras a
 npm run build      # tsc (tipos estrictos) y compilación de producción en dist/
 npm run preview    # sirve dist/ con el mismo reenvío de /api y la misma guarda
 npm test           # Vitest, una sola corrida
+npm run entrega    # genera utn-prog3-tpi-libreria-ts.zip con el contenido del último commit
 ```
 
 ---
@@ -121,7 +123,7 @@ la API de producción).
 1. **NUNCA** usar librerías de ejecución, frameworks ni CDNs de CSS o JavaScript → todo recurso (estilos, scripts, tipografías, imágenes) es propio y local; las únicas dependencias son de desarrollo: `vite`, `typescript`, `vitest` y `@types/node`.
 2. **NUNCA** usar scripts clásicos ni el espacio de nombres global `Libreria` → módulos ES de TypeScript con `import`/`export` y `import type` para los tipos.
 3. **NUNCA** dejar que `npm run build` falle ni usar `any` explícito → los tipos se declaran en `src/types/` y `tsc` corre en modo estricto sobre `src/` y `tests/`.
-4. **NUNCA** acceder a datos o a la red fuera de los repositorios → las vistas usan solo `src/datos/proveedor.ts`; la red llega a la API solo por los repositorios y por la base del mismo origen (`/api`), nunca a `https://api.ismaelsuarez.me` en forma directa; y nada que corra en desarrollo, previsualización o pruebas escribe en producción (guarda del reenvío, backend local para escrituras, `fetch` global bloqueado en la suite).
+4. **NUNCA** acceder a datos o a la red fuera de los repositorios → las vistas usan solo `src/datos/proveedor.ts`; la red llega a la API solo por los repositorios y por la base del mismo origen (`/api`), nunca a `https://api.ismaelsuarez.me` en forma directa; y nada que corra en desarrollo, previsualización, pruebas ni en la verificación local del contenedor escribe en producción (guarda del reenvío, backend local para escrituras, `fetch` global bloqueado en la suite; el contenedor se prueba con `API_UPSTREAM` apuntando a un backend local, y contra producción solo con `GET`).
 5. **NUNCA** insertar datos de usuario con `innerHTML` → usar `textContent` o creación de nodos.
 6. **NUNCA** tocar el DOM dentro de `src/logica/` → allí solo funciones puras; el DOM vive en los módulos de `src/pages/` y en `src/utils/dom.ts`.
 7. **NUNCA** nombrar `localStorage` fuera de `src/datos/local/almacen-local.ts` → ese archivo es el único que obtiene el almacenamiento del navegador; los almacenes de `src/datos/local/` (usuarios y sesión) lo reciben inyectado y son la única vía de lectura y escritura. Los datos de negocio no se guardan en el navegador y las claves `libreria.*` de versiones anteriores no se leen, escriben ni borran.
@@ -172,7 +174,8 @@ los tres integrantes y sus agentes compartan decisiones y hallazgos.
 - La lógica pura se escribe con pruebas primero (Vitest, `npm test`); el DOM se
   verifica con los casos manuales.
 - Repositorio: <https://github.com/ismaelsuarez/utn-prog3-tpi-libreria-ts> (público). Nace como copia de `utn-prog3-tpi-libreria`, la versión JavaScript entregada, que sigue en su propio repositorio.
-- No forman parte de la entrega: `node_modules/`, `dist/`, `tests/`, `docs/`, `discovery/`,
+- La entrega es el `.zip` de `npm run entrega` (`git archive` del último commit, bajo la carpeta `utn-prog3-tpi-libreria-ts/`): `index.html`, `src/`, `tests/`, `package.json`, `package-lock.json`, `tsconfig.json`, `vite.config.ts`, `.env.example`, `README.md`, `Dockerfile`, `.dockerignore` y `despliegue/`.
+- No forman parte de la entrega: `node_modules/`, `dist/`, `.git/`, `.engram/`, `.githooks/`, `docs/`, `discovery/`,
   `knowledge-base/`, `openspec/`, `.atl/`, `.claude/`, `CHANGES.md`,
   `AGENTS.md`, `CLAUDE.md` y `.active-orchestrator-state.json`.
 

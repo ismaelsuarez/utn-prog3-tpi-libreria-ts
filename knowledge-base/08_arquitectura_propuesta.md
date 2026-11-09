@@ -64,8 +64,10 @@ proyecto/
 │   └── assets/                 # estanteria.webp, portadas/, LEEME.txt
 ├── README.md
 │
+├── tests/                      # Pruebas con Vitest (tests/**/*.test.ts) y fixtures de la API (van en la entrega)
+├── Dockerfile, .dockerignore, despliegue/   # imagen de producción, plantilla de nginx, comprobar.sh y DESPLIEGUE.md
+│
 │   # Fuera de la entrega (solo desarrollo)
-├── tests/                      # Pruebas con Vitest (tests/**/*.test.ts) y fixtures de la API
 ├── node_modules/, dist/
 ├── docs/, discovery/, knowledge-base/, openspec/
 ```
@@ -150,6 +152,44 @@ proyecto/
   (`despliegue-frontend`) no usa Vite y sí escribe en producción cuando la opera
   el bibliotecario.
 
+## Producción (contenedor nginx)
+
+`despliegue-frontend` publica la compilación en un contenedor (`Dockerfile`,
+`despliegue/nginx/`), no con `npm run preview`.
+
+- **Imagen**: etapa Node 22 Alpine (`npm ci`, `npm run build`) y etapa
+  `nginxinc/nginx-unprivileged` Alpine, ambas con etiqueta exacta; usuario `nginx`
+  (uid 101), puerto 8080, sin TLS ni secretos; solo `dist/` en
+  `/usr/share/nginx/html`. `HEALTHCHECK` sobre `/healthz`.
+- **Servicio estático**: páginas múltiples sin respaldo de SPA
+  (`try_files $uri =404`); `/` y `/index.html` redirigen con `302` a
+  `/src/pages/auth/login/login.html` porque el script en línea de `index.html` no
+  se ejecuta bajo `script-src 'self'`; `absolute_redirect off` mantiene las
+  redirecciones como rutas relativas detrás del proxy HTTPS.
+- **Caché y compresión**: `assets/` (nombres con huella) un año e `immutable`; el
+  HTML `no-cache`; gzip para texto.
+- **Cabeceras** (`despliegue/nginx/cabeceras-seguridad.conf`, con `always` e
+  incluidas en cada `location`): política de contenido
+  `default-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`,
+  `X-Content-Type-Options: nosniff` y `Referrer-Policy: no-referrer`; sin versión
+  de nginx y sin HSTS.
+- **Reenvío de `/api`**: `location /api/` con `rewrite ^/api/(.*)$ /$1 break` y
+  `proxy_pass` sobre una variable (`$api_destino`, tomada de `API_UPSTREAM`,
+  tolerando una barra final): quita el prefijo, conserva método, cuerpo y
+  parámetros, presenta al destino su propio `Host` (`$proxy_host`), usa SNI y
+  verifica el certificado cuando el destino es `https://`, no reintenta
+  (`proxy_next_upstream off`), espera 5 s para conectar y 30 s para leer (más que
+  los 10 s del cliente) y rechaza con `413` los cuerpos de más de 64 KiB. Solo
+  `/api/` reenvía: `/api` y `/apiclientes/` son `404`. `proxy_redirect` reescribe
+  toda `Location` del destino a `/api/…` del mismo origen. Reenvía las escrituras:
+  la guarda es del servidor de Vite y no existe en el contenedor.
+- **Resolución en tiempo de ejecución**: el `resolver` toma los servidores de
+  `/etc/resolv.conf` (en Easypanel, el DNS embebido de Docker, `127.0.0.11`) y
+  guarda el resultado 30 s; el contenedor arranca y queda `healthy` aunque el
+  destino no exista todavía, `/api/…` responde `502` mientras no resuelve y lo
+  alcanza apenas aparece, sin reiniciar.
+- **Comprobación**: `despliegue/comprobar.sh <base>` (solo `GET` y `HEAD`).
+
 ## Estrategia de verificación
 
 | Nivel | Qué cubre | Herramienta |
@@ -161,7 +201,7 @@ proyecto/
 - Las pruebas automatizadas no reemplazan los casos manuales.
 - El DOM no se prueba con un runner automático; se cubre con los casos
   manuales.
-- `tests/`, `node_modules/` y `dist/` no forman parte de la entrega.
+- `tests/` va en la entrega (`npm test` funciona desde el `.zip`); `node_modules/` y `dist/` no.
 
 ## Seguridad
 
@@ -189,8 +229,9 @@ proyecto/
 |---|---|---|---|
 | `VITE_API_BASE` | El código del navegador (`obtenerBaseApi`) | `/api` | Base relativa de la API |
 | `API_PROXY_TARGET` | Solo el servidor de Vite (`vite.config.ts`) | `https://api.ismaelsuarez.me` | Destino del reenvío de `/api` en `npm run dev` y `npm run preview` |
+| `API_UPSTREAM` | Solo nginx, al iniciar el contenedor (`despliegue/nginx/default.conf.template`) | `http://libreria_api:8000` | Destino del reenvío de `/api` en producción; alternativa pública `https://api.ismaelsuarez.me`. No llega al navegador |
 
-Se documentan en `.env.example`.
+Las dos primeras se documentan en `.env.example`; `API_UPSTREAM` es del contenedor y se fija con `ENV` en el `Dockerfile` o en la configuración de la App.
 
 ## Adaptación y accesibilidad
 
