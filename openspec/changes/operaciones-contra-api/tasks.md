@@ -28,10 +28,10 @@ Gobernanza ALTO: ninguna tarea de los grupos 1 a 10 empieza antes de cerrar el g
 
 ## 2. Cliente HTTP con escrituras [alto riesgo: escrituras a un sistema externo]
 
-- [ ] 2.1 RED/GREEN: `enviar("POST", ruta, cuerpo)` arma la dirección como `obtener`, envía `Content-Type: application/json` y el cuerpo serializado, y devuelve el JSON del 201; verificar en `tests/datos/api/cliente-http.test.ts`
-- [ ] 2.2 RED/GREEN: errores de `enviar` (409 con `detail` de texto, 422 con lista, respuesta no JSON, 502 sin cuerpo) iguales a los de `obtener`; falla de red y tiempo agotado producen `resultadoIncierto: true`, el mensaje de D1 y **una sola** llamada a `solicitar`; verificar con las mismas pruebas
-- [ ] 2.3 Prueba de regresión: las pruebas existentes de `obtener` pasan sin cambios y una lectura sin respuesta no marca `resultadoIncierto`; verificar con `npm test`
-- [ ] 2.4 Commit `feat(api): add JSON POST to the HTTP client without retries`
+- [x] 2.1 RED/GREEN: `enviar("POST", ruta, cuerpo)` arma la dirección como `obtener`, envía `Content-Type: application/json` y el cuerpo serializado, y devuelve el JSON del 201; verificar en `tests/datos/api/cliente-http.test.ts`
+- [x] 2.2 RED/GREEN: errores de `enviar` (409 con `detail` de texto, 422 con lista, respuesta no JSON, 502 sin cuerpo) iguales a los de `obtener`; falla de red y tiempo agotado producen `resultadoIncierto: true`, el mensaje de D1 y **una sola** llamada a `solicitar`; verificar con las mismas pruebas
+- [x] 2.3 Prueba de regresión: las pruebas existentes de `obtener` pasan sin cambios y una lectura sin respuesta no marca `resultadoIncierto`; verificar con `npm test`
+- [x] 2.4 Commit `feat(api): add JSON POST to the HTTP client without retries`
 
 ## 3. Adaptadores de la API: sondeo y escrituras [alto riesgo: escrituras a un sistema externo]
 
