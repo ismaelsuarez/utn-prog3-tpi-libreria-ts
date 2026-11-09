@@ -250,8 +250,8 @@ con el rol `client` y llega al Catálogo; la página no ofrece elegir el rol.
 > [!WARNING]
 > **Limitación de seguridad**: el registro, el login, la sesión y los roles
 > existen **solo en el navegador**. Cualquiera con acceso al navegador puede editar
-> `userData` (por ejemplo, escribir `role: "admin"`) sin conocer ninguna
-> contraseña, y la API de producción no exige autenticación. La huella evita
+> `users` y `userData` sin conocer ninguna contraseña (ver el párrafo siguiente),
+> y la API de producción no exige autenticación. La huella evita
 > exponer en `localStorage` las contraseñas escritas, nada más: no es seguridad
 > real. Si se borra `users` del navegador, el administrador de demostración se
 > vuelve a crear al abrir cualquier página; los demás usuarios se pierden.
