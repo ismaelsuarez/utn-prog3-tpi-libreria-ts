@@ -274,3 +274,8 @@ export function construirVenta(
     },
   };
 }
+
+/** Código con el que se muestra una venta (`1` → `ven-01`), como en la versión anterior. */
+export function codigoDeVenta(id: Id): string {
+  return `ven-${String(id).padStart(2, "0")}`;
+}

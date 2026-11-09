@@ -3,6 +3,7 @@ import {
   agregarRenglon,
   calcularVenta,
   cambiarCantidad,
+  codigoDeVenta,
   construirVenta,
   quitarRenglon,
   validarVenta,
@@ -381,5 +382,17 @@ describe("construirVenta", () => {
     expect(resultado.errores[0]?.campo).toBe("renglones");
     expect("venta" in resultado).toBe(false);
     expect(renglones[0]?.subtotal).toBe("3001.00");
+  });
+});
+
+describe("codigoDeVenta", () => {
+  test("muestra el identificador entero con el formato ven-XX de la versión anterior", () => {
+    expect(codigoDeVenta(1)).toBe("ven-01");
+    expect(codigoDeVenta(7)).toBe("ven-07");
+    expect(codigoDeVenta(12)).toBe("ven-12");
+  });
+
+  test("no recorta los identificadores de más de dos dígitos", () => {
+    expect(codigoDeVenta(123)).toBe("ven-123");
   });
 });

@@ -32,6 +32,7 @@ export default defineConfig(({ mode }) => {
           catalogo: desdeRaiz("./src/pages/client/catalogo/catalogo.html"),
           libros: desdeRaiz("./src/pages/admin/libros/libros.html"),
           clientes: desdeRaiz("./src/pages/admin/clientes/clientes.html"),
+          ventas: desdeRaiz("./src/pages/admin/ventas/ventas.html"),
         },
       },
     },
