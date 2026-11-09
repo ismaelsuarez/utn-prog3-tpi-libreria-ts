@@ -26,14 +26,23 @@ Unidad HTML, CSS y JavaScript · Revisor de la unidad: Prof. Matías Torres
 ## Resumen
 
 Frontend de una librería ficticia: catálogo con buscador, alta de libros y
-clientes, venta simulada con comprobante e historial de ventas. Todo funciona
-en el navegador: los datos se guardan en `localStorage` y **no hay servidor,
-base de datos, API ni inicio de sesión**.
+clientes, venta simulada con comprobante e historial de ventas, escrito en
+TypeScript estricto y compilado con Vite.
 
 > [!NOTE]
-> Los datos son ficticios. Las validaciones y el almacenamiento del navegador
-> sirven para la práctica; no representan seguridad ni integridad garantizada
-> por un servidor. No se gestionan stock, cobros ni facturación fiscal.
+> **Estado de la migración**: las vistas acceden a los datos solo mediante
+> repositorios con la forma de la API de producción
+> (`https://api.ismaelsuarez.me`). Por ahora esos repositorios guardan los datos
+> en `localStorage`; los changes `cliente-http-y-catalogo` y
+> `operaciones-contra-api` los conectarán con la API a través de la base `/api`
+> del mismo origen. El registro, el inicio de sesión y los roles llegan con
+> `registro-login-y-sesion` y `proteccion-de-rutas-y-roles`, y vivirán solo en
+> el navegador: la API no tiene usuarios y queda abierta.
+
+> [!NOTE]
+> Los datos de ejemplo son ficticios. Las validaciones del navegador sirven para
+> la práctica; no representan seguridad ni integridad garantizada por un
+> servidor. No se gestionan cobros ni facturación fiscal.
 
 ## Contenido
 

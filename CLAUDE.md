@@ -152,7 +152,7 @@ los tres integrantes y sus agentes compartan decisiones y hallazgos.
 | Al iniciar una sesión de trabajo | `engram sync --import` | El agente (regla dura 15) |
 
 - **Activación, una sola vez por clon**: `git config core.hooksPath .githooks`. Git no activa hooks al clonar; hasta ejecutar ese comando nada es automático.
-- El proyecto se llama `parcial_javascript` para Engram; lo fija `.engram/config.json` y no debe cambiarse.
+- El proyecto se llama `tpi_libreria_typescript` para Engram; lo fija `.engram/config.json` y no debe cambiarse. La versión JavaScript (`utn-prog3-tpi-libreria`) conserva su propio proyecto, `parcial_javascript`.
 - Si Engram no está instalado, los hooks no hacen nada y no interrumpen el commit.
 - `.engram/manifest.json` puede entrar en conflicto si dos personas hacen commit a la vez: se resuelve conservando las entradas de ambos lados.
 
@@ -171,7 +171,7 @@ los tres integrantes y sus agentes compartan decisiones y hallazgos.
 
 - La lógica pura se escribe con pruebas primero (Vitest, `npm test`); el DOM se
   verifica con los casos manuales.
-- Repositorio: <https://github.com/ismaelsuarez/utn-prog3-tpi-libreria> (público, rama `main`).
+- Repositorio: copia local de `utn-prog3-tpi-libreria` (versión JavaScript entregada); el remoto propio de la versión TypeScript todavía no está creado.
 - No forman parte de la entrega: `node_modules/`, `dist/`, `tests/`, `docs/`, `discovery/`,
   `knowledge-base/`, `openspec/`, `.atl/`, `.claude/`, `CHANGES.md`,
   `AGENTS.md`, `CLAUDE.md` y `.active-orchestrator-state.json`.
