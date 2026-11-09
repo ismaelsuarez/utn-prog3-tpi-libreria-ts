@@ -35,8 +35,10 @@ Seguridad operativa: ninguna tarea envía POST, PUT, PATCH ni DELETE a `https://
 
 ## 4. Base de la API del mismo origen (Commit: `feat(datos): define same-origin api base and dev proxy`)
 
-- [ ] 4.1 RED: `tests/datos/api/base.test.ts` con `obtenerBaseApi` (sin valor → `/api`; `""` → `/api`; `"/servicio/"` → `/servicio`; `"/api"` → `/api`); GREEN en `src/datos/api/base.ts`; declarar `VITE_API_BASE` en `ImportMetaEnv`; quitar `passWithNoTests`. — Verificación: RED observado (módulo inexistente), luego `npm test` verde y `npx tsc` con código 0.
-- [ ] 4.2 Configurar en `vite.config.ts` `server.proxy` y `preview.proxy` para `/api` (destino desde `API_PROXY_TARGET` leído con `loadEnv`, `https://api.ismaelsuarez.me` por defecto, `changeOrigin: true`, quitar el prefijo). — Verificación: con `npm run dev`, `curl -s -o /dev/null -w '%{http_code}' http://localhost:5173/api/health/live` → `200` y `curl -s 'http://localhost:5173/api/libros/?limit=1'` devuelve un arreglo JSON (solo GET).
+- [x] 4.1 RED: `tests/datos/api/base.test.ts` con `obtenerBaseApi` (sin valor → `/api`; `""` → `/api`; `"/servicio/"` → `/servicio`; `"/api"` → `/api`); GREEN en `src/datos/api/base.ts`; declarar `VITE_API_BASE` en `ImportMetaEnv`; quitar `passWithNoTests`. — Verificación: RED observado (módulo inexistente), luego `npm test` verde y `npx tsc` con código 0.
+  - Evidencia: RED: `npm test` falló por módulo `src/datos/api/base` inexistente («Failed to resolve import»); GREEN: 6/6 en `npm test` (sin valor, vacío, `/servicio/`, `/api`, barras repetidas, solo barras/espacios); `npx tsc` → 0; `passWithNoTests` quitado; `ImportMetaEnv.VITE_API_BASE` declarado.
+- [x] 4.2 Configurar en `vite.config.ts` `server.proxy` y `preview.proxy` para `/api` (destino desde `API_PROXY_TARGET` leído con `loadEnv`, `https://api.ismaelsuarez.me` por defecto, `changeOrigin: true`, quitar el prefijo). — Verificación: con `npm run dev`, `curl -s -o /dev/null -w '%{http_code}' http://localhost:5173/api/health/live` → `200` y `curl -s 'http://localhost:5173/api/libros/?limit=1'` devuelve un arreglo JSON (solo GET).
+  - Evidencia: `npm run dev` + `curl -s -o /dev/null -w "%{http_code}" http://localhost:5173/api/health/live` → `200`; `curl -s "http://localhost:5173/api/libros/?limit=1"` → arreglo JSON con un libro («Rayuela»); solo GET. La clave del proxy sigue a `VITE_API_BASE` (`obtenerBaseApi`); `npm run build` → código 0 (`dist/` queda ignorado).
 
 ## 5. Tipos de dominio (Commit: `feat(types): add domain types aligned with production api`)
 
