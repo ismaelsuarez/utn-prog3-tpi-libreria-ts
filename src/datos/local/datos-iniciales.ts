@@ -2,7 +2,7 @@ import type { DatosIniciales } from "./tipos-locales";
 
 // Datos de ejemplo de la aplicación. Editoriales y autores suman `pais` y
 // `nacionalidad` ficticios, que la forma de la API exige y que no se persisten
-// (SU-05: estas entidades no se guardan en `localStorage`).
+// (SU-05: estas entidades no se guardan en el almacenamiento del navegador).
 export const datosIniciales: DatosIniciales = {
   editoriales: [
     { id: "edi-01", nombre: "Ediciones del Puerto", pais: "Argentina" },

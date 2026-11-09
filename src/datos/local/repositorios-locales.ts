@@ -1,5 +1,5 @@
 // Adaptador de los repositorios sobre el almacén local. Traduce entre la forma
-// guardada en `localStorage` (identificadores `lib-07`, precio numérico,
+// guardada en el almacenamiento del navegador (identificadores `lib-07`, precio numérico,
 // relaciones por identificador, `nombreCompleto`, `telefono`) y la forma de la
 // API de producción (ids enteros, `Dinero`, relaciones anidadas, `perfil`), sin
 // cambiar el formato que se guarda. Es transitorio: `cliente-http-y-catalogo` y

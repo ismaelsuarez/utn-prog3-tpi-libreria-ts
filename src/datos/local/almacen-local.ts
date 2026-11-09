@@ -113,6 +113,19 @@ function siguienteId(lista: readonly { id?: unknown }[], prefijo: string): strin
   return `${prefijo}-${String(maximo + 1).padStart(2, "0")}`;
 }
 
+/**
+ * Almacenamiento del navegador, o `null` si no hay ventana o el acceso está
+ * bloqueado. Es el único lugar de la aplicación que nombra `localStorage`.
+ */
+export function obtenerAlmacenamientoDelNavegador(): AlmacenamientoInyectable | null {
+  try {
+    if (typeof window === "undefined") return null;
+    return window.localStorage ?? null;
+  } catch {
+    return null; // Acceso bloqueado por el navegador: se usa la reserva en memoria.
+  }
+}
+
 export function crearAlmacenLocal(
   almacenamiento: AlmacenamientoInyectable | null,
 ): AlmacenLocal {

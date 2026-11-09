@@ -1,4 +1,4 @@
-// Forma de los registros tal como el almacén local los guarda en `localStorage`
+// Forma de los registros tal como el almacén local los guarda en el almacenamiento del navegador
 // (versión anterior de la aplicación): identificadores de texto con prefijo,
 // precios numéricos y relaciones por identificador. El adaptador de
 // `repositorios-locales.ts` los traduce a la forma de la API.
