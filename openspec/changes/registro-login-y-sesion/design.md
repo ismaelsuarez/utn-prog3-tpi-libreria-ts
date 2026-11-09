@@ -125,3 +125,12 @@ Las tareas asumen la recomendación de cada una; si el usuario elige otra, cambi
 2. **Credenciales del administrador y dónde se publican.** Recomendación: `admin@libreria.test` / `Faro-Admin-2026`, solo en el README. Alternativa: mostrarlas también en la página de login para el evaluador (más cómodo, peor ejemplo de práctica). Solo cambia datos de la tarea 3.2 y del README.
 3. **Campo «Repetir contraseña» en el registro.** Recomendación: incluirlo (sin recuperación de contraseña, un error de tipeo deja la cuenta inutilizable). La consigna menciona solo email y contraseña; si se quita, sale un escenario del spec y cambian las tareas 2.1 y 4.2.
 4. **Destino del administrador después del login.** Recomendación: vista Libros (primera vista de la zona `admin` en la navegación). Alternativa: Catálogo para ambos roles. Cambia `destinoPorRol` y un escenario.
+
+## Decisiones del usuario (2026-11-09)
+
+El usuario respondió «si acepto» a la recomendación de cada pregunta abierta; ninguna difiere, así que el spec y las tareas no cambian.
+
+1. Contraseña en `users`: huella PBKDF2-SHA-256 con sal aleatoria por usuario mediante Web Crypto (D1), no texto plano.
+2. Credenciales del administrador: `admin@libreria.test` / `Faro-Admin-2026`, documentadas solo en el README para el evaluador y no mostradas en la página de login.
+3. El registro conserva el campo «Repetir contraseña».
+4. Después del login, el administrador llega a Libros (`src/pages/admin/libros/`) y el cliente al Catálogo.

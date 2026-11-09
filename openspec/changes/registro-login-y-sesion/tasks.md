@@ -6,9 +6,9 @@
 
 ## 1. Preparación y línea base
 
-- [ ] 1.1 Crear la rama `feat/registro-login-y-sesion` desde `feat/migracion-vite-typescript` (el PR #1 no está fusionado), comprobar `git config core.hooksPath` = `.githooks` y ejecutar `engram sync --import`; verificar con `git branch --show-current`.
-- [ ] 1.2 Red de seguridad: ejecutar `npm test` (línea base esperada 229/229), `npx tsc --noEmit` y `npm run build`, y registrar los resultados observados en esta tarea; si algo falla, detenerse e informarlo como falla previa.
-- [ ] 1.3 Registrar en `design.md` las respuestas del usuario a las «Preguntas abiertas» 1 a 4; si alguna difiere de la recomendación, ajustar el spec `usuarios-y-sesion` y estas tareas antes de seguir, y verificar con `openspec validate registro-login-y-sesion --strict`.
+- [x] 1.1 Crear la rama `feat/registro-login-y-sesion` desde `feat/migracion-vite-typescript` (el PR #1 no está fusionado), comprobar `git config core.hooksPath` = `.githooks` y ejecutar `engram sync --import`; verificar con `git branch --show-current`. Observado: rama `feat/registro-login-y-sesion`, `core.hooksPath` = `.githooks`, `engram sync --import` sin errores.
+- [x] 1.2 Red de seguridad: ejecutar `npm test` (línea base esperada 229/229), `npx tsc --noEmit` y `npm run build`, y registrar los resultados observados en esta tarea; si algo falla, detenerse e informarlo como falla previa. Observado: `npm test` 229/229 (12 archivos), `npx tsc --noEmit` salida 0, `npm run build` salida 0.
+- [x] 1.3 Registrar en `design.md` las respuestas del usuario a las «Preguntas abiertas» 1 a 4; si alguna difiere de la recomendación, ajustar el spec `usuarios-y-sesion` y estas tareas antes de seguir, y verificar con `openspec validate registro-login-y-sesion --strict`.
 
 ## 2. Tipos y lógica pura de usuarios y sesión
 
