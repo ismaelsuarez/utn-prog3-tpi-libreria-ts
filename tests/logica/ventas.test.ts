@@ -4,14 +4,14 @@ import {
   calcularVenta,
   cambiarCantidad,
   codigoDeVenta,
-  construirVenta,
+  mensajeDeVentaFallida,
   quitarRenglon,
   validarVenta,
+  ventaNuevaDesdeBorrador,
   type LibroVendible,
   type RenglonBorrador,
   type RenglonCalculado,
 } from "../../src/logica/ventas";
-import type { ClienteRef } from "../../src/types/cliente";
 
 function libro(precio: number | string, id = 1): LibroVendible {
   return { id, titulo: "Libro de prueba", isbn: "978-1", precio };
@@ -27,7 +27,6 @@ function renglonesDe(resultado: ReturnType<typeof calcularVenta>): RenglonCalcul
   return resultado.renglones;
 }
 
-const FECHA = "2026-01-06T01:07:00.000Z";
 
 describe("calcularVenta: redondeo y centavos", () => {
   test("redondea el unitario antes de multiplicar sin cambiar el catálogo", () => {
@@ -281,107 +280,51 @@ describe("validarVenta", () => {
   });
 });
 
-describe("construirVenta", () => {
-  test("construye la venta completa sin identificador y con fecha suministrada", () => {
-    const renglones = renglonesDe(calcular(1500.125, 2));
-    const resultado = construirVenta(clientes[0] as ClienteRef, renglones, "2026-10-16T23:45:00.000Z");
-    expect(resultado).toEqual({
-      ok: true,
-      errores: [],
-      venta: {
-        fecha: "2026-10-16T23:45:00.000Z",
-        cliente: { id: 1, nombre: "Cliente de prueba", email: "cliente@ejemplo.test" },
-        renglones: [
-          { libro_id: 1, titulo: "Libro de prueba", isbn: "978-1", cantidad: 2, precio_unitario: "1500.13", subtotal: "3000.26" },
-        ],
-        total: "3000.26",
-      },
-    });
+describe("cantidad máxima de la API (2 147 483 647)", () => {
+  const MAXIMO = 2_147_483_647;
+
+  test("acepta exactamente el máximo", () => {
+    const resultado = calcular(1, MAXIMO);
+    expect(resultado.ok).toBe(true);
+    expect(renglonesDe(resultado)[0]?.cantidad).toBe(MAXIMO);
   });
 
-  test("la instantánea no comparte referencias con cliente, catálogo ni borrador", () => {
-    const cliente: ClienteRef = { ...(clientes[0] as ClienteRef) };
-    const catalogo = [libro(1500.125)];
-    const borrador = renglonesDe(calcularVenta([{ libro_id: 1, cantidad: 2 }], catalogo));
-    const resultado = construirVenta(cliente, borrador, FECHA);
-    cliente.nombre = "Modificado";
-    (catalogo[0] as LibroVendible).titulo = "Modificado";
-    (catalogo[0] as LibroVendible).isbn = "Otro";
-    (catalogo[0] as LibroVendible).precio = 999;
-    (borrador[0] as RenglonCalculado).titulo = "Modificado";
-    (borrador[0] as RenglonCalculado).cantidad = 99;
-    borrador.push({ libro_id: 7, titulo: "otro", isbn: "x", cantidad: 1, precio_unitario: "1.00", subtotal: "1.00" });
-    if (!resultado.ok) throw new Error("se esperaba una venta");
-    expect(resultado.venta.cliente.nombre).toBe("Cliente de prueba");
-    expect(resultado.venta.renglones).toEqual([
-      { libro_id: 1, titulo: "Libro de prueba", isbn: "978-1", cantidad: 2, precio_unitario: "1500.13", subtotal: "3000.26" },
+  test("rechaza el siguiente, señala la cantidad y no entrega renglones", () => {
+    const resultado = calcular(1, MAXIMO + 1);
+    expect(resultado.ok).toBe(false);
+    expect(resultado.errores).toEqual([
+      { campo: "cantidad", mensaje: "La cantidad no puede superar 2 147 483 647." },
     ]);
-    expect(resultado.venta.total).toBe("3000.26");
+    expect("renglones" in resultado).toBe(false);
   });
 
-  test("conserva el unitario cero redondeado desde un precio positivo", () => {
-    const resultado = construirVenta(clientes[0] as ClienteRef, renglonesDe(calcular(0.004, 2)), FECHA);
-    expect(resultado.errores).toEqual([]);
-    if (!resultado.ok) throw new Error("se esperaba una venta");
-    expect(resultado.venta.renglones[0]?.precio_unitario).toBe("0.00");
-    expect(resultado.venta.total).toBe("0.00");
+  test("agregarRenglon rechaza una cantidad mayor que el máximo", () => {
+    const resultado = agregarRenglon([], 1, MAXIMO + 1, [libro(1500)]);
+    expect(resultado.errores).toEqual([
+      { campo: "cantidad", mensaje: "La cantidad no puede superar 2 147 483 647." },
+    ]);
   });
 
-  const valido = (): RenglonCalculado[] => renglonesDe(calcular(1));
-  test.each<[string, ClienteRef | null, () => RenglonCalculado[], string, string]>([
-    ["cliente", null, valido, FECHA, "cliente"],
-    ["renglones", clientes[0] as ClienteRef, () => [], FECHA, "renglones"],
-    ["cantidad", clientes[0] as ClienteRef, () => [{ ...(valido()[0] as RenglonCalculado), cantidad: 0 }], FECHA, "cantidad"],
-    ["precio unitario", clientes[0] as ClienteRef, () => [{ ...(valido()[0] as RenglonCalculado), precio_unitario: "abc" }], FECHA, "libro"],
-    ["fecha", clientes[0] as ClienteRef, valido, "fecha inválida", "fecha"],
-  ])("rechaza %s inválido sin producir venta", (_nombre, cliente, crearRenglones, fecha, campo) => {
-    const renglones = crearRenglones();
-    const copia = structuredClone(renglones);
-    const resultado = construirVenta(cliente, renglones, fecha);
-    expect(resultado.errores[0]?.campo).toBe(campo);
-    expect("venta" in resultado).toBe(false);
-    expect(renglones).toEqual(copia);
+  test("agregarRenglon rechaza la acumulación que supera el máximo sin modificar el borrador", () => {
+    const borrador: RenglonBorrador[] = [{ libro_id: 1, cantidad: MAXIMO }];
+    const resultado = agregarRenglon(borrador, 1, 1, [libro(1)]);
+    expect(resultado.ok).toBe(false);
+    expect(resultado.errores[0]?.campo).toBe("cantidad");
+    expect(resultado.errores[0]?.mensaje).toBe("La cantidad no puede superar 2 147 483 647.");
+    expect(borrador).toEqual([{ libro_id: 1, cantidad: MAXIMO }]);
   });
 
-  test("calcula el total en centavos y copia solo los campos del contrato", () => {
-    const renglones = renglonesDe(
-      calcularVenta(
-        [{ libro_id: 1, cantidad: 3 }, { libro_id: 2, cantidad: 1 }],
-        [libro(0.1), libro(0.2, 2)],
-      ),
-    );
-    const conExtra = Object.assign(renglones[0] as RenglonCalculado, { extra: { mutable: true } });
-    expect(conExtra.extra.mutable).toBe(true);
-    const clienteConExtra = Object.assign({ ...(clientes[0] as ClienteRef) }, { extra: { mutable: true } });
-    const resultado = construirVenta(clienteConExtra, renglones, FECHA);
-    expect(resultado.errores).toEqual([]);
-    if (!resultado.ok) throw new Error("se esperaba una venta");
-    expect(resultado.venta.total).toBe("0.50");
-    expect("extra" in (resultado.venta.renglones[0] as object)).toBe(false);
-    expect("extra" in resultado.venta.cliente).toBe(false);
+  test("cambiarCantidad rechaza una cantidad mayor que el máximo", () => {
+    const resultado = cambiarCantidad([{ libro_id: 1, cantidad: 1 }], 1, MAXIMO + 1, [libro(1500)]);
+    expect(resultado.errores[0]?.mensaje).toBe("La cantidad no puede superar 2 147 483 647.");
   });
 
-  test("rechaza renglones duplicados", () => {
-    const renglon = renglonesDe(calcular(1))[0] as RenglonCalculado;
-    const resultado = construirVenta(clientes[0] as ClienteRef, [renglon, { ...renglon }], FECHA);
-    expect(resultado.errores[0]?.campo).toBe("renglones");
-    expect("venta" in resultado).toBe(false);
-  });
-
-  test("rechaza fecha sin hora ISO", () => {
-    const resultado = construirVenta(clientes[0] as ClienteRef, renglonesDe(calcular(1)), "2026-01-06");
-    expect(resultado.errores[0]?.campo).toBe("fecha");
-    expect(resultado.errores[0]?.mensaje).toBe("La fecha de confirmación no es válida.");
-    expect("venta" in resultado).toBe(false);
-  });
-
-  test("rechaza subtotal alterado en vez de confirmar una venta distinta", () => {
-    const renglones = renglonesDe(calcular(1500, 2));
-    (renglones[0] as RenglonCalculado).subtotal = "3001.00";
-    const resultado = construirVenta(clientes[0] as ClienteRef, renglones, FECHA);
-    expect(resultado.errores[0]?.campo).toBe("renglones");
-    expect("venta" in resultado).toBe(false);
-    expect(renglones[0]?.subtotal).toBe("3001.00");
+  test("una cantidad no entera, cero o negativa conserva su mensaje de siempre", () => {
+    for (const cantidad of [0, -1, 1.5, "abc", ""]) {
+      expect(agregarRenglon([], 1, cantidad, [libro(1500)]).errores).toEqual([
+        { campo: "cantidad", mensaje: "La cantidad debe ser un entero positivo seguro." },
+      ]);
+    }
   });
 });
 
@@ -394,5 +337,77 @@ describe("codigoDeVenta", () => {
 
   test("no recorta los identificadores de más de dos dígitos", () => {
     expect(codigoDeVenta(123)).toBe("ven-123");
+  });
+});
+
+describe("ventaNuevaDesdeBorrador: cuerpo de POST /ventas/", () => {
+  test("lleva solo el cliente y, por renglón, el libro y la cantidad", () => {
+    const cuerpo = ventaNuevaDesdeBorrador(2, [
+      { libro_id: 1, cantidad: 2 },
+      { libro_id: 4, cantidad: 1 },
+    ]);
+    expect(JSON.stringify(cuerpo)).toBe(
+      '{"cliente_id":2,"renglones":[{"libro_id":1,"cantidad":2},{"libro_id":4,"cantidad":1}]}',
+    );
+  });
+
+  test("descarta cualquier otro dato del renglón calculado (título, ISBN, importes) y pasa las cantidades a número", () => {
+    const calculado = renglonesDe(calcularVenta([{ libro_id: 1, cantidad: "3" }], [libro(10)]));
+    expect(ventaNuevaDesdeBorrador(5, calculado)).toEqual({
+      cliente_id: 5,
+      renglones: [{ libro_id: 1, cantidad: 3 }],
+    });
+    expect(ventaNuevaDesdeBorrador(5, [{ libro_id: 1, cantidad: "3" }]).renglones[0]?.cantidad).toBe(3);
+  });
+});
+
+describe("venta sin control de stock", () => {
+  test("una cantidad mayor que el stock del libro se acepta en el borrador", () => {
+    const conStock = { ...libro(100), stock: 10 };
+    const resultado = agregarRenglon([], 1, 12, [conStock]);
+    expect(resultado.ok).toBe(true);
+    expect(renglonesDe(resultado)[0]?.cantidad).toBe(12);
+    expect(conStock.stock).toBe(10);
+  });
+});
+
+describe("mensajeDeVentaFallida", () => {
+  const sinCampos: [] = [];
+
+  test("un rechazo de la API se muestra con su mensaje y avisa que el borrador se conserva", () => {
+    const mensaje = mensajeDeVentaFallida({
+      porCampo: sinCampos,
+      deLaOperacion: "No se pudo registrar la venta: cliente o libros invalidos",
+      resultadoIncierto: false,
+      estado: 409,
+    });
+    expect(mensaje).toBe("No se pudo registrar la venta: cliente o libros invalidos. El borrador se conserva.");
+  });
+
+  test("un 422 junta los mensajes de cada campo", () => {
+    expect(
+      mensajeDeVentaFallida({
+        porCampo: [
+          { campo: "cliente", mensaje: "Input should be a valid integer" },
+          { campo: "renglones", mensaje: "Libro repetido" },
+        ],
+        deLaOperacion: null,
+        resultadoIncierto: false,
+        estado: 422,
+      }),
+    ).toBe("Input should be a valid integer. Libro repetido. El borrador se conserva.");
+  });
+
+  test("una falta de respuesta dice que no se sabe si se registró y manda al Historial, sin reenvío automático", () => {
+    const mensaje = mensajeDeVentaFallida({
+      porCampo: sinCampos,
+      deLaOperacion: "No se pudo confirmar si el servidor registró la operación. Revisá los datos antes de reintentar.",
+      resultadoIncierto: true,
+      estado: null,
+    });
+    expect(mensaje).toBe(
+      "No se pudo confirmar si la venta se registró. Revisá el Historial antes de reintentar: " +
+        "el borrador se conserva y no se vuelve a enviar solo.",
+    );
   });
 });

@@ -7,7 +7,7 @@
 Programación III · Tecnicatura Universitaria en Programación a Distancia · UTN
 Unidad HTML, CSS y JavaScript · Revisor de la unidad: Prof. Matías Torres
 
-`HTML5` · `CSS3` · `JavaScript nativo` · `localStorage` · Sin librerías, frameworks ni CDNs
+`HTML5` · `CSS3` · `TypeScript` · `Vite` · Sin librerías de ejecución, frameworks ni CDNs
 
 </div>
 
@@ -34,8 +34,8 @@ TypeScript estricto y compilado con Vite.
 > repositorios con la forma de la API de producción
 > (`https://api.ismaelsuarez.me`). El **Catálogo ya lee los libros de la API**
 > por la base `/api` del mismo origen (`cliente-http-y-catalogo`); Libros,
-> Clientes, Ventas e Historial siguen guardando en `localStorage` hasta
-> `operaciones-contra-api` (ver [Origen de los datos](#origen-de-los-datos)). El registro y el inicio de sesión ya existen
+> Clientes, Ventas e Historial también leen y registran en la API
+> (`operaciones-contra-api`; ver [Origen de los datos](#origen-de-los-datos)). El registro y el inicio de sesión ya existen
 > (`registro-login-y-sesion`) y las páginas se protegen según el rol
 > (`proteccion-de-rutas-y-roles`). Todo vive solo en el navegador: la API no
 > tiene usuarios y queda abierta (ver [Usuarios de demostración y
@@ -59,6 +59,7 @@ TypeScript estricto y compilado con Vite.
 - [Imágenes y recursos](#imágenes-y-recursos)
 - [Estructura de carpetas](#estructura-de-carpetas)
 - [Entrega](#entrega)
+- [Backend local para verificar escrituras](#backend-local-para-verificar-escrituras)
 - [Para quienes desarrollan](#para-quienes-desarrollan)
 
 ---
@@ -95,11 +96,15 @@ error al crear una cuenta o ingresar.
 
 **Cambio de origen**: lo guardado en el navegador cuando se abría desde
 `file://` no se ve en `http://localhost:5173`, porque `localStorage` es propio de
-cada origen. Es esperado: en el origen nuevo se vuelven a cargar los ejemplos.
+cada origen. Es esperado: los datos de negocio ya no se guardan en el navegador
+(salen de la API) y los usuarios se vuelven a sembrar en el origen nuevo.
 
 **API de producción**: el navegador usa la base `/api` del mismo origen
 (`VITE_API_BASE`); `npm run dev` y `npm run preview` la reenvían a
-`https://api.ismaelsuarez.me` (variable `API_PROXY_TARGET`). Ver `.env.example`.
+`https://api.ismaelsuarez.me` (variable `API_PROXY_TARGET`), **pero solo las
+lecturas**: toda escritura hacia producción se rechaza con `403` en el propio
+servidor de desarrollo. Para probar altas y ventas, ver [Backend local para
+verificar escrituras](#backend-local-para-verificar-escrituras). Ver `.env.example`.
 
 ## Navegación entre vistas
 
@@ -152,68 +157,119 @@ repite al recargar y al volver atrás con el historial. La sesión solo vale si
 
 ### Libros
 
-- Editorial y género se eligen con selectores, y los autores con casillas;
-  todas las opciones salen de los datos locales. El género incluye
-  «Sin clasificar».
-- Validaciones:
+- Editorial y género se eligen con selectores, y los autores con casillas; cada
+  autor marcado tiene su **rol** (autor, coautor, traductor o ilustrador; «autor»
+  por defecto). El orden de autoría es el de las casillas marcadas, desde 1.
+  Todas las opciones salen de la API y se leen una sola vez al abrir la
+  página; el género incluye «Sin clasificar». Si esa lectura falla, se muestra
+  el error y no se puede registrar.
+- El alta envía el libro a la API (`POST /libros/`). **Stock**: es obligatorio
+  porque la API lo exige, pero la aplicación no lo muestra ni lo descuenta
+  (la venta no lo modifica y el alcance excluye la gestión de stock).
+- Validaciones, todas junto al campo y antes de enviar nada:
 
   | Campo | Regla |
   |---|---|
-  | Título | Obligatorio |
-  | ISBN | Obligatorio y sin repetir; se compara sin espacios ni guiones (sin dígito de control) |
-  | Precio | Numérico y mayor que cero |
-  | Editorial | Obligatoria y existente en los datos |
-  | Autores | Al menos uno; todos existentes en los datos |
-  | Género | Opcional; si se elige, debe existir en los datos |
+  | Título | Obligatorio, hasta 200 caracteres |
+  | ISBN | Obligatorio, hasta 20 caracteres (se cuenta el texto escrito, sin espacios exteriores) y sin repetir; se compara sin espacios ni guiones (sin dígito de control) |
+  | Precio | Numérico, mayor que cero y hasta 99 999 999,99; se envía redondeado al centavo (`1500,125` se envía como `1500.13`) |
+  | Stock | Obligatorio, entero de 0 a 2 147 483 647 |
+  | Editorial | Obligatoria y existente en la API |
+  | Autores | Al menos uno, todos existentes en la API y con uno de los cuatro roles |
+  | Género | Opcional; si se elige, debe existir en la API |
 
-- Los errores se muestran junto a cada campo. El alta correcta actualiza la
-  tabla sin recargar la página.
+  Los límites de longitud, de precio y de stock son los de la base del servidor,
+  que la API no valida y que, excedidos, producirían un error 500.
+- Un rechazo de la API (`409` o `422`) se muestra en texto, junto al campo cuando
+  la API lo identifica, y el formulario conserva lo escrito. El alta correcta
+  vuelve a leer el listado y limpia el formulario sin recargar la página. Si la
+  API no responde, no se anuncia éxito: se avisa que no se pudo confirmar si se
+  guardó y se vuelve a leer el listado para que se compruebe antes de
+  reintentar. Nunca se reenvía solo, y el botón queda deshabilitado mientras
+  la operación está en curso (un doble clic envía una sola vez).
 
 ### Clientes
 
-- Alta con **nombre completo, email y teléfono**:
+- Alta con **nombre completo, email, teléfono y dirección**. Se hace en dos
+  escrituras: primero el cliente (`POST /clientes/`) y, solo si se registró, su
+  perfil con teléfono y dirección (`POST /clientes/{id}/perfil`):
 
   | Campo | Regla |
   |---|---|
-  | Nombre completo | Obligatorio |
-  | Email | Obligatorio, con formato válido y sin repetir (se compara sin espacios exteriores y sin distinguir mayúsculas) |
-  | Teléfono | Obligatorio, de 7 a 15 dígitos; admite `+`, espacios, guiones, puntos y paréntesis |
+  | Nombre completo | Obligatorio, hasta 100 caracteres |
+  | Email | Obligatorio, con formato válido, hasta 255 caracteres y sin repetir (se compara sin espacios exteriores y sin distinguir mayúsculas) |
+  | Teléfono | Obligatorio, de 7 a 15 dígitos y hasta 30 caracteres; admite `+`, espacios, guiones, puntos y paréntesis |
+  | Dirección | Opcional, hasta 255 caracteres; vacía se envía como `null` |
 
-- **Edición de datos de contacto** desde el botón «Editar» de cada fila, con
-  las mismas validaciones. Las ventas ya confirmadas conservan los datos del
-  cliente que tenían al confirmarse.
+- **El perfil se guarda una sola vez**: la API no permite modificarlo. Un cliente
+  con perfil muestra su teléfono y dirección sin ningún control de edición; uno
+  sin perfil (se ve «—») ofrece el botón «Completar perfil de <nombre>», que
+  registra teléfono y dirección una única vez con las mismas reglas del alta. Si
+  el cliente se registra pero el perfil falla, se avisa que quedó sin perfil y
+  se ofrece completarlo; nunca se repite ninguna escritura sola. Un `409` del
+  perfil («El cliente ya tiene un perfil») se muestra y se vuelve a leer el
+  listado.
+- Un `409` del alta del cliente (email ya registrado en la API) se muestra junto
+  al email y el formulario conserva lo escrito.
+- **No hay edición ni borrado de clientes** (regla dura 9). Quien necesite
+  corregir un dato debe hacerlo en la API fuera de esta aplicación.
+- **Limitación del listado**: la API no tiene `GET /clientes/`, así que el listado
+  se arma consultando `GET /clientes/1`, `/2`, `/3`… hasta encontrar 10 ausentes
+  seguidos pasado el mayor cliente que mencionan las ventas. Más de 10 altas
+  fallidas seguidas sin un alta posterior exitosa ocultarían a los clientes
+  siguientes hasta que una venta los mencione.
 
 ### Ventas
 
+- Los clientes y los libros se leen de la API **una sola vez, al abrir la
+  página**; componer la venta no hace solicitudes. Si esa lectura falla, se
+  muestra el error y no se puede confirmar. Un cliente o libro dado de alta
+  después aparece al volver a abrir Ventas.
 - Se elige un cliente existente y se agregan renglones con un libro y una
-  cantidad entera mayor que cero.
+  cantidad entera mayor que cero (hasta 2 147 483 647).
 - Agregar otra vez el mismo libro suma la cantidad al renglón existente, sin
   duplicar filas. Antes de confirmar se pueden cambiar cantidades y quitar
   renglones.
-- Cada renglón muestra libro, cantidad, precio unitario y subtotal, con dos
-  decimales. El total es la suma de los subtotales.
+- Cada renglón muestra libro, cantidad, precio unitario y subtotal **estimados**,
+  con dos decimales, y el total estimado es la suma de los subtotales.
 - No se confirma una venta sin cliente, sin renglones o con cantidades
   inválidas.
-- Al confirmar, el formulario se limpia, se muestra un mensaje y se abre un
-  **comprobante interno no fiscal** animado, que se puede imprimir o guardar
-  como PDF desde el navegador. Con «reducir movimiento» activado, el
-  comprobante aparece sin animación.
+- **La venta no controla ni descuenta el stock**: se puede vender más unidades
+  que el stock del libro y el stock no cambia al vender, porque la API no lo
+  descuenta y el alcance excluye la gestión de stock.
+- Al confirmar se envía a la API (`POST /ventas/`) solo el cliente y, por
+  renglón, el libro y la cantidad. **Los importes definitivos los calcula el
+  servidor**: copia el precio vigente en ese momento, calcula los subtotales y el
+  total, y el **comprobante interno no fiscal** (que se puede imprimir o guardar
+  como PDF desde el navegador, con animación o sin ella si el navegador tiene
+  «reducir movimiento») muestra la venta que devolvió la API; si el precio
+  cambió desde que se abrió la página, puede diferir del borrador.
+- Si la API rechaza la venta, se muestra su mensaje y el borrador se conserva.
+  Si no responde, **no se anuncia éxito**: se avisa que no se pudo confirmar si
+  la venta se registró y que conviene revisar el Historial antes de reintentar;
+  el borrador se conserva y no se reenvía solo. El botón queda deshabilitado
+  mientras la confirmación está en curso (un doble clic o Enter envía una sola
+  venta).
 
-**Importes**: el precio unitario se redondea al centavo antes de multiplicar,
-con las mitades hacia arriba. Por ejemplo, `1500,125` pasa a `1500,13` y dos
-unidades cuestan `3000,26`. Los cálculos usan centavos enteros.
+**Importes estimados**: el precio unitario se redondea al centavo antes de
+multiplicar, con las mitades hacia arriba. Por ejemplo, `1500,125` pasa a
+`1500,13` y dos unidades cuestan `3000,26`. Los cálculos usan centavos enteros.
 
 ### Historial
 
 - Tabla con identificador, fecha (`dd/mm/aaaa HH:mm`, hora local), cliente y
-  total, y un botón para ver el detalle de cada venta.
-- El historial lee la **copia guardada en la venta**, no el catálogo actual:
-  si después cambia el precio de un libro, la venta conserva sus importes.
+  total, y un botón para ver el detalle de cada venta. Se leen **todas las
+  páginas** de ventas de la API (de 100 en 100), en el orden que entrega.
+- El detalle usa solo los datos de la venta: el **precio unitario, los subtotales
+  y el total son los registrados al confirmar** y no cambian si después cambia el
+  precio de un libro; el **título del libro y el cliente son los actuales** (la
+  API los informa al consultar) y no se muestra el ISBN porque la API no lo
+  entrega. El Historial no consulta el catálogo.
 - Las ventas confirmadas no se editan ni se eliminan desde la interfaz.
 
 > [!NOTE]
 > «Sin recargar» significa dentro de la misma página donde ocurre el alta.
-> Al navegar a otra vista, esa vista vuelve a leer el almacenamiento.
+> Al navegar a otra vista, esa vista vuelve a leer la API.
 
 ## Funcionalidades pendientes
 
@@ -221,8 +277,7 @@ No hay funcionalidades pendientes: las cinco vistas y todas las operaciones
 de la consigna están implementadas.
 
 Además del alcance pedido, el proyecto incluye la ficha de lectura del
-Catálogo, el comprobante de venta y la edición de los datos de contacto de
-los clientes.
+Catálogo y el comprobante de venta.
 
 ---
 
@@ -267,118 +322,109 @@ con el rol `client` y llega al Catálogo; la página no ofrece elegir el rol.
 
 ## Origen de los datos
 
-Durante la transición a la API conviven dos orígenes, cada vista con uno solo:
+Todos los datos de negocio salen de la API de producción
+(`https://api.ismaelsuarez.me`) por la base `/api` del mismo origen, solo por
+medio de los repositorios (`src/datos/proveedor.ts`):
 
-| Vistas | Origen | Detalle |
-|---|---|---|
-| Catálogo | API de producción, solo lectura | `GET /api/libros/` (todas las páginas de 100) y `GET /api/libros/{id}` por cada libro para traer sus autores, con a lo sumo 4 consultas a la vez; tiempo límite de 10 s por solicitud |
-| Libros, Clientes, Ventas e Historial | `localStorage` del navegador | Sin ninguna solicitud a `/api`; pasan a la API en `operaciones-contra-api` |
+| Vistas | Operaciones contra `/api` |
+|---|---|
+| Catálogo | Solo lectura: `GET /api/libros/` (todas las páginas de 100) y `GET /api/libros/{id}` por cada libro para traer sus autores, con a lo sumo 4 consultas a la vez; tiempo límite de 10 s por solicitud |
+| Libros, Clientes, Ventas e Historial | Lecturas de libros, editoriales, géneros, autores, clientes y ventas; altas con `POST /libros/`, `POST /clientes/`, `POST /clientes/{id}/perfil` y `POST /ventas/`. Solo `GET` y `POST`: nunca `PUT`, `PATCH` ni `DELETE` |
 
-Consecuencias que conviene conocer (no hay aviso en la interfaz):
+Lo que conviene conocer:
 
-- Un libro dado de alta en Libros **no aparece en el Catálogo** (sí en el
-  selector de Ventas), y los libros del Catálogo no son los de ejemplo de
-  Libros: los identificadores y los datos difieren hasta `operaciones-contra-api`.
+- **Escrituras**: el servidor devuelve el registro creado (identificadores,
+  precio copiado, subtotales y total); la aplicación muestra eso y no lo
+  enviado. Una escritura sin respuesta (red o tiempo agotado) se informa como
+  resultado desconocido y **nunca se reintenta sola**.
+- **Listados por sondeo**: la API no ofrece `GET /clientes/` ni `GET /autores/`.
+  Esos listados se arman pidiendo `GET /clientes/{id}` y `GET /autores/{id}`
+  desde el 1, de a 4 a la vez, hasta 10 identificadores seguidos sin registro
+  posteriores al mayor identificador que mencionan las ventas o los libros. Como
+  la API no borra, solo más de 10 altas fallidas seguidas ocultarían a los
+  registros siguientes hasta que una venta o un libro los mencione.
+- **Stock**: se carga al registrar un libro (la API lo exige), pero no se
+  muestra ni se descuenta: la venta no controla el stock.
+- **Producción desde desarrollo**: `npm run dev` y `npm run preview` rechazan con
+  `403` toda escritura cuyo destino sea la API de producción; las pruebas
+  automatizadas no usan la red. Ver [Backend local para verificar
+  escrituras](#backend-local-para-verificar-escrituras).
 - Sin el reenvío de `/api` (por ejemplo, si se sirve `dist/` con otro servidor)
-  o con la API caída, el Catálogo no muestra libros: informa «No se pudieron
-  cargar los datos.» y el motivo. No hay respaldo local, a propósito.
-- La aplicación nunca escribe en la API: solo se envían solicitudes `GET`.
+  o con la API caída, las vistas informan «No se pudieron cargar los datos.» y
+  el motivo. No hay respaldo local, a propósito.
 
 ## Datos y almacenamiento
 
-### Datos iniciales
-
-Viven en `src/datos/local/datos-iniciales.ts`: 6 libros, 2 editoriales, 2 géneros,
-3 autores y 3 clientes ficticios, con identificadores estables (`lib-01`,
-`edi-01`, `gen-01`, `aut-01`, `cli-01`…). Editoriales, géneros y autores
-**no se guardan** en `localStorage`: se leen siempre de ese archivo. Las
-vistas no lo importan: piden los datos a los repositorios
-(`src/datos/repositorios.ts`), que para las vistas de gestión implementa un
-adaptador sobre `localStorage`; el Catálogo ya usa la API
-(`cliente-http-y-catalogo`) y `operaciones-contra-api` reemplazará el resto sin
-tocar las vistas.
-
-### Cómo funciona `localStorage`
-
-- Solo `src/datos/local/almacen-local.ts` nombra `localStorage`; los almacenes de
-  `src/datos/local/` (datos de la librería, usuarios y sesión) reciben el
-  almacenamiento ya obtenido.
-- En el **primer inicio**, la raíz de composición (`src/datos/proveedor.ts`)
-  carga los ejemplos en las claves que faltan. Al volver a abrir, se recuperan los registros guardados **sin
-  duplicar** los datos iniciales.
-- Identificadores nuevos: `lib-07`, `cli-04`, `ven-01`, etc.
+El navegador guarda únicamente dos claves, ambas de acceso y sesión (ver
+[Usuarios de demostración y seguridad](#usuarios-de-demostración-y-seguridad)):
 
 | Clave | Contenido |
 |---|---|
-| `libreria.libros` | Arreglo de libros: `id`, `titulo`, `isbn`, `precio`, `editorialId`, `generoId` (o `null`) y `autorIds` |
-| `libreria.clientes` | Arreglo de clientes: `id`, `nombreCompleto`, `email` y, en los registrados desde la interfaz, `telefono` |
-| `users` y `userData` | Usuarios y sesión: ver [Usuarios de demostración y seguridad](#usuarios-de-demostración-y-seguridad) |
-| `libreria.ventas` | Arreglo de ventas `{id, fecha, cliente, renglones, total}`; cada renglón guarda `libroId`, `titulo`, `isbn`, `cantidad`, `precioUnitario` y `subtotal` |
+| `users` | Usuarios registrados (contraseña protegida con PBKDF2) y el administrador inicial |
+| `userData` | Sesión vigente |
+
+- Solo `src/datos/local/almacen-local.ts` nombra `localStorage`; los almacenes de
+  `src/datos/local/` (usuarios y sesión) reciben el almacenamiento ya obtenido.
+- Las claves `libreria.libros`, `libreria.clientes` y `libreria.ventas` de
+  versiones anteriores **ya no se leen, escriben, migran ni borran**: quedan en el
+  navegador sin uso y ninguna vista muestra sus registros. Para quitarlas a
+  mano: Herramientas de desarrollo → **Application** (o *Almacenamiento*) →
+  **Local Storage** → origen `http://localhost:5173` (o el de la compilación
+  servida) → borrar esas tres claves.
+- No hay datos iniciales de ejemplo en el código: los libros, clientes y ventas
+  son los que tiene la API (para pruebas manuales, la siembra del backend local).
 
 ### Límites
 
 > [!IMPORTANT]
-> `localStorage` depende del **navegador**, del **perfil** y de la
-> **ubicación desde la que se abre** el proyecto. Los datos **no se comparten
-> entre usuarios** ni entre perfiles, no se respaldan en un servidor y se
-> pierden si el navegador borra los datos del sitio. No se sincronizan
-> pestañas abiertas en simultáneo.
-
-**Claves dañadas**: si una clave no contiene un arreglo JSON válido (por
-ejemplo, porque se alteró a mano), la aplicación no la repara ni la
-sobrescribe. Libros y clientes muestran los ejemplos de forma provisoria; el
-historial informa que no pudo leer las ventas. La clave se reemplaza recién
-con el próximo alta de ese tipo (ejemplos + registro nuevo).
-
-### Ubicación y estructura del catálogo guardado
-
-Herramientas de desarrollo → **Application** (o *Almacenamiento*) →
-**Local Storage** → origen `http://localhost:5173` (o el de la compilación servida) → clave `libreria.libros`. Un libro
-guardado tiene esta forma:
-
-```json
-{
-  "id": "lib-01",
-  "titulo": "El faro de los vientos",
-  "isbn": "978-987-000-001-1",
-  "precio": 1500,
-  "editorialId": "edi-01",
-  "generoId": "gen-01",
-  "autorIds": ["aut-01"]
-}
-```
-
-**Para reproducir CM-6** en una copia de prueba: confirmar una venta, editar
-**solo** el campo `precio` del libro dentro de `libreria.libros` (sin tocar
-`libreria.ventas`), recargar Historial y comparar el detalle con los importes
-confirmados.
+> `users` y `userData` dependen del **navegador**, del **perfil** y de la
+> **ubicación desde la que se abre** el proyecto: no se comparten entre
+> usuarios ni perfiles, no se respaldan en un servidor y se pierden si el
+> navegador borra los datos del sitio. Los datos de negocio, en cambio, viven en
+> la API y los ven todos los navegadores.
 
 ---
 
 ## Casos manuales: resultado observado
 
-**Ejecución del 2026-11-09** (migración a Vite y TypeScript, change
-`migracion-vite-typescript`): recorrido automatizado en Google Chrome 157
-(modo headless, mediante el protocolo de herramientas de desarrollo) contra
-`npm run dev` (`http://localhost:5173`) y contra la copia del commit anterior a
-la migración abierta con `file://`, ambas con un perfil nuevo y el mismo guion.
-En los ocho casos los resultados de la versión nueva coinciden con los de la
-versión anterior; las únicas diferencias son la hora de las ventas, el orden de
-las claves del JSON guardado y que la versión anterior registraba en la consola
-un error 404 por imágenes de maqueta inexistentes, que ya no existe. No
-reemplaza una pasada visual en el navegador habitual de cada integrante ni una
-auditoría con lector de pantalla.
+**Ejecución del 2026-11-09** (change `operaciones-contra-api`): recorrido
+automatizado en Google Chrome 157 (modo headless, mediante el protocolo de
+herramientas de desarrollo), con un perfil nuevo por pasada, **contra el backend
+local de Docker** (sección «Backend local para verificar escrituras»: clon del
+backend en `469b8db`, PostgreSQL 17, imagen construida desde `despliegue/` y
+sembrada con `seed.py` dentro del contenedor local) y `API_PROXY_TARGET=http://127.0.0.1:8000`
+con el servidor de desarrollo de Vite (`npx vite`, equivalente a `npm run dev`).
+Antes de la primera escritura, `GET /api/health/ready` por el reenvío respondió
+`{"estado":"ok","base":"disponible"}` y el registro del contenedor local mostró
+esa solicitud. Ninguna escritura se envió a producción: la única corrida con el
+destino por defecto fue CM-17, con el servidor de desarrollo detrás de un
+bloqueo adicional que impide cualquier solicitud que no sea de lectura hacia un
+destino remoto. Las condiciones de red (fallo, retención hasta el tiempo
+agotado y latencia) se provocaron con la interceptación de solicitudes del
+protocolo de herramientas de desarrollo, equivalente a bloquearlas desde la
+pestaña de red. Los anchos de 320 px y 1280 px se comprobaron con el
+desplazamiento horizontal de la página sin barras de desplazamiento clásicas
+(como en un móvil). No reemplaza una pasada visual en el navegador habitual de
+cada integrante ni una auditoría con lector de pantalla (**no ejecutadas**).
 
 | Caso | Resultado esperado | Resultado observado | Estado |
 |---|---|---|---|
-| **CM-1** Búsqueda en mayúsculas, vacía e inexistente | Coincidencias sin distinguir mayúsculas; catálogo completo; mensaje sin resultados | Reejecutado el 2026-11-09 con los libros de producción (`cliente-http-y-catalogo`; 5 libros ese día): `RAYUELA` → 1 tarjeta; `   rayuela   ` → 1; vacía → 5; `ISIDRO` → 1; `zzzz` → 0 con «No se encontraron libros cuyo título coincida con la búsqueda.»; «Sin clasificar» solo en «La invención de Morel»; la ficha de «Rayuela» abre con su cubierta textual y la sinopsis «Este libro todavía no tiene una sinopsis cargada.». No ejecutado con datos de producción: un título con `<i>&</i>` (ningún libro lo trae; el código usa `textContent`, verificado en la ejecución anterior con los datos locales) | ✅ Aprobado |
-| **CM-2** Alta de libro con ISBN existente y luego nuevo | El duplicado se rechaza; el válido aparece en la tabla de Libros y en la venta; su aparición en el Catálogo queda **pendiente hasta `operaciones-contra-api`** | Parte de gestión reejecutada el 2026-11-09: `978 987 000 001 1` rechazado con «Ese ISBN ya está registrado.»; el libro nuevo aparece en la tabla (7 filas) y en el selector de Ventas (7 libros); repetirlo sin recargar se rechaza. Parte del Catálogo: el libro **no aparece** (el Catálogo lee la API de producción: 5 tarjetas) | ✅ Aprobado (gestión) · ⏳ Pendiente (Catálogo) |
-| **CM-3** Alta de cliente con email inválido, existente en mayúsculas y nuevo | Se rechazan los dos primeros; el nuevo aparece en listado y selección | `ana@` rechazado con «El email no tiene un formato válido.»; `  LAURA.MENDOZA@CORREO.TEST ` rechazado con «Ese email ya está registrado.»; el cliente nuevo se registra sin recargar (4 filas) y aparece en el selector de Ventas; editar conservando el email propio se acepta y usar el de otro cliente se rechaza | ✅ Aprobado |
-| **CM-4** Venta sin cliente, cantidad 0, negativa o decimal; libro repetido | No se confirma; el duplicado no crea otro renglón | Sin cliente: «Seleccione un cliente existente.»; `0`, `-2`, `1.5` y vacía rechazadas con «La cantidad debe ser un entero positivo seguro.»; un renglón editado a `0` bloquea la confirmación; el libro repetido suma en la misma fila (1 + 1 → 2); el borrador se conserva ante cada error | ✅ Aprobado |
-| **CM-5** Dos unidades a 1500 y una a 2000 | Subtotales 3000 y 2000; total 5000; detalle en el historial | $ 3000,00 y $ 2000,00; total $ 5000,00; comprobante `ven-01` y venta guardada con el mismo detalle en Historial | ✅ Aprobado |
-| **CM-6** Cambio exclusivo del precio en el catálogo guardado | El historial conserva los importes confirmados; que el Catálogo muestre el precio nuevo queda **pendiente hasta `operaciones-contra-api`** | Parte de gestión reejecutada el 2026-11-09: precio del primer libro guardado cambiado a 9999 y página recargada: el detalle de la venta conserva $ 1500,00 / $ 4500,00, $ 2000,00 / $ 2000,00 y total $ 6500,00; Libros muestra $ 9999,00; con `libreria.ventas` ilegible el Historial informa «No se pudo consultar el historial. Los datos guardados no se modificaron…» y la clave queda intacta. Parte del Catálogo: no refleja el cambio porque lee los precios de la API (no el almacén local) | ✅ Aprobado (gestión) · ⏳ Pendiente (Catálogo) |
-| **CM-7** Recarga después de altas y venta | Se recuperan los datos sin duplicar | Tras dos recargas de las cinco vistas: 7 libros, 4 clientes y 1 venta, sin duplicar ejemplos ni ventas | ✅ Aprobado |
-| **CM-8** Teclado y anchos de 320 px y 1280 px | Foco visible, controles utilizables y tablas con desplazamiento propio | Sin desplazamiento horizontal de la página en las cinco vistas ni con los diálogos abiertos (ficha, edición de cliente, comprobante y detalle de venta); foco visible en todas las paradas de Tab y foco contenido dentro de los diálogos | ✅ Aprobado |
+| **CM-1** Búsqueda en mayúsculas, vacía e inexistente | Coincidencias sin distinguir mayúsculas; catálogo completo; mensaje sin resultados | Con los 5 libros sembrados: `RAYUELA` → 1 tarjeta; `   rayuela   ` → 1; vacía → 5; `ISIDRO` → 1; `zzzz` → 0 con «No se encontraron libros cuyo título coincida con la búsqueda.»; «Sin clasificar» solo en «La invención de Morel»; la ficha de «Rayuela» abre con la sinopsis «Este libro todavía no tiene una sinopsis cargada.». No ejecutado: un título con `<i>&</i>` (ningún libro de la base lo trae; el código usa `textContent`) | ✅ Aprobado |
+| **CM-2** Alta de libro con ISBN existente y luego nuevo | El duplicado se rechaza; el válido aparece en Libros, en la venta y en el Catálogo | `978 950 00 0001 1` (con separadores distintos) rechazado con «Ese ISBN ya está registrado.» y sin solicitud; «El Aleph» (ISBN `978-950-00-0006-6`) se registra y la tabla pasa de 5 a 6 filas; el Catálogo lo muestra (8 tarjetas al final de la pasada) y el selector de Ventas lo ofrece; repetirlo sin recargar se rechaza como ISBN existente | ✅ Aprobado |
+| **CM-3** Alta de cliente con email inválido, existente en mayúsculas y nuevo | Se rechazan los dos primeros; el nuevo aparece en listado y selección | `ana@` rechazado con «El email no tiene un formato válido.»; `  ANA@EXAMPLE.COM ` rechazado con «Ese email ya está registrado.»; ninguno envió solicitud; «María Nueva» se registra con su perfil (4 filas) y, tras la pasada, el selector de Ventas ofrece todos los clientes de la base (7 de 7) | ✅ Aprobado |
+| **CM-4** Venta sin cliente, cantidad 0, negativa o decimal; libro repetido | No se confirma; el duplicado no crea otro renglón | Sin cliente ni renglones: «Seleccione un cliente existente.» y «Agregue al menos un libro a la venta.»; `0`, `-2`, `1.5` y vacía rechazadas con «La cantidad debe ser un entero positivo seguro.»; un renglón editado a `0` bloquea la confirmación («Corrija la cantidad marcada o quite ese renglón antes de continuar.»); el libro repetido suma en la misma fila (1 + 1 → 2); sin cliente se conserva el borrador. Ninguno envió `POST` | ✅ Aprobado |
+| **CM-5** Dos unidades a 1500 y una a 2000 | Subtotales 3000 y 2000; total 5000; detalle en el historial | Con dos libros de 1500 y 2000 creados en el backend local: borrador $ 5000,00; `POST /ventas/` con `{"cliente_id":1,"renglones":[{"libro_id":10,"cantidad":2},{"libro_id":11,"cantidad":1}]}` → 201; comprobante `ven-03` con $ 3.000,00, $ 2.000,00 y total $ 5.000,00 (los importes son los del servidor); el Historial muestra la venta con el mismo detalle | ✅ Aprobado |
+| **CM-6** Cambio exclusivo del precio del libro | El historial conserva los importes confirmados; el Catálogo muestra el precio nuevo | `PATCH /libros/10` a 9999 en el backend local y recarga del Historial: el detalle de `ven-03` conserva $ 1.500,00 × 2 = $ 3000,00, $ 2000,00 y total $ 5000,00; Libros y el Catálogo muestran $ 9999,00. El título del otro libro, renombrado también en la base, aparece con su nombre actual (así lo informa la API, ver «Historial») | ✅ Aprobado |
+| **CM-7** Recarga después de altas y venta | Se recuperan los datos sin duplicar | Tras tres cargas de cada vista, con la base en 10 libros, 7 clientes y 7 ventas: Libros 10, Clientes 7, Historial 7, Catálogo 10 y Ventas con 7 clientes y 10 libros, en las tres cargas | ✅ Aprobado |
+| **CM-8** Teclado y anchos de 320 px y 1280 px | Foco visible, controles utilizables y tablas con desplazamiento propio | Sin desplazamiento horizontal de la página en las cinco vistas a 1280 px y a 320 px ni con los cuatro diálogos abiertos (ficha del Catálogo, «Completar perfil», detalle de venta y comprobante); con Tab se recorrieron 17 (Catálogo), 18 (Libros), 14 (Clientes), 12 (Ventas) y 15 (Historial) paradas, todas con indicador de foco visible; al abrirse cada diálogo el foco queda dentro (en el detalle de venta, en su título). No ejecutado: recorrido completo con Tab dentro de cada diálogo ni lector de pantalla | ✅ Aprobado (alcance indicado) |
+| **CM-17** Escritura hacia producción desde desarrollo | La guarda responde `403` y nada llega a producción | Con el destino por defecto, «Registrar cliente» muestra «No se registró el cliente. El servidor de desarrollo no reenvía escrituras a la API de producción. Usá un backend local con API_PROXY_TARGET.»; la pestaña de red muestra un solo `POST /api/clientes/` → 403 y un `POST /api/clientes/` directo por el reenvío también da 403 con ese `detail`; el bloqueo adicional registró 0 escrituras hacia producción | ✅ Aprobado |
+| **CM-18** Alta de libro con stock y autores con rol | El libro se registra con stock, roles y orden; el precio se redondea al centavo | Título «El Aleph», precio `1500,125`, stock 3, dos autores (el primero «autor», el segundo «traductor») y doble clic en «Registrar libro»: un solo `POST /libros/` con `"precio":"1500.13","stock":3` y `"autores":[{"autor_id":2,"rol":"autor","orden":1},{"autor_id":3,"rol":"traductor","orden":2}]` → 201; la base muestra precio 1500.13, stock 3 y esos roles y orden; la tabla sube a 6 filas | ✅ Aprobado |
+| **CM-19** Libros: validaciones y rechazos | Los límites se rechazan junto al campo sin enviar; los rechazos y la falta de respuesta se informan | Stock vacío, `-1`, `2,5` y `abc`: error junto al stock y 0 solicitudes (el navegador entrega vacío para `abc` y se informa «El stock es obligatorio.»); título de 201 caracteres, ISBN de 21 y precio `100000000` rechazados junto a su campo; stock `0` registrado; un ISBN creado en el backend local después de abrir la página produce el `409` mostrado como «No se registró el libro. No se pudo crear el libro: editorial, genero, autor o isbn invalidos.» con el formulario conservado; con el `POST` cortado, no se anuncia éxito y se informa que no se pudo confirmar si se guardó y que se volvió a leer el listado | ✅ Aprobado |
+| **CM-20** Clientes: alta con perfil y rechazos | El alta envía cliente y perfil; los límites se rechazan; un email repetido se muestra junto al email | Nombre vacío, de 101 caracteres, teléfono de 3 y de 31 dígitos, dirección de 256 y email de 256 caracteres: error junto al campo y 0 solicitudes; «María Nueva» con teléfono `+54 9 261 123 4567` y dirección «Calle 1 100» y doble clic: `POST /clientes/` → 201 y `POST /clientes/4/perfil` → 201 (una sola vez cada uno), y la base guarda el perfil; un email creado en el backend local después de abrir la página produce el `409` mostrado junto al email, sin enviar el perfil y con lo escrito conservado; el cliente sembrado con perfil no ofrece ningún control de edición | ✅ Aprobado |
+| **CM-21** Clientes: perfil fallido y «Completar perfil» | El cliente queda registrado sin perfil y se puede completar una sola vez | Con `POST /clientes/{id}/perfil` cortado: el cliente se registra (201), se informa «El cliente se registró, pero no se pudo guardar su teléfono y dirección: No se pudo confirmar si el servidor registró la operación… Podés completarlos con «Completar perfil».» y la fila muestra «—»; sin el corte, «Completar perfil» valida el teléfono (`12` rechazado), guarda con 201 y la fila muestra teléfono y dirección sin botón; si el perfil se crea por fuera antes, el `409` se muestra («El cliente ya tiene un perfil.») y se vuelve a leer el listado | ✅ Aprobado |
+| **CM-22** Venta: importes del servidor y sin control de stock | El servidor calcula los importes; no se controla ni descuenta el stock | Componer (agregar, cambiar, quitar) no hizo ninguna solicitud; 12 unidades de un libro con stock 10 se aceptan, la venta se confirma y el stock sigue en 10; con el precio de un libro cambiado a 2500 en la base después de armar un borrador de $ 4000,00, el comprobante muestra $ 2.500,00 × 2 = $ 5.000,00 (los del servidor) | ✅ Aprobado |
+| **CM-23** Venta: falta de respuesta y envío único | No se anuncia éxito, el borrador se conserva y no se reenvía solo; un doble envío es una venta | Con el `POST /ventas/` cortado: «No se pudo confirmar si la venta se registró. Revisá el Historial antes de reintentar…», borrador intacto y una sola solicitud (la base no registró la venta); con el `POST` retenido el mensaje apareció a los 10,1 s, con una sola solicitud y Enter durante la espera sin efecto; el reintento manual posterior se registró; con 2,5 s de latencia, un clic y dos Enter enviaron un solo `POST /ventas/`, el botón estuvo deshabilitado durante la espera y se registró una venta | ✅ Aprobado |
+| **CM-24** Lectura inicial fallida | Se informa el error y no se puede registrar ni confirmar | Con las solicitudes a `/api/clientes/*` cortadas, Ventas y Clientes muestran «No se pudieron cargar los datos. No se pudo conectar con el servidor.» y sus botones quedan deshabilitados; con `/api/editoriales/*` cortadas, Libros hace lo mismo; con `/api/ventas/*` cortadas, el Historial informa el error y no una lista vacía | ✅ Aprobado |
 
 ### Casos manuales del acceso y la sesión (`registro-login-y-sesion`)
 
@@ -404,7 +450,9 @@ Ventas; en el login, Tab recorre el enlace de la otra página de acceso, Email,
 Contraseña, «Ingresar» y el enlace al registro, todos con contorno visible de 3 px,
 y Enter en la contraseña envía el formulario; en el registro no se recorrió Tab. No se repitió la pasada con lector de pantalla.
 
-**Regresión de CM-1 a CM-8 con sesión de administrador** (sesión iniciada por el
+**Regresión de CM-1 a CM-8 con sesión de administrador** (resultados de aquel change,
+cuando Libros, Clientes y Ventas aún usaban `localStorage`; los vigentes están en la
+tabla de arriba) (sesión iniciada por el
 login, perfil nuevo): CM-1 a CM-5 y CM-7 se repitieron y dieron el mismo resultado
 que el registro anterior (búsquedas 1, 1, 6 y 0 tarjetas; ISBN existente
 rechazado y libro nuevo en tabla, Catálogo y Ventas con 7; email `ana@` y
@@ -515,9 +563,9 @@ src/
 │   ├── client/catalogo/    Catálogo y ficha de lectura
 │   └── admin/              libros, clientes, ventas (con comprobante) e historial
 ├── logica/                 funciones puras sin DOM: texto, dinero, fecha, catálogo, libros, clientes, ventas, usuarios, sesión
-├── datos/                  repositorios, raíz de composición (proveedor), base /api, cliente HTTP y adaptador local
-│   ├── api/                base /api, cliente HTTP de solo lectura, errores de la API, paginación y repositorios sobre la API
-│   └── local/              almacén local (único que nombra localStorage), datos iniciales, repositorios locales,
+├── datos/                  repositorios, raíz de composición (proveedor), base /api y adaptador de la API
+│   ├── api/                base /api, cliente HTTP (GET y POST), errores de la API, paginación y sondeo, repositorios sobre la API y guarda de escrituras de desarrollo
+│   └── local/              almacenamiento del navegador (único que nombra localStorage),
 │                           almacén de usuarios y sesión, contraseñas (PBKDF2) y usuario administrador inicial
 ├── types/                  tipos de dominio alineados con la API de producción
 ├── utils/                  dom.ts (mensajes, errores de campo, cierre de sesión), auth.ts y navigate.ts (sesión y navegación)
@@ -539,6 +587,83 @@ Quedan fuera: `tests/`, `docs/`, `discovery/`, `knowledge-base/`, `openspec/`,
 
 ---
 
+## Backend local para verificar escrituras
+
+`npm run dev` y `npm run preview` reenvían las lecturas a la API de producción,
+pero **rechazan con `403`, en el propio servidor de desarrollo, toda escritura
+(`POST`, `PUT`, `PATCH`, `DELETE`) cuyo destino sea `https://api.ismaelsuarez.me`**.
+No hay variable para desactivar esa guarda. Para probar altas y ventas se usa un
+backend local construido desde el mismo código que producción, sobre PostgreSQL
+en Docker. Requiere Docker y Git; nada de esto forma parte de la entrega.
+
+1. Clonar el backend fuera de este repositorio y preparar la red y el volumen:
+
+   ```bash
+   BACKEND=$(mktemp -d)
+   git clone https://github.com/pabloavalos25/Actividad--ibreria-api.git "$BACKEND/repo"
+   docker network create tpi-libreria-red
+   docker volume create tpi-libreria-datos
+   ```
+
+2. Levantar PostgreSQL 17 y esperar a que acepte conexiones:
+
+   ```bash
+   docker run -d --name tpi-libreria-pg --network tpi-libreria-red \
+     -e POSTGRES_USER=libreria -e POSTGRES_PASSWORD=solo-local -e POSTGRES_DB=libreria \
+     -v tpi-libreria-datos:/var/lib/postgresql/data postgres:17
+   until docker exec tpi-libreria-pg pg_isready -U libreria -d libreria; do sleep 1; done
+   ```
+
+3. Construir la imagen desde `despliegue/` (el mismo `Dockerfile` y las mismas
+   migraciones que producción) y arrancarla, publicada solo en el loopback:
+
+   ```bash
+   docker build -t tpi-libreria-api "$BACKEND/repo/despliegue"
+   docker run -d --name tpi-libreria-api --network tpi-libreria-red \
+     -e DATABASE_URL=postgresql+asyncpg://libreria:solo-local@tpi-libreria-pg:5432/libreria \
+     -e ECHO_SQL=false -p 127.0.0.1:8000:8000 tpi-libreria-api
+   until [ "$(docker inspect -f '{{.State.Health.Status}}' tpi-libreria-api)" = healthy ]; do sleep 1; done
+   ```
+
+4. Sembrar los datos de ejemplo **solo dentro del contenedor local** (vacía y
+   vuelve a cargar esa base, nunca la de producción):
+
+   ```bash
+   docker exec tpi-libreria-api python seed.py
+   ```
+
+5. Comprobar el destino **antes de cualquier escritura**: debe responder el
+   contenedor local, en el loopback.
+
+   ```bash
+   curl -s http://127.0.0.1:8000/health/ready      # {"estado":"ok","base":"disponible"}
+   ```
+
+6. Arrancar el frontend apuntando al backend local y repetir la comprobación
+   por el reenvío:
+
+   ```bash
+   API_PROXY_TARGET=http://127.0.0.1:8000 npm run dev
+   curl -s http://localhost:5173/api/health/ready  # {"estado":"ok","base":"disponible"}
+   docker logs tpi-libreria-api | tail -n 3         # muestra esa solicitud
+   ```
+
+   Nunca escribir con `API_PROXY_TARGET` vacío o distinto de `127.0.0.1`.
+
+7. Apagar y limpiar al terminar:
+
+   ```bash
+   docker rm -f tpi-libreria-api tpi-libreria-pg
+   docker network rm tpi-libreria-red
+   docker volume rm tpi-libreria-datos
+   docker rmi tpi-libreria-api
+   rm -rf "$BACKEND"
+   ```
+
+La suite automatizada (`npm test`) no necesita nada de esto: no sale a la red.
+
+---
+
 ## Para quienes desarrollan
 
 <details>
@@ -552,7 +677,7 @@ npx tsc          # comprobación de tipos de src/ y tests/
 ```
 
 Las pruebas no necesitan navegador y no sustituyen los recorridos manuales
-(CM-1 a CM-16).
+(CM-1 a CM-24).
 
 ### Memoria compartida (Engram)
 

@@ -12,3 +12,9 @@ export function normalizarEmail(email: string): string {
 
 /** Formato simple de email, que se aplica tras normalizar (SU-07 / PA-11). */
 export const FORMATO_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Cierra un mensaje con punto si no termina en `.`, `!` o `?`; los mensajes del servidor suelen venir sin él. */
+export function conPuntoFinal(texto: string): string {
+  const limpio = String(texto).trim();
+  return limpio === "" || /[.!?]$/.test(limpio) ? limpio : `${limpio}.`;
+}

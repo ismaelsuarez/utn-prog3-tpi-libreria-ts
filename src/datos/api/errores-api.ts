@@ -6,24 +6,34 @@ import type { ErrorDeCampo } from "../../types/formulario";
 export const MENSAJE_RED = "No se pudo conectar con el servidor.";
 export const MENSAJE_TIEMPO = "El servidor tardó demasiado en responder.";
 export const MENSAJE_FORMATO = "La respuesta del servidor no tiene el formato esperado.";
+export const MENSAJE_RESULTADO_INCIERTO =
+  "No se pudo confirmar si el servidor registró la operación. Revisá los datos antes de reintentar.";
 
 export type TipoDeErrorApi = "http" | "red" | "tiempo" | "formato";
 
-/** Falla al consultar la API. `estado` es el código HTTP, o `null` si no hubo respuesta. */
+/**
+ * Falla al consultar la API. `estado` es el código HTTP, o `null` si no hubo
+ * respuesta. `resultadoIncierto` es verdadero solo en una escritura sin
+ * respuesta, con un 502 o 504 del intermediario o con un 2xx ilegible (ver
+ * `cliente-http.ts`), es decir, cuando no se sabe si la API la registró.
+ */
 export class ErrorDeApi extends ErrorDeRepositorio {
   readonly tipo: TipoDeErrorApi;
   readonly estado: number | null;
+  readonly resultadoIncierto: boolean;
 
   constructor(
     mensaje: string,
     tipo: TipoDeErrorApi,
     estado: number | null = null,
     errores: ErrorDeCampo[] = [],
+    resultadoIncierto = false,
   ) {
     super(mensaje, errores);
     this.name = "ErrorDeApi";
     this.tipo = tipo;
     this.estado = estado;
+    this.resultadoIncierto = resultadoIncierto;
   }
 }
 

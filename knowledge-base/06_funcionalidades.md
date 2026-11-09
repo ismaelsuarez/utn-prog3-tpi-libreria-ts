@@ -228,9 +228,9 @@ entrega 3.
 **Para** no perder lo registrado
 
 **Criterios de aceptación**:
-- [ ] Se guardan libros, clientes y ventas en `localStorage`.
-- [ ] En el primer inicio se cargan los ejemplos.
-- [ ] Al recargar no se duplican ejemplos ni ventas.
+- [ ] Se guardan libros, clientes y ventas en la API (desde `operaciones-contra-api`; antes, en `localStorage`).
+- [ ] La aplicación no carga ejemplos: los datos iniciales son los sembrados en la API.
+- [ ] Al recargar no se duplican libros, clientes ni ventas.
 
 **Reglas relacionadas**: RN-PE-01 a RN-PE-03
 
@@ -244,12 +244,12 @@ entrega 3.
 | # | Caso | Resultado esperado |
 |---|---|---|
 | CM-1 | Búsqueda con una parte del título en mayúsculas; luego búsqueda vacía y texto inexistente | Coincidencias sin distinguir mayúsculas; catálogo completo; mensaje sin resultados |
-| CM-2 | Alta de libro con ISBN existente y luego con ISBN nuevo | El duplicado se rechaza; el válido aparece en catálogo y selección de venta |
+| CM-2 | Alta de libro con ISBN existente y luego con ISBN nuevo | El duplicado se rechaza; el válido aparece en Libros, Catálogo y selección de venta |
 | CM-3 | Alta de cliente con email inválido, email existente en mayúsculas y email nuevo | Se rechazan los dos primeros; el nuevo aparece en listado y selección |
 | CM-4 | Venta sin cliente, cantidad cero, negativa o decimal; libro repetido | No se confirma; el duplicado no crea otro renglón |
 | CM-5 | Venta válida: dos unidades a 1500 y una a 2000 | Subtotales 3000 y 2000; total 5000; detalle conservado en el historial |
-| CM-6 | Venta confirmada y cambio exclusivo del precio de catálogo guardado, en una copia de prueba del proyecto | Tras recargar, el precio unitario, los subtotales y el total de esa venta conservan los valores confirmados |
-| CM-7 | Recarga después de altas y venta | Se recuperan datos sin duplicar ejemplos ni ventas |
+| CM-6 | Venta confirmada y cambio exclusivo del precio del libro con `PATCH /libros/{id}` en el backend local (nunca en producción) | Tras recargar el Historial, el precio unitario, los subtotales y el total de esa venta conservan los valores confirmados |
+| CM-7 | Recarga después de altas y venta | Se recuperan los datos de la API sin duplicar libros, clientes ni ventas |
 | CM-8 | Navegación por teclado y anchos de 320 px y 1280 px | Foco visible, controles utilizables y tabla con desplazamiento propio si lo necesita |
 
 **Reglas relacionadas**: RN-GL-07
@@ -266,9 +266,9 @@ entrega 3.
 - [ ] Navegación entre vistas.
 - [ ] Funcionalidades implementadas y pendientes.
 - [ ] Ubicación de los datos iniciales.
-- [ ] Funcionamiento y límites de `localStorage` (depende del navegador, del
-      perfil y de la ubicación de apertura; no comparte información entre usuarios).
-- [ ] Ubicación y estructura del catálogo guardado, para reproducir CM-6.
+- [ ] Origen de los datos (la API) y qué se guarda aún en `localStorage` (usuarios y
+      sesión; depende del navegador y no comparte información entre usuarios).
+- [ ] Cómo reproducir CM-6 con el backend local de Docker.
 - [ ] Resultados de los casos manuales.
 - [ ] Procedencia de imágenes ajenas, si existen.
 - [ ] La entrega es una carpeta o archivo comprimido con `index.html`, los

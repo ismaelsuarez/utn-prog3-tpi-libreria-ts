@@ -1,7 +1,8 @@
 // Vista Historial: ventas confirmadas y detalle de cada una. La única fuente son
-// las instantáneas que entrega el repositorio de ventas: no se consulta el
-// catálogo ni los clientes, de modo que un cambio posterior de precio no altera
-// lo ya confirmado.
+// las ventas que entrega el repositorio (todas las páginas de la API): no se
+// consulta el catálogo ni los clientes, de modo que un cambio posterior de
+// precio no altera lo ya confirmado. El título del libro y el cliente son los
+// actuales; precio unitario, subtotales y total, los registrados al confirmar.
 import "../../../main";
 import { repositorioVentas } from "../../../datos/proveedor";
 import { formatearImporte } from "../../../logica/dinero";
@@ -35,9 +36,7 @@ async function iniciar(): Promise<void> {
     vaciarNodo(filasDetalle);
     for (const renglon of venta.renglones) {
       const fragmento = plantillaDetalle.content.cloneNode(true) as DocumentFragment;
-      const libro =
-        renglon.isbn === undefined ? renglon.titulo : `${renglon.titulo} · ISBN ${renglon.isbn}`;
-      buscar(fragmento, '[data-campo="libro"]', HTMLElement).textContent = libro;
+      buscar(fragmento, '[data-campo="libro"]', HTMLElement).textContent = renglon.titulo;
       buscar(fragmento, '[data-campo="cantidad"]', HTMLElement).textContent = String(renglon.cantidad);
       buscar(fragmento, '[data-campo="precio-unitario"]', HTMLElement).textContent = formatearImporte(renglon.precio_unitario);
       buscar(fragmento, '[data-campo="subtotal"]', HTMLElement).textContent = formatearImporte(renglon.subtotal);
@@ -71,7 +70,7 @@ async function iniciar(): Promise<void> {
   tablaVentas.hidden = true;
   contenedorVentas.hidden = true;
   try {
-    // Única fuente: instantáneas guardadas.
+    // Única fuente: las ventas de la API.
     const ventas = await repositorioVentas.listar();
     ventas.forEach(pintarVenta);
     if (ventas.length === 0) {
@@ -84,7 +83,7 @@ async function iniciar(): Promise<void> {
     vaciarNodo(filasVentas);
     mostrarMensaje(
       mensajeError,
-      "No se pudo consultar el historial. Los datos guardados no se modificaron. Revisa el acceso al almacenamiento e inténtalo nuevamente al recargar.",
+      "No se pudo consultar el historial. Las ventas registradas no se modificaron. Revisá la conexión con el servidor e intentá nuevamente al recargar la página.",
     );
   }
 }

@@ -1,5 +1,6 @@
-// Lógica pura de la venta: borrador, cálculo en centavos enteros e instantánea
-// histórica. No toca el DOM ni el almacenamiento.
+// Lógica pura de la venta: borrador y cálculo en centavos enteros (el importe
+// definitivo y el precio histórico los fija y guarda el servidor). No toca el DOM
+// ni el almacenamiento.
 //
 // Entrada: renglones `{ libro_id, cantidad }` con cantidad numérica o texto
 // numérico no vacío, siempre entera positiva y segura. Los precios del catálogo
@@ -11,11 +12,13 @@
 // `{ ok: false, errores }`, sin sustituir el último borrador válido. Cada
 // renglón devuelto copia título, ISBN, cantidad, unitario y subtotal, y ninguna
 // operación modifica las entradas ni comparte objetos de renglón.
-import type { ClienteRef } from "../types/cliente";
 import type { ErrorDeCampo } from "../types/formulario";
-import type { Dinero, FechaIso, Id } from "../types/primitivos";
-import type { Renglon } from "../types/venta";
+import type { Dinero, Id } from "../types/primitivos";
+import type { Renglon, VentaNueva } from "../types/venta";
 import { aCentavos, centavosADinero } from "./dinero";
+import type { FalloDeOperacion } from "./errores-de-formulario";
+import { ENTERO_MAXIMO_DE_LA_API, ENTERO_MAXIMO_DE_LA_API_TEXTO } from "./limites";
+import { conPuntoFinal } from "./texto";
 
 /** Renglón de un borrador de venta, tal como lo arma el formulario. */
 export interface RenglonBorrador {
@@ -31,7 +34,7 @@ export interface LibroVendible {
   precio: Dinero | number;
 }
 
-/** Renglón calculado: el de la API más el ISBN, que la instantánea local conserva. */
+/** Renglón calculado del borrador: el de la API más el ISBN del libro, que el borrador muestra. */
 export interface RenglonCalculado extends Renglon {
   isbn: string;
 }
@@ -40,33 +43,26 @@ export type ResultadoCalculo =
   | { ok: true; errores: []; renglones: RenglonCalculado[]; total: Dinero }
   | { ok: false; errores: ErrorDeCampo[] };
 
-/** Venta lista para guardar: todavía sin identificador. */
-export interface VentaConstruida {
-  fecha: FechaIso;
-  cliente: ClienteRef;
-  renglones: RenglonCalculado[];
-  total: Dinero;
-}
-
-export type ResultadoConstruccion =
-  | { ok: true; errores: []; venta: VentaConstruida }
-  | { ok: false; errores: ErrorDeCampo[] };
-
 const MENSAJE_CANTIDAD = "La cantidad debe ser un entero positivo seguro.";
-const FORMATO_FECHA =
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+const MENSAJE_CANTIDAD_MAXIMA = `La cantidad no puede superar ${ENTERO_MAXIMO_DE_LA_API_TEXTO}.`;
 
 function rechazo(campo: string, mensaje: string): { ok: false; errores: ErrorDeCampo[] } {
   return { ok: false, errores: [{ campo, mensaje }] };
 }
 
-function cantidadValida(cantidad: unknown): cantidad is number | string {
+function esEnteroPositivoSeguro(cantidad: unknown): cantidad is number | string {
   return (
     (typeof cantidad === "number" ||
       (typeof cantidad === "string" && cantidad.trim() !== "")) &&
     Number.isSafeInteger(Number(cantidad)) &&
     Number(cantidad) > 0
   );
+}
+
+/** Mensaje de rechazo de una cantidad, o `null` si es un entero positivo que la API acepta. */
+function mensajeDeCantidad(cantidad: unknown): string | null {
+  if (!esEnteroPositivoSeguro(cantidad)) return MENSAJE_CANTIDAD;
+  return Number(cantidad) > ENTERO_MAXIMO_DE_LA_API ? MENSAJE_CANTIDAD_MAXIMA : null;
 }
 
 interface LibroResuelto {
@@ -79,7 +75,6 @@ interface LibroResuelto {
 function calcular<R extends RenglonBorrador>(
   renglones: readonly R[],
   resolverLibro: (renglon: R) => LibroResuelto | undefined,
-  permiteCero: boolean,
 ): ResultadoCalculo {
   const ids = renglones.map((renglon) => renglon.libro_id);
   if (new Set(ids).size !== ids.length) {
@@ -90,8 +85,9 @@ function calcular<R extends RenglonBorrador>(
   let totalCentavos = 0;
   const calculados: RenglonCalculado[] = [];
   for (const renglon of renglones) {
-    if (!cantidadValida(renglon.cantidad)) {
-      errores.push({ campo: "cantidad", mensaje: MENSAJE_CANTIDAD });
+    const mensajeCantidad = mensajeDeCantidad(renglon.cantidad);
+    if (mensajeCantidad !== null) {
+      errores.push({ campo: "cantidad", mensaje: mensajeCantidad });
       continue;
     }
     const libro = resolverLibro(renglon);
@@ -100,7 +96,7 @@ function calcular<R extends RenglonBorrador>(
       continue;
     }
     const centavos = aCentavos(libro.precio);
-    if (centavos === null || (!permiteCero && Number(libro.precio) === 0)) {
+    if (centavos === null || Number(libro.precio) === 0) {
       errores.push({
         campo: "libro",
         mensaje: "El precio del libro no es utilizable en una venta.",
@@ -143,7 +139,6 @@ export function calcularVenta(
   return calcular(
     renglones,
     (renglon) => libros.find((libro) => libro.id === renglon.libro_id),
-    false,
   );
 }
 
@@ -153,7 +148,8 @@ export function agregarRenglon(
   cantidad: unknown,
   libros: readonly LibroVendible[],
 ): ResultadoCalculo {
-  if (!cantidadValida(cantidad)) return rechazo("cantidad", MENSAJE_CANTIDAD);
+  const mensajeCantidad = mensajeDeCantidad(cantidad);
+  if (mensajeCantidad !== null) return rechazo("cantidad", mensajeCantidad);
   const existente = renglones.some((renglon) => renglon.libro_id === libroId);
   const nuevos: RenglonBorrador[] = existente
     ? renglones.map((renglon) =>
@@ -171,7 +167,8 @@ export function cambiarCantidad(
   cantidad: unknown,
   libros: readonly LibroVendible[],
 ): ResultadoCalculo {
-  if (!cantidadValida(cantidad)) return rechazo("cantidad", MENSAJE_CANTIDAD);
+  const mensajeCantidad = mensajeDeCantidad(cantidad);
+  if (mensajeCantidad !== null) return rechazo("cantidad", mensajeCantidad);
   if (!renglones.some((renglon) => renglon.libro_id === libroId)) {
     return rechazo("libro", "El libro no pertenece al borrador.");
   }
@@ -216,66 +213,43 @@ export function validarVenta(
   return [...errores, ...calcularVenta(renglones, libros).errores];
 }
 
-/**
- * Arma la instantánea de la venta (sin identificador): copia los datos del
- * cliente y de cada renglón. No consulta el catálogo ni el reloj: debe llamarse
- * tras `validarVenta`, con los renglones ya calculados y la fecha suministrada.
- */
-export function construirVenta(
-  cliente: ClienteRef | null,
-  renglones: readonly RenglonCalculado[],
-  fecha: FechaIso,
-): ResultadoConstruccion {
-  const errores: ErrorDeCampo[] = [];
-  if (!cliente?.id) {
-    errores.push({ campo: "cliente", mensaje: "Seleccione un cliente existente." });
-  }
-  if (renglones.length === 0) {
-    errores.push({ campo: "renglones", mensaje: "Agregue al menos un libro a la venta." });
-  }
-  if (typeof fecha !== "string" || !FORMATO_FECHA.test(fecha) || !Number.isFinite(Date.parse(fecha))) {
-    errores.push({ campo: "fecha", mensaje: "La fecha de confirmación no es válida." });
-  }
-  const resultado = calcular(
-    renglones,
-    (renglon) => ({
-      id: renglon.libro_id,
-      titulo: renglon.titulo,
-      isbn: renglon.isbn,
-      precio: renglon.precio_unitario,
-    }),
-    true,
-  );
-  errores.push(...resultado.errores);
-  if (
-    resultado.ok &&
-    renglones.some((renglon, indice) => {
-      const calculado = resultado.renglones[indice];
-      return (
-        renglon.precio_unitario !== calculado?.precio_unitario ||
-        renglon.subtotal !== calculado.subtotal
-      );
-    })
-  ) {
-    errores.push({
-      campo: "renglones",
-      mensaje: "Los importes del borrador no coinciden con sus cantidades y unitarios.",
-    });
-  }
-  if (errores.length > 0 || !resultado.ok || !cliente) return { ok: false, errores };
-  return {
-    ok: true,
-    errores: [],
-    venta: {
-      fecha,
-      cliente: { id: cliente.id, nombre: cliente.nombre, email: cliente.email },
-      renglones: resultado.renglones,
-      total: resultado.total,
-    },
-  };
-}
-
 /** Código con el que se muestra una venta (`1` → `ven-01`), como en la versión anterior. */
 export function codigoDeVenta(id: Id): string {
   return `ven-${String(id).padStart(2, "0")}`;
+}
+
+/**
+ * Cuerpo de `POST /ventas/`: solo el identificador del cliente y, por renglón, el
+ * del libro y la cantidad. El precio, los subtotales y el total los calcula el
+ * servidor con el precio vigente al confirmar.
+ */
+export function ventaNuevaDesdeBorrador(
+  clienteId: Id,
+  renglones: readonly RenglonBorrador[],
+): VentaNueva {
+  return {
+    cliente_id: clienteId,
+    renglones: renglones.map((renglon) => ({
+      libro_id: renglon.libro_id,
+      cantidad: Number(renglon.cantidad),
+    })),
+  };
+}
+
+/**
+ * Mensaje de una confirmación que no se registró. Ante una falta de respuesta
+ * no se sabe si la venta quedó: se pide revisar el Historial y no se reenvía.
+ */
+export function mensajeDeVentaFallida(fallo: FalloDeOperacion): string {
+  if (fallo.resultadoIncierto) {
+    return (
+      "No se pudo confirmar si la venta se registró. Revisá el Historial antes de reintentar: " +
+      "el borrador se conserva y no se vuelve a enviar solo."
+    );
+  }
+  const motivos = [
+    ...(fallo.deLaOperacion === null ? [] : [fallo.deLaOperacion]),
+    ...fallo.porCampo.map((error) => error.mensaje),
+  ];
+  return `${motivos.map(conPuntoFinal).join(" ")} El borrador se conserva.`.trim();
 }

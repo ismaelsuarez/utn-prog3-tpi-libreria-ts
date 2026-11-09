@@ -33,3 +33,4 @@
 | PA-12 | Resuelta | ¿El detalle de una venta se muestra en la misma página de Historial o en una página aparte? **En la misma página** (DD-11, change `estructura-y-pantallas-html`) | — | Equipo |
 | PA-13 | Baja | ¿Se usan imágenes ajenas? Si las hay, el README debe indicar su procedencia | Change 6 | Equipo |
 | PA-14 | Baja | ¿Cómo se excluyen de la entrega las carpetas de desarrollo (`tests/`, `openspec/`, `knowledge-base/`, `discovery/`, `docs/`)? | Entrega | Equipo |
+| PA-15 | Media | Producción tiene 5 libros y la consigna pide al menos 6 (el resto de los mínimos se cumple: 3 editoriales, 3 géneros, 5 autores y 3 clientes). `operaciones-contra-api` no escribe en producción para completarlo. ¿Se registra el sexto libro desde la aplicación desplegada como operación real del bibliotecario, se pide al responsable del backend o se declara la diferencia en la entrega? | Entrega | Equipo |

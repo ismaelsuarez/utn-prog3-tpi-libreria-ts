@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { crearClienteHttp, TIEMPO_LIMITE_POR_DEFECTO_MS } from "../../../src/datos/api/cliente-http";
-import { ErrorDeApi } from "../../../src/datos/api/errores-api";
+import { ErrorDeApi, MENSAJE_RESULTADO_INCIERTO } from "../../../src/datos/api/errores-api";
 
 type Solicitar = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -65,10 +65,10 @@ describe("crearClienteHttp: dirección, método y cabeceras", () => {
     expect(init.body).toBeUndefined();
   });
 
-  test("expone solo la operación obtener: sin escrituras", () => {
+  test("expone solo obtener y enviar: ni PUT, ni PATCH, ni DELETE", () => {
     const cliente = crearClienteHttp({ base: "/api", solicitar: solicitarCon(() => respuestaJson([])) });
-    expect(Object.keys(cliente)).toEqual(["obtener"]);
-    expect(Reflect.has(cliente, "post")).toBe(false);
+    expect(Object.keys(cliente).sort()).toEqual(["enviar", "obtener"]);
+    expect(Reflect.has(cliente, "put")).toBe(false);
     expect(Reflect.has(cliente, "patch")).toBe(false);
     expect(Reflect.has(cliente, "delete")).toBe(false);
   });
@@ -284,5 +284,183 @@ describe("crearClienteHttp: fetch global por defecto", () => {
     expect(falso).toHaveBeenCalledTimes(1);
     expect(falso.mock.calls[0]?.[0]).toBe("/api/libros/?limit=5");
     expect((falso.mock.calls[0]?.[1] as RequestInit).method).toBe("GET");
+  });
+});
+
+describe("crearClienteHttp: enviar (POST con cuerpo JSON)", () => {
+  const cuerpoDeCliente = { nombre: "Ana Gómez", email: "ana@example.com" };
+
+  test("arma la dirección como obtener, envía POST con JSON y devuelve el JSON del 201", async () => {
+    const creado = { id: 4, nombre: "Ana Gómez", email: "ana@example.com", perfil: null };
+    const solicitar = solicitarCon(() => respuestaJson(creado, 201));
+    const cliente = crearClienteHttp({ base: "/api/", solicitar });
+
+    const resultado = await cliente.enviar("POST", "/clientes/", cuerpoDeCliente);
+
+    expect(resultado).toEqual(creado);
+    expect(solicitar).toHaveBeenCalledTimes(1);
+    expect(solicitar.mock.calls[0]?.[0]).toBe("/api/clientes/");
+    const init = solicitar.mock.calls[0]?.[1] as RequestInit;
+    expect(init.method).toBe("POST");
+    expect(init.headers).toEqual({ Accept: "application/json", "Content-Type": "application/json" });
+    expect(init.body).toBe('{"nombre":"Ana Gómez","email":"ana@example.com"}');
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  test("serializa null y anidados tal cual (dirección vacía como null)", async () => {
+    const solicitar = solicitarCon(() => respuestaJson({ id: 1 }, 201));
+    await crearClienteHttp({ base: "/api", solicitar }).enviar("POST", "/clientes/4/perfil", {
+      telefono: "1155550101",
+      direccion: null,
+    });
+    expect((solicitar.mock.calls[0]?.[1] as RequestInit).body).toBe('{"telefono":"1155550101","direccion":null}');
+  });
+
+  test("409 con detail de texto: error http con el estado, sin resultado incierto", async () => {
+    const solicitar = solicitarCon(() => respuestaJson({ detail: "Ya existe un cliente con ese email" }, 409));
+    const error = await falla(crearClienteHttp({ base: "/api", solicitar }).enviar("POST", "/clientes/", cuerpoDeCliente));
+    expect(error.tipo).toBe("http");
+    expect(error.estado).toBe(409);
+    expect(error.message).toBe("Ya existe un cliente con ese email");
+    expect(error.errores).toEqual([]);
+    expect(error.resultadoIncierto).toBe(false);
+    expect(solicitar).toHaveBeenCalledTimes(1);
+  });
+
+  test("422 con lista de detalles: un error por campo", async () => {
+    const cuerpo = {
+      detail: [{ type: "missing", loc: ["body", "stock"], msg: "Field required" }],
+    };
+    const solicitar = solicitarCon(() => respuestaJson(cuerpo, 422));
+    const error = await falla(crearClienteHttp({ base: "/api", solicitar }).enviar("POST", "/libros/", {}));
+    expect(error.estado).toBe(422);
+    expect(error.message).toBe("Field required");
+    expect(error.errores).toEqual([{ campo: "stock", mensaje: "Field required" }]);
+    expect(error.resultadoIncierto).toBe(false);
+  });
+
+  // Un 502 o 504 lo produce el intermediario: la API pudo haber registrado el
+  // alta antes de que se perdiera la respuesta.
+  test.each([502, 504])("%i en una escritura: resultado incierto con el estado y una sola solicitud", async (estado) => {
+    const solicitar = solicitarCon(
+      () => new Response("<html>Gateway</html>", { status: estado, headers: { "content-type": "text/html" } }),
+    );
+    const error = await falla(crearClienteHttp({ base: "/api", solicitar }).enviar("POST", "/ventas/", {}));
+    expect(error.tipo).toBe("http");
+    expect(error.estado).toBe(estado);
+    expect(error.resultadoIncierto).toBe(true);
+    expect(error.message).toBe(MENSAJE_RESULTADO_INCIERTO);
+    expect(solicitar).toHaveBeenCalledTimes(1);
+  });
+
+  test("500 en una escritura: error del servidor, sin resultado incierto", async () => {
+    const solicitar = solicitarCon(
+      () => new Response("Internal Server Error", { status: 500, headers: { "content-type": "text/plain" } }),
+    );
+    const error = await falla(crearClienteHttp({ base: "/api", solicitar }).enviar("POST", "/ventas/", {}));
+    expect(error.message).toBe("El servidor respondió con un error (500).");
+    expect(error.resultadoIncierto).toBe(false);
+  });
+
+  test("201 que no es JSON: el alta respondió como hecha, pero su resultado es incierto", async () => {
+    const solicitar = solicitarCon(
+      () => new Response("<!doctype html>", { status: 201, headers: { "content-type": "text/html" } }),
+    );
+    const error = await falla(crearClienteHttp({ base: "/api", solicitar }).enviar("POST", "/ventas/", {}));
+    expect(error.tipo).toBe("formato");
+    expect(error.estado).toBe(201);
+    expect(error.resultadoIncierto).toBe(true);
+    expect(error.message).toBe(MENSAJE_RESULTADO_INCIERTO);
+    expect(solicitar).toHaveBeenCalledTimes(1);
+  });
+
+  test("falla de red: resultado incierto con el mensaje fijo y una sola solicitud", async () => {
+    const solicitar = vi.fn<Solicitar>().mockRejectedValue(new TypeError("Failed to fetch"));
+    const error = await falla(crearClienteHttp({ base: "/api", solicitar }).enviar("POST", "/clientes/", cuerpoDeCliente));
+    expect(error.tipo).toBe("red");
+    expect(error.estado).toBeNull();
+    expect(error.resultadoIncierto).toBe(true);
+    expect(error.message).toBe(
+      "No se pudo confirmar si el servidor registró la operación. Revisá los datos antes de reintentar.",
+    );
+    expect(error.message).toBe(MENSAJE_RESULTADO_INCIERTO);
+    expect(solicitar).toHaveBeenCalledTimes(1);
+  });
+
+  test("un lanzamiento síncrono de la función de solicitud también es resultado incierto", async () => {
+    const solicitar = vi.fn<Solicitar>(() => {
+      throw new TypeError("Failed to fetch");
+    });
+    const error = await falla(crearClienteHttp({ base: "/api", solicitar }).enviar("POST", "/clientes/", {}));
+    expect(error.resultadoIncierto).toBe(true);
+    expect(solicitar).toHaveBeenCalledTimes(1);
+  });
+
+  describe("tiempo límite", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    function solicitarQueNoResponde(): ReturnType<typeof vi.fn<Solicitar>> {
+      return vi.fn<Solicitar>(
+        (_url, init) =>
+          new Promise<Response>((_resolver, rechazar) => {
+            init.signal?.addEventListener("abort", () => rechazar(new DOMException("Cancelado", "AbortError")));
+          }),
+      );
+    }
+
+    test("sin respuesta a los 10 000 ms: resultado incierto y una sola solicitud, sin reintentar", async () => {
+      const solicitar = solicitarQueNoResponde();
+      const resultado = falla(crearClienteHttp({ base: "/api", solicitar }).enviar("POST", "/ventas/", {}));
+      await vi.advanceTimersByTimeAsync(10_000);
+      const error = await resultado;
+      expect(error.tipo).toBe("tiempo");
+      expect(error.resultadoIncierto).toBe(true);
+      expect(error.message).toBe(MENSAJE_RESULTADO_INCIERTO);
+      // Aunque pase mucho más tiempo, no hay un segundo intento.
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(solicitar).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    test("tras un 201 no queda ningún temporizador pendiente", async () => {
+      const solicitar = solicitarCon(() => respuestaJson({ id: 1 }, 201));
+      await crearClienteHttp({ base: "/api", solicitar }).enviar("POST", "/clientes/", {});
+      expect(vi.getTimerCount()).toBe(0);
+    });
+  });
+});
+
+describe("crearClienteHttp: las lecturas no marcan resultado incierto", () => {
+  test("una lectura sin respuesta conserva el mensaje de red y resultadoIncierto en falso", async () => {
+    const solicitar = vi.fn<Solicitar>().mockRejectedValue(new TypeError("Failed to fetch"));
+    const error = await falla(crearClienteHttp({ base: "/api", solicitar }).obtener("/libros/"));
+    expect(error.tipo).toBe("red");
+    expect(error.message).toBe("No se pudo conectar con el servidor.");
+    expect(error.resultadoIncierto).toBe(false);
+  });
+
+  test("una lectura que vence el tiempo conserva su mensaje y resultadoIncierto en falso", async () => {
+    vi.useFakeTimers();
+    try {
+      const solicitar = vi.fn<Solicitar>(
+        (_url, init) =>
+          new Promise<Response>((_resolver, rechazar) => {
+            init.signal?.addEventListener("abort", () => rechazar(new DOMException("Cancelado", "AbortError")));
+          }),
+      );
+      const resultado = falla(crearClienteHttp({ base: "/api", solicitar }).obtener("/libros/"));
+      await vi.advanceTimersByTimeAsync(10_000);
+      const error = await resultado;
+      expect(error.tipo).toBe("tiempo");
+      expect(error.message).toBe("El servidor tardó demasiado en responder.");
+      expect(error.resultadoIncierto).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

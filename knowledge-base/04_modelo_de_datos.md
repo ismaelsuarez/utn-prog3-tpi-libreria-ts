@@ -92,23 +92,24 @@ Cliente 1 ──────< N Venta 1 ──────< 1..N Renglón
 total y los datos descriptivos desde la propia venta. Nunca vuelve a buscarlos
 en el catálogo.
 
-## Persistencia en `localStorage`
+## Persistencia
 
-Se conservan libros, clientes y ventas. Editoriales, géneros y autores no se
-modifican y permanecen como datos iniciales en el código.
+Los datos de negocio (libros, editoriales, géneros, autores, clientes y ventas)
+**no se guardan en el navegador**: los lee y registra la API de producción por
+medio de los repositorios (`operaciones-contra-api`). El servidor asigna los
+identificadores (enteros), copia el precio vigente en cada renglón de venta y
+calcula subtotales y total; ese es el precio histórico (regla central de arriba).
 
-| Clave propuesta | Contenido |
-|---|---|
-| `libreria.libros` | Array de Libro (el catálogo guardado) |
-| `libreria.clientes` | Array de Cliente |
-| `libreria.ventas` | Array de Venta |
-
-- En el primer inicio se cargan los ejemplos.
-- En los inicios siguientes se recuperan los registros guardados sin duplicar
-  los datos iniciales.
-- La ubicación y la estructura del catálogo guardado se documentan en el
-  README, porque el docente modifica el precio de un libro allí para
-  comprobar el precio histórico.
+- El navegador conserva solo `users` y `userData` (siguiente sección).
+- Las claves `libreria.libros`, `libreria.clientes` y `libreria.ventas` que haya
+  dejado una versión anterior quedan **sin uso**: no se leen, escriben, migran ni
+  borran. El README explica cómo quitarlas a mano.
+- No hay datos iniciales de ejemplo en el código. Para pruebas manuales se siembra
+  el backend local (`python seed.py` dentro del contenedor local).
+- El stock se captura en el alta de un libro (la API lo exige) y no se gestiona:
+  la venta no lo valida ni lo descuenta.
+- El perfil de un cliente (teléfono y dirección) se crea una sola vez; la API no
+  permite modificarlo.
 
 ### Usuarios y sesión (serie TypeScript, `registro-login-y-sesion`)
 

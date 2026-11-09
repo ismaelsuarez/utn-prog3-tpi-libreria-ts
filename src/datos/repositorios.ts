@@ -1,14 +1,11 @@
 // Frontera de acceso a datos: las vistas dependen solo de estas interfaces y de
 // los tipos de dominio (`src/types/`), con la forma de los DTO de la API de
-// producción. Todas las operaciones son asíncronas porque la implementación HTTP
-// lo será. Hoy las implementa el adaptador local (`local/repositorios-locales.ts`)
-// y `proveedor.ts` es la raíz de composición.
-//
-// Las operaciones marcadas «SIN ENDPOINT» no existen en la API de producción
-// (que no se puede modificar); la aplicación actual las usa y el change
-// `operaciones-contra-api` decide su diseño contra la API.
+// producción. Todas las operaciones son asíncronas. Las implementa el adaptador
+// de la API (`api/repositorios-api.ts`) y `proveedor.ts` es la raíz de
+// composición. Solo hay las operaciones que la API ofrece (lectura y alta); no
+// hay edición ni borrado (regla dura 9).
 import type { Autor } from "../types/autor";
-import type { Cliente, ClienteCambios, ClienteNuevo, Perfil, PerfilNuevo } from "../types/cliente";
+import type { Cliente, ClienteNuevo, Perfil, PerfilNuevo } from "../types/cliente";
 import type { Editorial } from "../types/editorial";
 import type { Genero } from "../types/genero";
 import type { FiltroLibros } from "../types/api";
@@ -40,23 +37,19 @@ export interface RepositorioGeneros {
 }
 
 export interface RepositorioAutores {
-  /** SIN ENDPOINT: la API no ofrece `GET /autores/` (solo alta, detalle y edición). */
+  /** La API no ofrece `GET /autores/`: el adaptador lo arma sondeando `GET /autores/{id}`. */
   listar(): Promise<Autor[]>;
 }
 
 export interface RepositorioClientes {
-  /** SIN ENDPOINT: la API no ofrece `GET /clientes/`. */
+  /** La API no ofrece `GET /clientes/`: el adaptador lo arma sondeando `GET /clientes/{id}`. */
   listar(): Promise<Cliente[]>;
   /** `GET /clientes/{id}`. */
   obtener(id: Id): Promise<Cliente>;
   /** `POST /clientes/`. */
   crear(cliente: ClienteNuevo): Promise<Cliente>;
-  /** `POST /clientes/{id}/perfil`. */
+  /** `POST /clientes/{id}/perfil`: el perfil se crea una sola vez. */
   crearPerfil(id: Id, perfil: PerfilNuevo): Promise<Perfil>;
-  /** `PATCH /clientes/{id}`. */
-  actualizar(id: Id, cambios: ClienteCambios): Promise<Cliente>;
-  /** SIN ENDPOINT: la API no ofrece actualizar el perfil (teléfono) de un cliente. */
-  actualizarTelefono(id: Id, telefono: string): Promise<Cliente>;
 }
 
 export interface RepositorioVentas {

@@ -1,5 +1,6 @@
-// Ayudas de lectura masiva: recorrido de todas las páginas de un listado y
-// ejecución de tareas asíncronas con concurrencia acotada.
+// Ayudas de lectura masiva: recorrido de todas las páginas de un listado,
+// ejecución de tareas asíncronas con concurrencia acotada y sondeo por
+// identificador para los recursos que la API no lista.
 import { ErrorDeApi, MENSAJE_FORMATO } from "./errores-api";
 
 export const TAMANIO_DE_PAGINA = 100;
@@ -69,5 +70,94 @@ export function mapearConLimite<T, R>(
     };
 
     for (let i = 0; i < Math.min(Math.max(1, limite), total); i += 1) iniciarSiguiente();
+  });
+}
+
+/** Ausentes seguidos, posteriores al mayor identificador conocido, que cierran el sondeo. */
+export const HUECO_DE_SONDEO = 10;
+/** Consultas simultáneas del sondeo. */
+export const CONCURRENCIA_DE_SONDEO = 4;
+
+export interface OpcionesDeSondeo {
+  /** Identificadores que otra fuente asegura que existen: el sondeo no termina antes de pasarlos. */
+  conocidos?: readonly number[];
+  hueco?: number;
+  concurrencia?: number;
+}
+
+function esAusente(error: unknown): boolean {
+  return error instanceof ErrorDeApi && error.estado === 404;
+}
+
+/**
+ * Lista un recurso que la API solo ofrece por identificador: pide `obtener(1)`,
+ * `obtener(2)`… con a lo sumo `concurrencia` consultas en curso; un 404 es un
+ * identificador ausente y cualquier otra falla rechaza todo el listado (nunca
+ * se entrega uno parcial). Termina tras `hueco` ausentes seguidos posteriores al
+ * mayor identificador de `conocidos`. No se adelanta: no pide un identificador
+ * si, contando como ausentes los que siguen en curso, ya habría `hueco` ausentes
+ * seguidos antes de él. Entrega los encontrados por identificador creciente.
+ *
+ * Los huecos de identificadores solo nacen de altas fallidas (la API no borra),
+ * de modo que más de `hueco` altas fallidas seguidas ocultarían los registros
+ * siguientes hasta que otra fuente (`conocidos`) los mencione.
+ */
+export function sondearPorIdentificador<T>(
+  obtener: (id: number) => Promise<T>,
+  opciones: OpcionesDeSondeo = {},
+): Promise<T[]> {
+  const { conocidos = [], hueco = HUECO_DE_SONDEO, concurrencia = CONCURRENCIA_DE_SONDEO } = opciones;
+  const mayorConocido = conocidos.reduce((mayor, id) => Math.max(mayor, id), 0);
+  const limite = Math.max(1, concurrencia);
+
+  return new Promise<T[]>((resolver, rechazar) => {
+    const encontrados = new Map<number, T>();
+    // Estado por identificador: ausente confirmado, en curso o presente (ausencia de entrada = sin pedir).
+    const ausentes = new Set<number>();
+    const enCurso = new Set<number>();
+    let siguiente = 1;
+    let fallo = false;
+
+    const ausenteSeguidosHasta = (id: number): number => {
+      let cuenta = 0;
+      for (let actual = id; actual >= 1 && (ausentes.has(actual) || enCurso.has(actual)); actual -= 1) cuenta += 1;
+      return cuenta;
+    };
+    const puedePedirSiguiente = (): boolean =>
+      siguiente <= mayorConocido || ausenteSeguidosHasta(siguiente - 1) < hueco;
+
+    const avanzar = (): void => {
+      if (fallo) return;
+      while (enCurso.size < limite && puedePedirSiguiente()) {
+        const id = siguiente;
+        siguiente += 1;
+        enCurso.add(id);
+        // `async` convierte también un lanzamiento síncrono de `obtener` en rechazo.
+        void (async (): Promise<T> => obtener(id))().then(
+          (registro) => {
+            if (fallo) return;
+            enCurso.delete(id);
+            encontrados.set(id, registro);
+            avanzar();
+          },
+          (error: unknown) => {
+            if (fallo) return;
+            enCurso.delete(id);
+            if (!esAusente(error)) {
+              fallo = true;
+              rechazar(error);
+              return;
+            }
+            ausentes.add(id);
+            avanzar();
+          },
+        );
+      }
+      if (enCurso.size === 0) {
+        resolver([...encontrados.entries()].sort(([a], [b]) => a - b).map(([, registro]) => registro));
+      }
+    };
+
+    avanzar();
   });
 }

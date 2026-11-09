@@ -5,10 +5,10 @@
   line-height: 1.35;
 }
 
-/* Tres datos de contacto en una misma fila cuando hay espacio. */
-@media (min-width: 68rem) {
+/* Cuatro datos de contacto en dos columnas cuando hay espacio. */
+@media (min-width: 48rem) {
   .formulario--cliente {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -18,26 +18,13 @@
 }
 
 
-/* Acciones del directorio: borde dorado fino, sin efectos tridimensionales. */
-#tabla-clientes th:last-child,
-#tabla-clientes td[data-campo="acciones"] {
-  text-align: right;
-  white-space: nowrap;
-}
-#tabla-clientes .cliente-editar {
+/* «Completar perfil» de un cliente sin perfil: botón secundario junto al guion. */
+#tabla-clientes .boton--compacto {
   min-height: 2.25rem;
+  margin-left: 0.5rem;
   padding: 0.4rem 0.85rem;
-  color: #245044;
-  border: 1px solid #b99964;
-  background: #fffaf0;
   font-size: 0.82rem;
   font-weight: 700;
-}
-#tabla-clientes .cliente-editar:hover,
-#tabla-clientes .cliente-editar:focus-visible {
-  color: #143d33;
-  background: #f4e8d0;
-  border-color: #a67b3c;
 }
 
 /* Ventana nativa de edición, integrada a la estética editorial de El Faro. */
@@ -124,6 +111,4 @@
   .cliente-modal__formulario { padding: 1.25rem 1rem; }
   .cliente-modal__acciones > button { flex: 1 1 auto; }
 }
-@media (prefers-reduced-motion: reduce) {
-  #tabla-clientes .cliente-editar { transition: none; }
-}
+

@@ -1,15 +1,23 @@
-// Cliente HTTP de solo lectura sobre la base del mismo origen (`/api`). Solo
-// ofrece `GET`: la garantía «sin escrituras contra la API» es estructural. Toda
-// falla se rechaza como `ErrorDeApi` con un mensaje en texto.
+// Cliente HTTP sobre la base del mismo origen (`/api`). Ofrece `GET` para las
+// lecturas y `POST` con cuerpo JSON para las altas; no hay `PUT`, `PATCH` ni
+// `DELETE`, y ningún método se reintenta. Toda falla se rechaza como `ErrorDeApi`
+// con un mensaje en texto.
 import {
   ErrorDeApi,
   MENSAJE_FORMATO,
   MENSAJE_RED,
+  MENSAJE_RESULTADO_INCIERTO,
   MENSAJE_TIEMPO,
   interpretarCuerpoDeError,
 } from "./errores-api";
 
 export const TIEMPO_LIMITE_POR_DEFECTO_MS = 10_000;
+
+/**
+ * Estados que produce el intermediario (502, 504) y no la API: ante una
+ * escritura, la API pudo haberla registrado antes de que se perdiera la respuesta.
+ */
+const ESTADOS_DEL_INTERMEDIARIO = new Set([502, 504]);
 
 /** Función de solicitud inyectable; las pruebas entregan un doble sin red. */
 export type Solicitar = (url: string, init: RequestInit) => Promise<Response>;
@@ -26,6 +34,13 @@ export interface OpcionesClienteHttp {
 export interface ClienteHttp {
   /** `GET base + ruta` con los parámetros codificados; entrega el JSON recibido sin afirmar su forma. */
   obtener(ruta: string, parametros?: ParametrosDeConsulta): Promise<unknown>;
+  /**
+   * `POST base + ruta` con `cuerpo` como JSON; entrega el JSON de la respuesta
+   * sin afirmar su forma. Sin respuesta (red o tiempo), con un 502 o 504 del
+   * intermediario o con un 2xx cuyo cuerpo no es JSON rechaza con
+   * `resultadoIncierto`; nunca reintenta.
+   */
+  enviar(metodo: "POST", ruta: string, cuerpo: unknown): Promise<unknown>;
 }
 
 // `fetch` se resuelve en cada llamada: guardarlo suelto y invocarlo desligado de
@@ -53,7 +68,7 @@ function interpretarJson(texto: string): { valor: unknown } | null {
 export function crearClienteHttp(opciones: OpcionesClienteHttp): ClienteHttp {
   const { base, solicitar = solicitarPorDefecto, tiempoLimiteMs = TIEMPO_LIMITE_POR_DEFECTO_MS } = opciones;
 
-  async function obtener(ruta: string, parametros?: ParametrosDeConsulta): Promise<unknown> {
+  async function ejecutar(direccion: string, init: RequestInit, esEscritura: boolean): Promise<unknown> {
     const controlador = new AbortController();
     let vencio = false;
     const temporizador = setTimeout(() => {
@@ -62,29 +77,54 @@ export function crearClienteHttp(opciones: OpcionesClienteHttp): ClienteHttp {
     }, tiempoLimiteMs);
 
     try {
-      const respuesta = await solicitar(armarDireccion(base, ruta, parametros), {
-        method: "GET",
-        headers: { Accept: "application/json" },
-        signal: controlador.signal,
-      });
+      const respuesta = await solicitar(direccion, { ...init, signal: controlador.signal });
       const texto = await respuesta.text();
 
       if (!respuesta.ok) {
+        if (esEscritura && ESTADOS_DEL_INTERMEDIARIO.has(respuesta.status)) {
+          throw new ErrorDeApi(MENSAJE_RESULTADO_INCIERTO, "http", respuesta.status, [], true);
+        }
         const { mensaje, errores } = interpretarCuerpoDeError(respuesta.status, interpretarJson(texto)?.valor);
         throw new ErrorDeApi(mensaje, "http", respuesta.status, errores);
       }
 
       const esJson = (respuesta.headers.get("content-type") ?? "").toLowerCase().includes("application/json");
       const cuerpo = esJson ? interpretarJson(texto) : null;
-      if (cuerpo === null) throw new ErrorDeApi(MENSAJE_FORMATO, "formato", respuesta.status);
+      if (cuerpo === null) {
+        // Una escritura con respuesta 2xx pudo quedar registrada aunque el cuerpo no se entienda.
+        if (esEscritura) throw new ErrorDeApi(MENSAJE_RESULTADO_INCIERTO, "formato", respuesta.status, [], true);
+        throw new ErrorDeApi(MENSAJE_FORMATO, "formato", respuesta.status);
+      }
       return cuerpo.valor;
     } catch (error) {
       if (error instanceof ErrorDeApi) throw error;
-      throw vencio ? new ErrorDeApi(MENSAJE_TIEMPO, "tiempo") : new ErrorDeApi(MENSAJE_RED, "red");
+      const tipo = vencio ? "tiempo" : "red";
+      if (esEscritura) throw new ErrorDeApi(MENSAJE_RESULTADO_INCIERTO, tipo, null, [], true);
+      throw new ErrorDeApi(vencio ? MENSAJE_TIEMPO : MENSAJE_RED, tipo);
     } finally {
       clearTimeout(temporizador);
     }
   }
 
-  return { obtener };
+  function obtener(ruta: string, parametros?: ParametrosDeConsulta): Promise<unknown> {
+    return ejecutar(
+      armarDireccion(base, ruta, parametros),
+      { method: "GET", headers: { Accept: "application/json" } },
+      false,
+    );
+  }
+
+  function enviar(metodo: "POST", ruta: string, cuerpo: unknown): Promise<unknown> {
+    return ejecutar(
+      armarDireccion(base, ruta),
+      {
+        method: metodo,
+        headers: { Accept: "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify(cuerpo),
+      },
+      true,
+    );
+  }
+
+  return { obtener, enviar };
 }

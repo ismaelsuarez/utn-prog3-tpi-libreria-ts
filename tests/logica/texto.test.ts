@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   FORMATO_EMAIL,
+  conPuntoFinal,
   normalizarEmail,
   normalizarIsbn,
   normalizarTexto,
@@ -58,4 +59,21 @@ describe("FORMATO_EMAIL", () => {
       expect(FORMATO_EMAIL.test(email)).toBe(false);
     },
   );
+});
+
+describe("conPuntoFinal", () => {
+  test("agrega el punto a un mensaje del servidor que no lo trae", () => {
+    expect(conPuntoFinal("El cliente ya tiene un perfil")).toBe("El cliente ya tiene un perfil.");
+  });
+
+  test("no duplica un punto, ni cambia otra puntuación final", () => {
+    expect(conPuntoFinal("No se pudo conectar con el servidor.")).toBe("No se pudo conectar con el servidor.");
+    expect(conPuntoFinal("¿Seguro?")).toBe("¿Seguro?");
+    expect(conPuntoFinal("Listo!")).toBe("Listo!");
+  });
+
+  test("recorta los espacios de los extremos y deja vacío el texto vacío", () => {
+    expect(conPuntoFinal("  Error de datos  ")).toBe("Error de datos.");
+    expect(conPuntoFinal("   ")).toBe("");
+  });
 });
