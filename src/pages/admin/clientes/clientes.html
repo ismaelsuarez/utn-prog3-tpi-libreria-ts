@@ -6,17 +6,13 @@
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1" name="viewport" />
     <title>Clientes · Librería El Faro</title>
-    <link href="src/styles/base.css" rel="stylesheet" />
-    <link href="src/styles/disposicion.css" rel="stylesheet" />
-    <link href="src/styles/componentes.css" rel="stylesheet" />
-    <link href="src/styles/clientes-contacto.css" rel="stylesheet" />
-    <script src="js/datos/datos-iniciales.js" defer></script>
-    <script src="js/logica/texto.js" defer></script>
-    <script src="js/logica/clientes.js" defer></script>
-    <script src="js/almacen.js" defer></script>
-    <script src="js/interfaz.js" defer></script>
-    <script src="js/paginas/clientes.js" defer></script>
-  <link rel="stylesheet" href="src/styles/vista-inmersiva.css">
+    <link rel="icon" href="data:," />
+    <link href="../../../styles/base.css" rel="stylesheet" />
+    <link href="../../../styles/disposicion.css" rel="stylesheet" />
+    <link href="../../../styles/componentes.css" rel="stylesheet" />
+    <link href="../../../styles/clientes-contacto.css" rel="stylesheet" />
+    <link href="../../../styles/vista-inmersiva.css" rel="stylesheet" />
+    <script type="module" src="./clientes.ts"></script>
 </head>
 
 <body>
@@ -28,11 +24,11 @@
             </div>
             <nav aria-label="Principal" class="navegacion">
                 <ul class="navegacion__lista">
-                    <li><a class="navegacion__enlace" href="src/pages/client/catalogo/catalogo.html">Catálogo</a></li>
-                    <li><a class="navegacion__enlace" href="src/pages/admin/libros/libros.html">Libros</a></li>
+                    <li><a class="navegacion__enlace" href="../../client/catalogo/catalogo.html">Catálogo</a></li>
+                    <li><a class="navegacion__enlace" href="../libros/libros.html">Libros</a></li>
                     <li><a class="navegacion__enlace" href="clientes.html" aria-current="page">Clientes</a></li>
-                    <li><a class="navegacion__enlace" href="ventas.html">Ventas</a></li>
-                    <li><a class="navegacion__enlace" href="historial.html">Historial</a></li>
+                    <li><a class="navegacion__enlace" href="../../../../ventas.html">Ventas</a></li>
+                    <li><a class="navegacion__enlace" href="../../../../historial.html">Historial</a></li>
                 </ul>
             </nav>
         </div>
@@ -97,24 +93,6 @@
                         </tr>
                     </thead>
                     <tbody id="filas-clientes">
-                        <tr>
-                            <td data-campo="nombre">Lucía Fernández</td>
-                            <td data-campo="email">lucia.fernandez@example.com</td>
-                            <td data-campo="telefono">—</td>
-                            <td><button type="button" class="boton cliente-editar" data-accion="editar-cliente">Editar</button></td>
-                        </tr>
-                        <tr>
-                            <td data-campo="nombre">Martín Gómez</td>
-                            <td data-campo="email">martin.gomez@example.com</td>
-                            <td data-campo="telefono">—</td>
-                            <td><button type="button" class="boton cliente-editar" data-accion="editar-cliente">Editar</button></td>
-                        </tr>
-                        <tr>
-                            <td data-campo="nombre">Carla Ruiz</td>
-                            <td data-campo="email">carla.ruiz@example.com</td>
-                            <td data-campo="telefono">—</td>
-                            <td><button type="button" class="boton cliente-editar" data-accion="editar-cliente">Editar</button></td>
-                        </tr>
                     </tbody>
                 </table>
             </div>

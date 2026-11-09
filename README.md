@@ -89,7 +89,7 @@ actual.
 |---|---|---|
 | Catálogo | `src/pages/client/catalogo/catalogo.html` (`index.html` redirige aquí) | Buscar por título y ver los libros en tarjetas, con su ficha de lectura |
 | Libros | `src/pages/admin/libros/libros.html` | Registrar un libro y consultar la tabla de libros |
-| Clientes | `clientes.html` | Registrar un cliente, consultar la tabla y editar sus datos de contacto |
+| Clientes | `src/pages/admin/clientes/clientes.html` | Registrar un cliente, consultar la tabla y editar sus datos de contacto |
 | Ventas | `ventas.html` | Elegir cliente, armar los renglones, confirmar y ver el comprobante |
 | Historial | `historial.html` | Consultar las ventas confirmadas y el detalle de cada una |
 
