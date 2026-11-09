@@ -1,8 +1,11 @@
 // Raíz de composición: las vistas importan solo este módulo para obtener los
-// repositorios. Hoy todos son los locales, sobre el almacenamiento del
-// navegador; los changes siguientes cambian aquí (y en los adaptadores) el
-// origen de los datos sin tocar las vistas. Los usuarios y la sesión se quedan en
-// el navegador (la API no tiene usuarios): los atiende `autenticacion`.
+// repositorios. Durante la transición conviven dos orígenes: el Catálogo lee los
+// libros de la API de producción (`repositorioCatalogo`, solo lectura, por la base
+// `/api` del mismo origen) y las vistas de gestión siguen sobre el almacén local
+// del navegador hasta `operaciones-contra-api`, que cambia aquí (y en los
+// adaptadores) el origen de los datos sin tocar las vistas. Los usuarios y la
+// sesión se quedan en el navegador (la API no tiene usuarios): los atiende
+// `autenticacion`.
 import { crearServicioAutenticacion } from "./autenticacion";
 import type { ServicioAutenticacion } from "./autenticacion";
 import { crearAlmacenUsuarios } from "./local/almacen-usuarios";
@@ -10,7 +13,10 @@ import { obtenerAlmacenamientoDelNavegador, crearAlmacenLocal } from "./local/al
 import type { AlmacenamientoInyectable } from "./local/almacen-local";
 import { crearRepositoriosLocales } from "./local/repositorios-locales";
 import type { OpcionesRepositoriosLocales } from "./local/repositorios-locales";
-import type { Repositorios } from "./repositorios";
+import { obtenerBaseApi } from "./api/base";
+import { crearClienteHttp } from "./api/cliente-http";
+import { crearRepositoriosApi } from "./api/repositorios-api";
+import type { Repositorios, RepositorioLecturaLibros } from "./repositorios";
 
 /**
  * Crea los repositorios locales sobre el almacenamiento indicado e invoca una
@@ -46,5 +52,13 @@ export const repositorioGeneros = repositorios.generos;
 export const repositorioAutores = repositorios.autores;
 export const repositorioClientes = repositorios.clientes;
 export const repositorioVentas = repositorios.ventas;
+
+/**
+ * Libros de la API de producción para el Catálogo. Crear el repositorio no hace
+ * solicitudes: la red se usa recién al llamar `listar` u `obtener`.
+ */
+export const repositorioCatalogo: RepositorioLecturaLibros = crearRepositoriosApi(
+  crearClienteHttp({ base: obtenerBaseApi(import.meta.env.VITE_API_BASE) }),
+).libros;
 
 export const autenticacion = crearServicioDeAutenticacion(obtenerAlmacenamientoDelNavegador());
