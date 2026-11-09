@@ -15,7 +15,7 @@ import { aDinero } from "../../logica/dinero";
 import { ErrorDeRepositorio } from "../errores";
 import type {
   RepositorioAutores,
-  RepositorioClientesApi,
+  RepositorioClientes,
   RepositorioEditoriales,
   RepositorioGeneros,
   RepositorioLibros,
@@ -33,7 +33,7 @@ export interface RepositoriosApi {
   editoriales: RepositorioEditoriales;
   generos: RepositorioGeneros;
   autores: RepositorioAutores;
-  clientes: RepositorioClientesApi;
+  clientes: RepositorioClientes;
   ventas: RepositorioVentas;
 }
 

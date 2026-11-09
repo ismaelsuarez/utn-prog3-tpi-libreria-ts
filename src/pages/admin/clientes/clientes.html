@@ -93,7 +93,6 @@
                             <th scope="col">Nombre completo</th>
                             <th scope="col">Email</th>
                             <th scope="col">Teléfono</th>
-                            <th scope="col">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="filas-clientes">
@@ -106,10 +105,9 @@
                 <td data-campo="nombre"></td>
                 <td data-campo="email"></td>
                 <td data-campo="telefono"></td>
-                <td data-campo="acciones"><button type="button" class="boton cliente-editar" data-accion="editar-cliente">Editar</button></td>
             </tr>
         </template>
-        <!-- Se abre exclusivamente desde el botón Editar de una fila. -->
+        <!-- Sin uso hasta la vista Clientes de operaciones-contra-api, que lo reutiliza para «Completar perfil». -->
         <dialog id="dialogo-editar-cliente" class="cliente-modal" aria-labelledby="titulo-editar-cliente"
             aria-describedby="descripcion-editar-cliente">
             <div class="cliente-modal__caja">

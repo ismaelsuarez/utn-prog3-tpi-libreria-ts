@@ -5,8 +5,8 @@
 
 Trabajo Práctico Integrador de Programación III (Tecnicatura Universitaria en
 Programación a Distancia, UTN). Frontend estático de una librería: catálogo,
-alta de libros y clientes, venta simulada e historial, con datos en el
-navegador. Consigna: `docs/Repaso Primer Parcial.pdf`.
+alta de libros y clientes, venta e historial, con datos en la API de
+producción. Consigna: `docs/Repaso Primer Parcial.pdf`.
 
 Integrantes: Avalos Pablo, Blangetti Sofia, Suarez Ismael.
 
@@ -19,7 +19,7 @@ Integrantes: Avalos Pablo, Blangetti Sofia, Suarez Ismael.
 | Estructura | HTML5 semántico | Una página por vista en `src/pages/<zona>/<vista>/`; `index.html` de la raíz redirige al login (`src/pages/auth/login/login.html`) |
 | Presentación | CSS propio en archivos externos (`src/styles/`) | Flexbox o Grid; sin frameworks ni CDNs; tipografías e imágenes locales |
 | Comportamiento | TypeScript estricto, módulos ES (`<script type="module">`) | Sin librerías de ejecución; Vite 7 compila y sirve |
-| Datos | Repositorios asíncronos (`src/datos/repositorios.ts`) con forma de la API de producción | El Catálogo lee los libros de la API `https://api.ismaelsuarez.me` (solo `GET`) por la base `/api` del mismo origen (`VITE_API_BASE`), con reenvío en `npm run dev` y `npm run preview`; las vistas de gestión (Libros, Clientes, Ventas e Historial) siguen sobre un adaptador de `localStorage` hasta `operaciones-contra-api` |
+| Datos | Repositorios asíncronos (`src/datos/repositorios.ts`) con forma de la API de producción | Todos los datos de negocio (libros, editoriales, géneros, autores, clientes y ventas) salen de la API `https://api.ismaelsuarez.me` por la base `/api` del mismo origen (`VITE_API_BASE`), con el cliente HTTP de `src/datos/api/` (solo `GET` y `POST`, sin reintentos). `npm run dev` y `npm run preview` reenvían `/api` pero **rechazan con `403` toda escritura hacia producción**; las escrituras se prueban con un backend local en Docker (`API_PROXY_TARGET`, ver README). Usuarios y sesión (`users`, `userData`) siguen en `localStorage` |
 | Verificación de desarrollo | Vitest (`npm test`) y `tsc` | Las pruebas viven en `tests/`, fuera de la entrega |
 | Verificación de entrega | Casos manuales en el navegador | Dieciséis casos (CM-1 a CM-16) registrados en el README |
 
@@ -35,9 +35,9 @@ Detalle completo: [knowledge-base/02_descripcion_general.md](knowledge-base/02_d
 
 ```bash
 npm install        # instala las dependencias de desarrollo
-npm run dev        # servidor de desarrollo (reenvía /api a la API de producción)
+npm run dev        # servidor de desarrollo (reenvía /api; bloquea escrituras a producción)
 npm run build      # tsc (tipos estrictos) y compilación de producción en dist/
-npm run preview    # sirve dist/ con el mismo reenvío de /api
+npm run preview    # sirve dist/ con el mismo reenvío de /api y la misma guarda
 npm test           # Vitest, una sola corrida
 ```
 
@@ -121,10 +121,10 @@ la API de producción).
 1. **NUNCA** usar librerías de ejecución, frameworks ni CDNs de CSS o JavaScript → todo recurso (estilos, scripts, tipografías, imágenes) es propio y local; las únicas dependencias son de desarrollo: `vite`, `typescript`, `vitest` y `@types/node`.
 2. **NUNCA** usar scripts clásicos ni el espacio de nombres global `Libreria` → módulos ES de TypeScript con `import`/`export` y `import type` para los tipos.
 3. **NUNCA** dejar que `npm run build` falle ni usar `any` explícito → los tipos se declaran en `src/types/` y `tsc` corre en modo estricto sobre `src/` y `tests/`.
-4. **NUNCA** acceder a datos o a la red fuera de los repositorios → las vistas usan solo `src/datos/proveedor.ts`; la red se dirige únicamente a la base del mismo origen (`/api`), nunca a `https://api.ismaelsuarez.me` en forma directa.
+4. **NUNCA** acceder a datos o a la red fuera de los repositorios → las vistas usan solo `src/datos/proveedor.ts`; la red llega a la API solo por los repositorios y por la base del mismo origen (`/api`), nunca a `https://api.ismaelsuarez.me` en forma directa; y nada que corra en desarrollo, previsualización o pruebas escribe en producción (guarda del reenvío, backend local para escrituras, `fetch` global bloqueado en la suite).
 5. **NUNCA** insertar datos de usuario con `innerHTML` → usar `textContent` o creación de nodos.
 6. **NUNCA** tocar el DOM dentro de `src/logica/` → allí solo funciones puras; el DOM vive en los módulos de `src/pages/` y en `src/utils/dom.ts`.
-7. **NUNCA** nombrar `localStorage` fuera de `src/datos/local/almacen-local.ts` → ese archivo es el único que obtiene el almacenamiento del navegador; los almacenes de `src/datos/local/` (datos de negocio, usuarios y sesión) lo reciben inyectado y son la única vía de lectura y escritura.
+7. **NUNCA** nombrar `localStorage` fuera de `src/datos/local/almacen-local.ts` → ese archivo es el único que obtiene el almacenamiento del navegador; los almacenes de `src/datos/local/` (usuarios y sesión) lo reciben inyectado y son la única vía de lectura y escritura. Los datos de negocio no se guardan en el navegador y las claves `libreria.*` de versiones anteriores no se leen, escriben ni borran.
 8. **NUNCA** leer del catálogo el precio de una venta confirmada → la venta guarda copia del precio unitario y de los datos descriptivos.
 9. **NUNCA** agregar edición o borrado de registros, gestión de stock ni cobros → el alcance es el de la consigna.
 10. **NUNCA** marcar un caso manual como aprobado sin ejecutarlo → el README registra el resultado realmente observado; si falla o queda pendiente, se registra el comportamiento real.

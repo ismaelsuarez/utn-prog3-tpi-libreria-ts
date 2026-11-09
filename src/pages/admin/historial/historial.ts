@@ -35,9 +35,7 @@ async function iniciar(): Promise<void> {
     vaciarNodo(filasDetalle);
     for (const renglon of venta.renglones) {
       const fragmento = plantillaDetalle.content.cloneNode(true) as DocumentFragment;
-      const libro =
-        renglon.isbn === undefined ? renglon.titulo : `${renglon.titulo} · ISBN ${renglon.isbn}`;
-      buscar(fragmento, '[data-campo="libro"]', HTMLElement).textContent = libro;
+      buscar(fragmento, '[data-campo="libro"]', HTMLElement).textContent = renglon.titulo;
       buscar(fragmento, '[data-campo="cantidad"]', HTMLElement).textContent = String(renglon.cantidad);
       buscar(fragmento, '[data-campo="precio-unitario"]', HTMLElement).textContent = formatearImporte(renglon.precio_unitario);
       buscar(fragmento, '[data-campo="subtotal"]', HTMLElement).textContent = formatearImporte(renglon.subtotal);

@@ -14,8 +14,8 @@
 | Separación estructura / estilos / comportamiento | HTML en `src/pages/`, CSS en `src/styles/`, TypeScript | Lo valora expresamente la consigna |
 | Lógica pura separada del DOM | `src/logica/` | Permite probar validaciones, filtro y cálculos con Vitest y reutilizarlos entre páginas |
 | Repositorio (frontera de datos) | `src/datos/repositorios.ts` | Las vistas dependen solo de interfaces asíncronas con la forma de la API de producción; el origen de los datos se cambia sin tocar las vistas |
-| Raíz de composición | `src/datos/proveedor.ts` | Único lugar donde se eligen las implementaciones; siembra el almacén local una sola vez |
-| Adaptador | `src/datos/local/` | Implementa los repositorios sobre `localStorage` traduciendo entre la forma local y la de la API |
+| Raíz de composición | `src/datos/proveedor.ts` | Único lugar donde se eligen las implementaciones: un cliente HTTP y todos los repositorios sobre la API; crearlos no hace solicitudes |
+| Adaptador | `src/datos/api/` | Implementa los repositorios sobre la API (`GET` y `POST`), con sondeo por identificador para los listados que la API no ofrece |
 | Módulo por vista | `src/pages/<zona>/<vista>/<vista>.ts` | Cada vista conecta su DOM y sus eventos sin mezclar responsabilidades |
 | Generación de interfaz desde datos | Módulos de vista | Catálogo, listados y selectores salen de los repositorios, no del HTML escrito a mano |
 | Instantánea histórica (snapshot) | Construcción de la venta | Los renglones copian precio y datos descriptivos en lugar de referenciar el catálogo |
@@ -49,12 +49,12 @@ proyecto/
 │   │   ├── autenticacion.ts    # ServicioAutenticacion: registrar, ingresar, obtenerSesion, cerrarSesion
 │   │   ├── errores.ts          # ErrorDeRepositorio, ErrorDeAlmacenamiento, ErrorDeCriptografia
 │   │   ├── api/base.ts         # obtenerBaseApi: base `/api` del mismo origen
-│   │   ├── api/cliente-http.ts # crearClienteHttp: solo `obtener` (GET), tiempo límite de 10 s, fetch inyectable
+│   │   ├── api/cliente-http.ts # crearClienteHttp: `obtener` (GET) y `enviar` (POST JSON), tiempo límite de 10 s, sin reintentos, fetch inyectable
 │   │   ├── api/errores-api.ts  # ErrorDeApi (http, red, tiempo, formato) e interpretarCuerpoDeError
-│   │   ├── api/paginacion.ts   # recorrerPaginas (limit 100) y mapearConLimite (concurrencia acotada)
-│   │   ├── api/repositorios-api.ts # crearRepositoriosApi: libros (con autores), editoriales y géneros, solo lectura
-│   │   └── local/              # Adaptador local: almacen-local.ts (único que nombra localStorage),
-│   │                           # datos-iniciales.ts, repositorios-locales.ts, tipos-locales.ts;
+│   │   ├── api/paginacion.ts   # recorrerPaginas (limit 100), mapearConLimite y sondearPorIdentificador
+│   │   ├── api/repositorios-api.ts # crearRepositoriosApi: libros, editoriales, géneros, autores, clientes y ventas
+│   │   ├── api/reenvio.ts      # guarda de desarrollo: solo la importan vite.config.ts y las pruebas
+│   │   └── local/              # almacen-local.ts (único que nombra localStorage),
 │   │                           # almacen-usuarios.ts (claves `users` y `userData`, almacenamiento
 │   │                           # inyectado), contrasenas.ts (PBKDF2-SHA-256), usuarios-iniciales.ts
 │   ├── types/                  # Id, Dinero, Libro, LibroDetalle, Cliente, Venta, ErrorApi, IUser, Rol…
@@ -102,18 +102,22 @@ proyecto/
   `ventas`) son asíncronos y devuelven la forma de la API de producción:
   identificadores enteros, importes como texto decimal (`"1500.00"`), fechas
   ISO en UTC y relaciones anidadas.
-- Operaciones **sin endpoint** en la API (listado de clientes y de autores,
-  edición del teléfono) están marcadas en las interfaces; las resuelve el change
-  `operaciones-contra-api`.
-- Durante la transición conviven dos orígenes (`cliente-http-y-catalogo`): el
-  Catálogo usa `repositorioCatalogo` (`RepositorioLecturaLibros`, solo lectura),
-  que `proveedor.ts` crea sobre la API por la base `/api`; Libros, Clientes,
-  Ventas e Historial siguen en el adaptador local sobre `localStorage` (claves
-  `libreria.libros`, `libreria.clientes`, `libreria.ventas`, mismo formato que
-  antes) hasta `operaciones-contra-api`. Un alta local no aparece en el Catálogo.
-- **Cliente HTTP** (`src/datos/api/`): solo `GET` con `Accept: application/json`
-  y rutas con barra final (`/libros/`) para evitar la redirección 307 a otro
-  origen. Toda falla se rechaza como `ErrorDeApi` (subclase de
+- La API no ofrece `GET /clientes/` ni `GET /autores/`: esos listados los arma
+  el adaptador sondeando `GET /clientes/{id}` y `GET /autores/{id}`
+  (`sondearPorIdentificador`: desde el 1, 4 a la vez, hasta 10 ausentes seguidos
+  posteriores al mayor identificador que mencionan las ventas o los libros).
+  No hay edición ni borrado de ningún registro (regla dura 9); la única
+  escritura tras el alta de un cliente es el alta de su perfil, una sola vez.
+- Todos los repositorios de negocio salen de la API (`operaciones-contra-api`);
+  el Catálogo usa `repositorioCatalogo` (`RepositorioLecturaLibros`, solo
+  lectura) sobre el mismo cliente HTTP. El almacén local de negocio y sus claves
+  `libreria.*` se retiraron.
+- **Cliente HTTP** (`src/datos/api/`): `GET` con `Accept: application/json` y
+  `POST` con cuerpo JSON (`enviar`); nunca `PUT`, `PATCH` ni `DELETE`. Rutas con
+  barra final (`/libros/`) para evitar la redirección 307 a otro origen. Ningún
+  método se reintenta; una escritura sin respuesta (red o tiempo) rechaza con
+  `resultadoIncierto` y el mensaje «No se pudo confirmar si el servidor registró
+  la operación…». Toda falla se rechaza como `ErrorDeApi` (subclase de
   `ErrorDeRepositorio`, con `tipo` `http`, `red`, `tiempo` o `formato` y `estado`)
   con mensaje en texto: el `detail` de la API, la lista de validación del 422
   unida con «; » y un `ErrorDeCampo` por elemento, o un texto fijo. Los listados
@@ -121,8 +125,8 @@ proyecto/
   el listado de libros se completa con `GET /libros/{id}` para traer los autores,
   con a lo sumo 4 consultas a la vez. Los importes quedan como texto.
 - **Usuarios y sesión** (`registro-login-y-sesion`): nunca van a la API. Los
-  atiende `src/datos/local/almacen-usuarios.ts`, separado del almacén local
-  porque es permanente, con el mismo almacenamiento inyectado y las claves
+  atiende `src/datos/local/almacen-usuarios.ts`, con el almacenamiento
+  inyectado por `almacen-local.ts` y las claves
   `users` (arreglo de `UsuarioRegistrado`: `email` normalizado, `role`,
   `contrasena` como huella PBKDF2-SHA-256 con sal, `creadoEn`) y `userData`
   (un `IUser`: `email`, `loggedIn`, `role`; nunca la contraseña). La clave
@@ -135,13 +139,22 @@ proyecto/
   prefijo; en producción lo hace el contenedor del frontend (change
   `despliegue-frontend`). La API no envía cabeceras CORS, por eso nunca se la
   llama desde otro origen.
+- **Guarda de escrituras en desarrollo**: `vite.config.ts` registra, antes del
+  reenvío, un intermediario (`crearIntermediarioDeGuarda`, `src/datos/api/reenvio.ts`)
+  que responde `403` a toda solicitud que no sea `GET`, `HEAD` ni `OPTIONS` bajo
+  la base cuando el destino es `api.ismaelsuarez.me`; no hay variable para
+  desactivarla. Las escrituras se prueban con un backend local en Docker
+  (`API_PROXY_TARGET=http://127.0.0.1:8000`, receta en el README). La suite
+  reemplaza el `fetch` global por uno que rechaza. La aplicación desplegada
+  (`despliegue-frontend`) no usa Vite y sí escribe en producción cuando la opera
+  el bibliotecario.
 
 ## Estrategia de verificación
 
 | Nivel | Qué cubre | Herramienta |
 |---|---|---|
 | Tipos | Todo `src/` y `tests/` en modo estricto, sin `any`; los fixtures de la API se declaran con `satisfies` | `npx tsc` (parte de `npm run build`) |
-| Pruebas automatizadas | Funciones puras, almacén local con almacenamiento simulado inyectado y adaptador de repositorios | Vitest (`npm test`) |
+| Pruebas automatizadas | Funciones puras, almacenes de usuarios y sesión con almacenamiento simulado inyectado, cliente HTTP, repositorios sobre la API y guarda de desarrollo, con solicitudes simuladas (sin red) | Vitest (`npm test`) |
 | Casos manuales | Comportamiento observable en el navegador, incluidos DOM, teclado y anchos | Navegador, registrados en el README (CM-1 a CM-8) |
 
 - Las pruebas automatizadas no reemplazan los casos manuales.

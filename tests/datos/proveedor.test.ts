@@ -1,8 +1,19 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { obtenerAlmacenamientoDelNavegador } from "../../src/datos/local/almacen-local";
-import { autenticacion, crearProveedor, crearServicioDeAutenticacion } from "../../src/datos/proveedor";
-import { datosIniciales } from "../../src/datos/local/datos-iniciales";
+import { autenticacion, crearServicioDeAutenticacion } from "../../src/datos/proveedor";
+import { listadoDeEditoriales, listadoDeGeneros } from "../fixtures/api/catalogos";
+import {
+  altaDeCliente,
+  altaDeVenta,
+  clienteCreado,
+  detalleDelAutor1,
+  detalleDelAutor5,
+  libroCreado,
+  perfilCreado,
+  ventaCreada,
+} from "../fixtures/api/escrituras";
 import { detalleDelLibro1, detalleDelLibro2, listadoDeLibros } from "../fixtures/api/libros";
+import { detalleDelCliente1, listadoDeVentas } from "../fixtures/api/ventas";
 
 interface StorageSimulado {
   escrituras: string[];
@@ -24,45 +35,6 @@ function crearStorage(contenidoInicial: Record<string, string> = {}): StorageSim
   };
   return storage;
 }
-
-describe("crearProveedor", () => {
-  test("siembra una sola vez las claves ausentes", () => {
-    const storage = crearStorage();
-    crearProveedor(storage);
-
-    expect(storage.escrituras).toEqual(["libreria.libros", "libreria.clientes", "libreria.ventas"]);
-    expect(JSON.parse(storage.contenido["libreria.libros"] as string)).toEqual(datosIniciales.libros);
-    expect(storage.contenido["libreria.ventas"]).toBe("[]");
-
-    // Una segunda composición sobre el mismo almacenamiento no vuelve a sembrar.
-    crearProveedor(storage);
-    expect(storage.escrituras).toHaveLength(3);
-  });
-
-  test("respeta las claves presentes", () => {
-    const libros = JSON.stringify([
-      { id: "lib-77", titulo: "Guardado", isbn: "1", precio: 10, editorialId: "edi-01", generoId: null, autorIds: ["aut-01"] },
-    ]);
-    const storage = crearStorage({ "libreria.libros": libros });
-    crearProveedor(storage);
-
-    expect(storage.escrituras).toEqual(["libreria.clientes", "libreria.ventas"]);
-    expect(storage.contenido["libreria.libros"]).toBe(libros);
-  });
-
-  test("entrega los seis repositorios, que ven lo sembrado", async () => {
-    const repos = crearProveedor(crearStorage());
-    expect(Object.keys(repos).sort()).toEqual(["autores", "clientes", "editoriales", "generos", "libros", "ventas"]);
-    expect(await repos.libros.listar()).toHaveLength(6);
-    expect(await repos.ventas.listar()).toEqual([]);
-  });
-
-  test("sin almacenamiento sigue funcionando con los ejemplos", async () => {
-    const repos = crearProveedor(null);
-    expect(await repos.libros.listar()).toHaveLength(6);
-    expect(await repos.clientes.listar()).toHaveLength(3);
-  });
-});
 
 describe("crearServicioDeAutenticacion", () => {
   test("sobre un almacenamiento vacío siembra users una sola vez y no toca userData", () => {
@@ -128,22 +100,42 @@ describe("obtenerAlmacenamientoDelNavegador", () => {
   });
 });
 
-describe("composición de orígenes de datos (Catálogo sobre la API, gestión local)", () => {
+describe("composición: todos los repositorios sobre la API", () => {
   const encabezados = { "content-type": "application/json" };
 
-  function simularFetch(): ReturnType<typeof vi.fn<(url: string, init?: RequestInit) => Promise<Response>>> {
-    const rutas: Record<string, unknown> = {
-      "/api/libros/?limit=100&offset=0": listadoDeLibros,
-      "/api/libros/1": detalleDelLibro1,
-      "/api/libros/2": detalleDelLibro2,
+  interface Llamada {
+    metodo: string;
+    url: string;
+  }
+
+  /** `fetch` simulado: responde por «MÉTODO url» y registra cada llamada; lo demás es 404. */
+  function simularFetch() {
+    const rutas: Record<string, { estado: number; cuerpo: unknown }> = {
+      "GET /api/libros/?limit=100&offset=0": { estado: 200, cuerpo: listadoDeLibros },
+      "GET /api/libros/1": { estado: 200, cuerpo: detalleDelLibro1 },
+      "GET /api/libros/2": { estado: 200, cuerpo: detalleDelLibro2 },
+      "GET /api/editoriales/?limit=100&offset=0": { estado: 200, cuerpo: listadoDeEditoriales },
+      "GET /api/generos/?limit=100&offset=0": { estado: 200, cuerpo: listadoDeGeneros },
+      "GET /api/autores/1": { estado: 200, cuerpo: detalleDelAutor1 },
+      "GET /api/autores/5": { estado: 200, cuerpo: detalleDelAutor5 },
+      "GET /api/ventas/?limit=100&offset=0": { estado: 200, cuerpo: listadoDeVentas },
+      "GET /api/clientes/1": { estado: 200, cuerpo: detalleDelCliente1 },
+      "POST /api/libros/": { estado: 201, cuerpo: libroCreado },
+      "POST /api/clientes/": { estado: 201, cuerpo: clienteCreado },
+      "POST /api/clientes/4/perfil": { estado: 201, cuerpo: perfilCreado },
+      "POST /api/ventas/": { estado: 201, cuerpo: ventaCreada },
     };
-    const falso = vi.fn(async (url: string, _init?: RequestInit) =>
-      Object.hasOwn(rutas, url)
-        ? new Response(JSON.stringify(rutas[url]), { status: 200, headers: encabezados })
-        : new Response(JSON.stringify({ detail: "Libro no encontrado" }), { status: 404, headers: encabezados }),
-    );
+    const llamadas: Llamada[] = [];
+    const falso = vi.fn(async (url: string, init?: RequestInit) => {
+      const metodo = init?.method ?? "GET";
+      llamadas.push({ metodo, url });
+      const ruta = rutas[`${metodo} ${url}`];
+      return ruta === undefined
+        ? new Response(JSON.stringify({ detail: "No encontrado" }), { status: 404, headers: encabezados })
+        : new Response(JSON.stringify(ruta.cuerpo), { status: ruta.estado, headers: encabezados });
+    });
     vi.stubGlobal("fetch", falso);
-    return falso;
+    return { falso, llamadas, firmas: (): string[] => llamadas.map((l) => `${l.metodo} ${l.url}`) };
   }
 
   async function importarProveedor(): Promise<typeof import("../../src/datos/proveedor")> {
@@ -154,16 +146,17 @@ describe("composición de orígenes de datos (Catálogo sobre la API, gestión l
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
+    Reflect.deleteProperty(globalThis, "window");
   });
 
   test("importar el proveedor no hace ninguna solicitud", async () => {
-    const falso = simularFetch();
+    const { falso } = simularFetch();
     await importarProveedor();
     expect(falso).not.toHaveBeenCalled();
   });
 
   test("repositorioCatalogo.listar pide el listado y el detalle de cada libro a /api", async () => {
-    const falso = simularFetch();
+    const { falso, llamadas } = simularFetch();
     const { repositorioCatalogo } = await importarProveedor();
 
     const libros = await repositorioCatalogo.listar();
@@ -173,18 +166,20 @@ describe("composición de orígenes de datos (Catálogo sobre la API, gestión l
       "/api/libros/1",
       "/api/libros/2",
     ]);
-    expect(new Set(falso.mock.calls.map((llamada) => llamada[1]?.method))).toEqual(new Set(["GET"]));
+    expect(new Set(llamadas.map((llamada) => llamada.metodo))).toEqual(new Set(["GET"]));
     expect(libros.map((libro) => libro.titulo)).toEqual(["Rayuela", "Ficciones"]);
     expect(libros[0]?.autores[0]?.nombre).toBe("Julio Cortázar");
     expect(libros[0]?.precio).toBe("25000.00");
   });
 
   test("la base de las solicitudes sale de VITE_API_BASE y, si falta, es /api", async () => {
-    const falso = simularFetch();
+    const { falso } = simularFetch();
     vi.stubEnv("VITE_API_BASE", "/servicio/");
-    const { repositorioCatalogo } = await importarProveedor();
+    const { repositorioCatalogo, repositorioLibros } = await importarProveedor();
     await repositorioCatalogo.listar().catch(() => undefined);
+    await repositorioLibros.listar().catch(() => undefined);
     expect(falso.mock.calls[0]?.[0]).toBe("/servicio/libros/?limit=100&offset=0");
+    expect(falso.mock.calls.every((llamada) => llamada[0].startsWith("/servicio/"))).toBe(true);
   });
 
   test("repositorioCatalogo es solo de lectura", async () => {
@@ -193,24 +188,115 @@ describe("composición de orígenes de datos (Catálogo sobre la API, gestión l
     expect(Object.keys(repositorioCatalogo).sort()).toEqual(["listar", "obtener"]);
   });
 
-  test("repositorioLibros sigue entregando los seis libros de ejemplo del almacén local, sin llamar a fetch", async () => {
-    const falso = simularFetch();
-    const { repositorioLibros } = await importarProveedor();
+  test("las lecturas de gestión van a /api y entregan lo que devuelve la API, no ejemplos locales", async () => {
+    const { firmas } = simularFetch();
+    const p = await importarProveedor();
 
-    const libros = await repositorioLibros.listar();
+    expect((await p.repositorioLibros.listar()).map((l) => l.titulo)).toEqual(["Rayuela", "Ficciones"]);
+    expect((await p.repositorioEditoriales.listar()).map((e) => e.nombre)).toEqual(["Emecé", "Sudamericana"]);
+    expect((await p.repositorioGeneros.listar()).map((g) => g.nombre)).toEqual(["Policial", "Novela"]);
+    expect((await p.repositorioAutores.listar()).map((a) => a.id)).toEqual([1, 5]);
+    expect((await p.repositorioClientes.listar()).map((c) => c.id)).toEqual([1]);
+    expect((await p.repositorioVentas.listar()).map((v) => v.id)).toEqual([1]);
 
-    expect(libros).toHaveLength(6);
-    expect(libros.map((libro) => libro.titulo)).toEqual(datosIniciales.libros.map((libro) => libro.titulo));
-    expect(falso).not.toHaveBeenCalled();
+    expect(firmas()).toEqual(expect.arrayContaining([
+      "GET /api/editoriales/?limit=100&offset=0",
+      "GET /api/generos/?limit=100&offset=0",
+      "GET /api/autores/1",
+      "GET /api/clientes/1",
+      "GET /api/ventas/?limit=100&offset=0",
+    ]));
+    expect(firmas().every((firma) => firma.includes(" /api/"))).toBe(true);
   });
 
-  test("los demás repositorios de gestión tampoco usan la red", async () => {
-    const falso = simularFetch();
-    const proveedor = await importarProveedor();
-    await proveedor.repositorioClientes.listar();
-    await proveedor.repositorioEditoriales.listar();
-    await proveedor.repositorioGeneros.listar();
-    await proveedor.repositorioAutores.listar();
-    expect(falso).not.toHaveBeenCalled();
+  test("las altas de gestión se envían con POST a /api y entregan la respuesta del servidor", async () => {
+    const { llamadas } = simularFetch();
+    const p = await importarProveedor();
+
+    const libro = await p.repositorioLibros.crear({ isbn: "x", titulo: "t", precio: "1", stock: 0, editorial_id: 1 });
+    const cliente = await p.repositorioClientes.crear(altaDeCliente);
+    const perfil = await p.repositorioClientes.crearPerfil(4, { telefono: "1155550104" });
+    const venta = await p.repositorioVentas.crear(altaDeVenta);
+
+    expect([libro, cliente, perfil, venta]).toEqual([libroCreado, clienteCreado, perfilCreado, ventaCreada]);
+    expect(llamadas).toEqual([
+      { metodo: "POST", url: "/api/libros/" },
+      { metodo: "POST", url: "/api/clientes/" },
+      { metodo: "POST", url: "/api/clientes/4/perfil" },
+      { metodo: "POST", url: "/api/ventas/" },
+    ]);
+  });
+
+  describe("las claves libreria.* del navegador", () => {
+    const previas = {
+      "libreria.libros": JSON.stringify([{ id: "lib-77", titulo: "Guardado" }]),
+      "libreria.clientes": JSON.stringify([{ id: "cli-77", nombreCompleto: "Guardado" }]),
+      "libreria.ventas": JSON.stringify([{ id: "ven-77" }]),
+    };
+
+    function instalarVentana(storage: StorageSimulado & { lecturas: string[] }): void {
+      Object.defineProperty(globalThis, "window", { value: { localStorage: storage }, configurable: true });
+    }
+
+    function crearStorageEspiado(contenido: Record<string, string>): StorageSimulado & { lecturas: string[] } {
+      const base = crearStorage(contenido);
+      const lecturas: string[] = [];
+      return {
+        ...base,
+        lecturas,
+        getItem: (clave) => {
+          lecturas.push(clave);
+          return base.getItem(clave);
+        },
+        setItem: (clave, valor) => base.setItem(clave, valor),
+      };
+    }
+
+    async function usarTodo(): Promise<void> {
+      const p = await importarProveedor();
+      await p.repositorioLibros.listar();
+      await p.repositorioEditoriales.listar();
+      await p.repositorioGeneros.listar();
+      await p.repositorioAutores.listar();
+      await p.repositorioClientes.listar();
+      await p.repositorioVentas.listar();
+      await p.repositorioLibros.crear({ isbn: "x", titulo: "t", precio: "1", stock: 0, editorial_id: 1 });
+      await p.repositorioClientes.crear(altaDeCliente);
+      await p.repositorioVentas.crear(altaDeVenta);
+    }
+
+    test("con claves de la versión anterior, ninguna se lee ni se escribe y su contenido queda intacto", async () => {
+      simularFetch();
+      const storage = crearStorageEspiado(previas);
+      instalarVentana(storage);
+
+      await usarTodo();
+
+      expect(storage.lecturas.filter((clave) => clave.startsWith("libreria."))).toEqual([]);
+      expect(storage.escrituras.filter((clave) => clave.startsWith("libreria."))).toEqual([]);
+      for (const [clave, valor] of Object.entries(previas)) expect(storage.contenido[clave]).toBe(valor);
+    });
+
+    test("en un navegador sin datos anteriores no se crea ninguna clave libreria.*", async () => {
+      simularFetch();
+      const storage = crearStorageEspiado({});
+      instalarVentana(storage);
+
+      await usarTodo();
+
+      expect(Object.keys(storage.contenido).filter((clave) => clave.startsWith("libreria."))).toEqual([]);
+    });
+
+    test("la sesión y los usuarios siguen en el navegador: users se siembra y no hay solicitudes por eso", async () => {
+      const { falso } = simularFetch();
+      const storage = crearStorageEspiado({});
+      instalarVentana(storage);
+
+      const p = await importarProveedor();
+
+      expect(typeof p.autenticacion.ingresar).toBe("function");
+      expect(storage.escrituras).toEqual(["users"]);
+      expect(falso).not.toHaveBeenCalled();
+    });
   });
 });

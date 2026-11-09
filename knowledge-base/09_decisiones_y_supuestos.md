@@ -171,8 +171,8 @@
 **Trade-offs aceptados**: sin almacenamiento no hay reserva en memoria para la sesión; el registro y el ingreso muestran un error en lugar de fingir una sesión que se perdería al navegar.
 **Origen**: change `registro-login-y-sesion`, decisión D3.
 
-### DD-23 — Orígenes de datos durante la transición: Catálogo sobre la API, gestión local
-**Decisión**: hasta `operaciones-contra-api`, la vista Catálogo lee los libros de la API de producción por `repositorioCatalogo` (solo lectura, `proveedor.ts`) y Libros, Clientes, Ventas e Historial siguen sobre el almacén local, de modo que cada vista tenga un único origen coherente. Un libro dado de alta en Libros no aparece en el Catálogo. No se agrega aviso en la interfaz: se documenta en el README y en los casos manuales.
+### DD-23 — Orígenes de datos durante la transición: Catálogo sobre la API, gestión local (superada por DD-29)
+**Decisión (histórica, hasta `operaciones-contra-api`)**: hasta `operaciones-contra-api`, la vista Catálogo lee los libros de la API de producción por `repositorioCatalogo` (solo lectura, `proveedor.ts`) y Libros, Clientes, Ventas e Historial siguen sobre el almacén local, de modo que cada vista tenga un único origen coherente. Un libro dado de alta en Libros no aparece en el Catálogo. No se agrega aviso en la interfaz: se documenta en el README y en los casos manuales.
 **Contexto**: las vistas de gestión escriben y sus identificadores (`lib-01`, 1…) no coinciden con los de la API; cambiar todos los repositorios de lectura juntos habría dejado a Ventas confirmando contra libros locales con números de la API. El usuario aceptó esta recomendación el 2026-11-09.
 **Alternativas consideradas**: dejar `proveedor.ts` local hasta `operaciones-contra-api` (sin divergencia, pero el Catálogo no leería la API en esta entrega); repositorio de libros mixto (lectura HTTP, alta local); decidir el origen por la zona de la dirección dentro de `proveedor.ts`.
 **Justificación**: la API es la fuente de los datos de negocio y el Catálogo es solo de lectura; el resto se conecta cuando existan las escrituras.
@@ -194,6 +194,44 @@
 **Justificación**: el cotejo cierra la falsificación más obvia sin costo de red y se prueba con Vitest; el destino por rol es el mismo que recibe al iniciar sesión.
 **Trade-offs aceptados**: sigue siendo del cliente: quien edite `userData` puede editar también el rol de su entrada en `users`, y las credenciales del administrador de demostración están en el README; no es una medida de seguridad real. Si `users` es ilegible, `obtenerUsuarios()` devuelve la semilla y solo la sesión del administrador sembrado sigue valiendo (falla cerrado). La decisión se repite al cargar y al restaurar desde la caché de ida y vuelta, no en vivo ante un cierre de sesión en otra pestaña.
 **Origen**: change `proteccion-de-rutas-y-roles`, decisiones D1 a D4 y D8.
+
+### DD-26 — Escrituras contra la API: solo `GET` y `POST`, sin reintentos, resultado desconocido
+**Decisión**: el cliente HTTP suma `enviar("POST", ruta, cuerpo)` con cuerpo JSON; no hay `PUT`, `PATCH` ni `DELETE`. Una escritura sin respuesta (red o tiempo agotado) se rechaza con `resultadoIncierto` y un mensaje fijo, tras una sola solicitud; cada formulario impide un segundo envío mientras el primero está en curso. Los límites que la API no valida y harían fallar el servidor (longitudes, precio y stock máximos) se validan antes de enviar.
+**Contexto**: las altas no son idempotentes (un reintento puede duplicar un registro) y la API no se puede modificar.
+**Alternativas consideradas**: reintentos automáticos con clave de idempotencia (la API no la ofrece); `solicitar(método, …)` genérico (dejaría `DELETE` y `PUT` a un paso).
+**Justificación**: el operador decide con el listado a la vista; ningún duplicado es accidental.
+**Trade-offs aceptados**: ante un tiempo agotado el operador debe revisar antes de reintentar.
+**Origen**: change `operaciones-contra-api`, decisiones D1, D3 y D10.
+
+### DD-27 — Listados de clientes y autores por sondeo (supuesto: la API no borra)
+**Decisión**: como la API no ofrece `GET /clientes/` ni `GET /autores/`, se piden `GET /clientes/{id}` y `GET /autores/{id}` desde el 1, de a 4, hasta 10 ausentes seguidos posteriores al mayor identificador conocido por las ventas o los libros. Un 404 es un identificador ausente; cualquier otra falla rechaza todo el listado.
+**Contexto**: sin `DELETE`, los huecos solo nacen de altas fallidas (PostgreSQL consume la secuencia). El usuario aprobó esta heurística el 2026-11-09.
+**Alternativas consideradas**: solo clientes con ventas (un cliente nuevo no podría venderse); índice local de identificadores (vuelve a guardar datos de negocio en el navegador); pedir el identificador a mano (inusable).
+**Justificación**: costo `n + 10` consultas con 4 en curso, aceptable para decenas de registros.
+**Trade-offs aceptados**: más de 10 altas fallidas seguidas sin un alta exitosa posterior ocultarían a los registros siguientes hasta que una venta o un libro los mencione; la constante es ajustable.
+**Origen**: change `operaciones-contra-api`, decisión D5.
+
+### DD-28 — Perfil de cliente de una sola vez, sin edición de clientes
+**Decisión**: el alta registra el cliente y después su perfil; si el perfil falla, el cliente queda registrado, se informa el motivo y se ofrece «Completar perfil» (una sola vez). Se retira el diálogo de edición de nombre, email y teléfono. La dirección es opcional (supuesto: la API la admite vacía); el teléfono sigue obligatorio.
+**Contexto**: la API no permite modificar el perfil, la regla dura 9 excluye editar registros y un `PATCH` modificaría registros de producción que no se pueden restaurar. El usuario lo aprobó el 2026-11-09.
+**Alternativas consideradas**: conservar la edición de nombre y email con `PATCH /clientes/{id}`; sin recuperación del perfil.
+**Justificación**: coherencia con RN-CL-05 y mínima superficie de escritura sobre producción.
+**Trade-offs aceptados**: un teléfono o una dirección mal cargados no se corrigen desde la aplicación.
+**Origen**: change `operaciones-contra-api`, decisiones D6 y D7.
+
+### DD-29 — Protección de producción en desarrollo y retiro de los datos locales de negocio
+**Decisión**: `npm run dev` y `npm run preview` rechazan con `403`, antes del reenvío, toda escritura cuyo destino sea la API de producción (sin variable para desactivarlo); las escrituras se verifican contra un backend local en Docker; la suite reemplaza el `fetch` global por uno que rechaza. Las claves `libreria.libros`, `libreria.clientes` y `libreria.ventas` dejan de leerse y escribirse (no se borran ni se migran) y se eliminan el adaptador local de negocio y sus datos iniciales.
+**Contexto**: las primeras escrituras apuntan a un sistema que no se puede restaurar. El usuario aprobó ambas decisiones el 2026-11-09.
+**Alternativas consideradas**: destino local por defecto (el Catálogo dejaría de funcionar sin Docker); permitir escrituras a producción con una variable (abre la puerta que se quiere cerrar); migrar las claves (escribiría en producción); conservar los adaptadores locales «para pruebas» (invitaría a reconectarlos).
+**Justificación**: la seguridad no depende de la disciplina de quien desarrolla.
+**Trade-offs aceptados**: la verificación manual de escrituras exige Docker; los datos viejos del navegador quedan sin uso.
+**Origen**: change `operaciones-contra-api`, decisiones D9 y D11.
+
+### DD-30 — Stock capturado y no gestionado
+**Decisión**: el formulario de Libros pide `stock` (entero de 0 a 2 147 483 647) porque la API lo exige; no se muestra en los listados ni se valida en la venta, y el servidor no lo descuenta.
+**Alternativas consideradas**: columna «Stock» en Libros (sugiere un inventario que nadie actualiza); impedir vender más que el stock (bloquearía ventas de forma arbitraria).
+**Trade-offs aceptados**: se puede vender más que el stock cargado; regla dura 9 y RN-VE-16.
+**Origen**: change `operaciones-contra-api`, decisión D8.
 
 ## Supuestos inferidos
 
@@ -222,13 +260,13 @@
 **Cómo validar**: confirmar en el change del ejercicio 1.
 
 ### SU-05 — Editoriales, géneros y autores no se persisten
-**Supuesto**: permanecen como datos iniciales en el código y no se guardan en `localStorage`.
+**Supuesto**: no se guardan en `localStorage`; desde `operaciones-contra-api` los lee la API (ya no hay datos iniciales en el código).
 **Origen**: la consigna indica conservar «libros, clientes y ventas» y excluye el ABM de las otras entidades.
 **Riesgo si es falso**: bajo.
 **Cómo validar**: confirmar en el change del ejercicio 6.
 
-### SU-06 — Claves de `localStorage`
-**Supuesto**: tres claves separadas (`libreria.libros`, `libreria.clientes`, `libreria.ventas`).
+### SU-06 — Claves de `localStorage` (retirado)
+**Supuesto**: tres claves separadas (`libreria.libros`, `libreria.clientes`, `libreria.ventas`). Desde `operaciones-contra-api` esas claves quedan sin uso (DD-29): solo se conservan `users` y `userData`.
 **Origen**: propuesta del equipo; la consigna solo exige documentar ubicación y estructura del catálogo guardado.
 **Riesgo si es falso**: bajo, mientras se documente en el README.
 **Cómo validar**: confirmar en el change del ejercicio 6.

@@ -4,6 +4,8 @@ import type { AutorConRol } from "../../../src/types/autor";
 import type { Libro } from "../../../src/types/libro";
 import type { Cliente } from "../../../src/types/cliente";
 import type { LibroNuevo } from "../../../src/types/libro";
+import type { Venta } from "../../../src/types/venta";
+import { ventaCreada } from "./escrituras";
 import { listadoDeLibros } from "./libros";
 
 const base = listadoDeLibros[0];
@@ -25,3 +27,6 @@ export const autoriaConRolInvalido: LibroNuevo = { isbn: "x", titulo: "t", preci
 
 // @ts-expect-error `perfil` es obligatorio en un cliente: sin perfil se entrega `null`, no se omite
 export const clienteSinPerfilAusente: Cliente = { id: 1, nombre: "n", email: "e" };
+
+// @ts-expect-error el renglón de una venta no lleva `isbn`: la API no lo entrega
+export const renglonConIsbn: Venta = { ...ventaCreada, renglones: [{ ...ventaCreada.renglones[0], isbn: "978-950-00-0001-1" }] };

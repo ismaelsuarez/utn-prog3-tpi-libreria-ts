@@ -4,14 +4,12 @@ import {
   calcularVenta,
   cambiarCantidad,
   codigoDeVenta,
-  construirVenta,
   quitarRenglon,
   validarVenta,
   type LibroVendible,
   type RenglonBorrador,
   type RenglonCalculado,
 } from "../../src/logica/ventas";
-import type { ClienteRef } from "../../src/types/cliente";
 
 function libro(precio: number | string, id = 1): LibroVendible {
   return { id, titulo: "Libro de prueba", isbn: "978-1", precio };
@@ -27,7 +25,6 @@ function renglonesDe(resultado: ReturnType<typeof calcularVenta>): RenglonCalcul
   return resultado.renglones;
 }
 
-const FECHA = "2026-01-06T01:07:00.000Z";
 
 describe("calcularVenta: redondeo y centavos", () => {
   test("redondea el unitario antes de multiplicar sin cambiar el catálogo", () => {
@@ -278,110 +275,6 @@ describe("validarVenta", () => {
     const copia = structuredClone(renglones);
     expect(validarVenta(1, renglones, clientes, [libro(1500)])[0]?.campo).toBe(campo);
     expect(renglones).toEqual(copia);
-  });
-});
-
-describe("construirVenta", () => {
-  test("construye la venta completa sin identificador y con fecha suministrada", () => {
-    const renglones = renglonesDe(calcular(1500.125, 2));
-    const resultado = construirVenta(clientes[0] as ClienteRef, renglones, "2026-10-16T23:45:00.000Z");
-    expect(resultado).toEqual({
-      ok: true,
-      errores: [],
-      venta: {
-        fecha: "2026-10-16T23:45:00.000Z",
-        cliente: { id: 1, nombre: "Cliente de prueba", email: "cliente@ejemplo.test" },
-        renglones: [
-          { libro_id: 1, titulo: "Libro de prueba", isbn: "978-1", cantidad: 2, precio_unitario: "1500.13", subtotal: "3000.26" },
-        ],
-        total: "3000.26",
-      },
-    });
-  });
-
-  test("la instantánea no comparte referencias con cliente, catálogo ni borrador", () => {
-    const cliente: ClienteRef = { ...(clientes[0] as ClienteRef) };
-    const catalogo = [libro(1500.125)];
-    const borrador = renglonesDe(calcularVenta([{ libro_id: 1, cantidad: 2 }], catalogo));
-    const resultado = construirVenta(cliente, borrador, FECHA);
-    cliente.nombre = "Modificado";
-    (catalogo[0] as LibroVendible).titulo = "Modificado";
-    (catalogo[0] as LibroVendible).isbn = "Otro";
-    (catalogo[0] as LibroVendible).precio = 999;
-    (borrador[0] as RenglonCalculado).titulo = "Modificado";
-    (borrador[0] as RenglonCalculado).cantidad = 99;
-    borrador.push({ libro_id: 7, titulo: "otro", isbn: "x", cantidad: 1, precio_unitario: "1.00", subtotal: "1.00" });
-    if (!resultado.ok) throw new Error("se esperaba una venta");
-    expect(resultado.venta.cliente.nombre).toBe("Cliente de prueba");
-    expect(resultado.venta.renglones).toEqual([
-      { libro_id: 1, titulo: "Libro de prueba", isbn: "978-1", cantidad: 2, precio_unitario: "1500.13", subtotal: "3000.26" },
-    ]);
-    expect(resultado.venta.total).toBe("3000.26");
-  });
-
-  test("conserva el unitario cero redondeado desde un precio positivo", () => {
-    const resultado = construirVenta(clientes[0] as ClienteRef, renglonesDe(calcular(0.004, 2)), FECHA);
-    expect(resultado.errores).toEqual([]);
-    if (!resultado.ok) throw new Error("se esperaba una venta");
-    expect(resultado.venta.renglones[0]?.precio_unitario).toBe("0.00");
-    expect(resultado.venta.total).toBe("0.00");
-  });
-
-  const valido = (): RenglonCalculado[] => renglonesDe(calcular(1));
-  test.each<[string, ClienteRef | null, () => RenglonCalculado[], string, string]>([
-    ["cliente", null, valido, FECHA, "cliente"],
-    ["renglones", clientes[0] as ClienteRef, () => [], FECHA, "renglones"],
-    ["cantidad", clientes[0] as ClienteRef, () => [{ ...(valido()[0] as RenglonCalculado), cantidad: 0 }], FECHA, "cantidad"],
-    ["precio unitario", clientes[0] as ClienteRef, () => [{ ...(valido()[0] as RenglonCalculado), precio_unitario: "abc" }], FECHA, "libro"],
-    ["fecha", clientes[0] as ClienteRef, valido, "fecha inválida", "fecha"],
-  ])("rechaza %s inválido sin producir venta", (_nombre, cliente, crearRenglones, fecha, campo) => {
-    const renglones = crearRenglones();
-    const copia = structuredClone(renglones);
-    const resultado = construirVenta(cliente, renglones, fecha);
-    expect(resultado.errores[0]?.campo).toBe(campo);
-    expect("venta" in resultado).toBe(false);
-    expect(renglones).toEqual(copia);
-  });
-
-  test("calcula el total en centavos y copia solo los campos del contrato", () => {
-    const renglones = renglonesDe(
-      calcularVenta(
-        [{ libro_id: 1, cantidad: 3 }, { libro_id: 2, cantidad: 1 }],
-        [libro(0.1), libro(0.2, 2)],
-      ),
-    );
-    const conExtra = Object.assign(renglones[0] as RenglonCalculado, { extra: { mutable: true } });
-    expect(conExtra.extra.mutable).toBe(true);
-    const clienteConExtra = Object.assign({ ...(clientes[0] as ClienteRef) }, { extra: { mutable: true } });
-    const resultado = construirVenta(clienteConExtra, renglones, FECHA);
-    expect(resultado.errores).toEqual([]);
-    if (!resultado.ok) throw new Error("se esperaba una venta");
-    expect(resultado.venta.total).toBe("0.50");
-    expect("extra" in (resultado.venta.renglones[0] as object)).toBe(false);
-    expect("extra" in resultado.venta.cliente).toBe(false);
-  });
-
-  test("rechaza renglones duplicados", () => {
-    const renglon = renglonesDe(calcular(1))[0] as RenglonCalculado;
-    const resultado = construirVenta(clientes[0] as ClienteRef, [renglon, { ...renglon }], FECHA);
-    expect(resultado.errores[0]?.campo).toBe("renglones");
-    expect("venta" in resultado).toBe(false);
-  });
-
-  test("rechaza fecha sin hora ISO", () => {
-    const resultado = construirVenta(clientes[0] as ClienteRef, renglonesDe(calcular(1)), "2026-01-06");
-    expect(resultado.errores[0]?.campo).toBe("fecha");
-    expect(resultado.errores[0]?.mensaje).toBe("La fecha de confirmación no es válida.");
-    expect("venta" in resultado).toBe(false);
-  });
-
-  test("rechaza subtotal alterado en vez de confirmar una venta distinta", () => {
-    const renglones = renglonesDe(calcular(1500, 2));
-    (renglones[0] as RenglonCalculado).subtotal = "3001.00";
-    const resultado = construirVenta(clientes[0] as ClienteRef, renglones, FECHA);
-    expect(resultado.errores[0]?.campo).toBe("renglones");
-    expect("venta" in resultado).toBe(false);
-    expect(renglones[0]?.subtotal).toBe("3001.00");
   });
 });
 

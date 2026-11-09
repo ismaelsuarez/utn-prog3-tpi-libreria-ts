@@ -116,10 +116,17 @@ provienen de la consigna (`docs/Repaso Primer Parcial.pdf`).
 
 ## Dominio: Persistencia (RN-PE)
 
-- **RN-PE-01**: Se utiliza `localStorage` para conservar libros, clientes y ventas.
-- **RN-PE-02**: En el primer inicio se cargan los ejemplos.
-- **RN-PE-03**: Al volver a abrir se recuperan los registros guardados sin
-  duplicar los datos iniciales ni las ventas.
+- **RN-PE-01** (reemplazada): libros, clientes y ventas ya no se conservan en
+  `localStorage`; los guarda y los lee la API de producción.
+  Spec: `acceso-a-datos`, «Datos de negocio desde la API».
+- **RN-PE-02** (retirada): no hay datos de ejemplo en el primer inicio; los
+  datos son los de la API.
+- **RN-PE-03** (reemplazada): al volver a abrir se recuperan los registros desde
+  la API, sin duplicados porque no hay copia local.
+- **RN-PE-04**: las claves `libreria.libros`, `libreria.clientes` y
+  `libreria.ventas` de versiones anteriores no se leen, escriben, migran ni
+  borran; el navegador solo usa `users` y `userData`.
+  Spec: `datos-locales`, «Claves de negocio anteriores sin uso».
 
 ## Dominio: Formularios e interfaz (RN-UI)
 

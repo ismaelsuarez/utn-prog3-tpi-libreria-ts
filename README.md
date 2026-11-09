@@ -7,7 +7,7 @@
 Programación III · Tecnicatura Universitaria en Programación a Distancia · UTN
 Unidad HTML, CSS y JavaScript · Revisor de la unidad: Prof. Matías Torres
 
-`HTML5` · `CSS3` · `JavaScript nativo` · `localStorage` · Sin librerías, frameworks ni CDNs
+`HTML5` · `CSS3` · `TypeScript` · `Vite` · Sin librerías de ejecución, frameworks ni CDNs
 
 </div>
 
@@ -34,8 +34,8 @@ TypeScript estricto y compilado con Vite.
 > repositorios con la forma de la API de producción
 > (`https://api.ismaelsuarez.me`). El **Catálogo ya lee los libros de la API**
 > por la base `/api` del mismo origen (`cliente-http-y-catalogo`); Libros,
-> Clientes, Ventas e Historial siguen guardando en `localStorage` hasta
-> `operaciones-contra-api` (ver [Origen de los datos](#origen-de-los-datos)). El registro y el inicio de sesión ya existen
+> Clientes, Ventas e Historial también leen y registran en la API
+> (`operaciones-contra-api`; ver [Origen de los datos](#origen-de-los-datos)). El registro y el inicio de sesión ya existen
 > (`registro-login-y-sesion`) y las páginas se protegen según el rol
 > (`proteccion-de-rutas-y-roles`). Todo vive solo en el navegador: la API no
 > tiene usuarios y queda abierta (ver [Usuarios de demostración y
@@ -96,11 +96,15 @@ error al crear una cuenta o ingresar.
 
 **Cambio de origen**: lo guardado en el navegador cuando se abría desde
 `file://` no se ve en `http://localhost:5173`, porque `localStorage` es propio de
-cada origen. Es esperado: en el origen nuevo se vuelven a cargar los ejemplos.
+cada origen. Es esperado: los datos de negocio ya no se guardan en el navegador
+(salen de la API) y los usuarios se vuelven a sembrar en el origen nuevo.
 
 **API de producción**: el navegador usa la base `/api` del mismo origen
 (`VITE_API_BASE`); `npm run dev` y `npm run preview` la reenvían a
-`https://api.ismaelsuarez.me` (variable `API_PROXY_TARGET`). Ver `.env.example`.
+`https://api.ismaelsuarez.me` (variable `API_PROXY_TARGET`), **pero solo las
+lecturas**: toda escritura hacia producción se rechaza con `403` en el propio
+servidor de desarrollo. Para probar altas y ventas, ver [Backend local para
+verificar escrituras](#backend-local-para-verificar-escrituras). Ver `.env.example`.
 
 ## Navegación entre vistas
 
@@ -268,95 +272,77 @@ con el rol `client` y llega al Catálogo; la página no ofrece elegir el rol.
 
 ## Origen de los datos
 
-Durante la transición a la API conviven dos orígenes, cada vista con uno solo:
+Todos los datos de negocio salen de la API de producción
+(`https://api.ismaelsuarez.me`) por la base `/api` del mismo origen, solo por
+medio de los repositorios (`src/datos/proveedor.ts`):
 
-| Vistas | Origen | Detalle |
-|---|---|---|
-| Catálogo | API de producción, solo lectura | `GET /api/libros/` (todas las páginas de 100) y `GET /api/libros/{id}` por cada libro para traer sus autores, con a lo sumo 4 consultas a la vez; tiempo límite de 10 s por solicitud |
-| Libros, Clientes, Ventas e Historial | `localStorage` del navegador | Sin ninguna solicitud a `/api`; pasan a la API en `operaciones-contra-api` |
+| Vistas | Operaciones contra `/api` |
+|---|---|
+| Catálogo | Solo lectura: `GET /api/libros/` (todas las páginas de 100) y `GET /api/libros/{id}` por cada libro para traer sus autores, con a lo sumo 4 consultas a la vez; tiempo límite de 10 s por solicitud |
+| Libros, Clientes, Ventas e Historial | Lecturas de libros, editoriales, géneros, autores, clientes y ventas; altas con `POST /libros/`, `POST /clientes/`, `POST /clientes/{id}/perfil` y `POST /ventas/`. Solo `GET` y `POST`: nunca `PUT`, `PATCH` ni `DELETE` |
 
-Consecuencias que conviene conocer (no hay aviso en la interfaz):
+Lo que conviene conocer:
 
-- Un libro dado de alta en Libros **no aparece en el Catálogo** (sí en el
-  selector de Ventas), y los libros del Catálogo no son los de ejemplo de
-  Libros: los identificadores y los datos difieren hasta `operaciones-contra-api`.
+- **Escrituras**: el servidor devuelve el registro creado (identificadores,
+  precio copiado, subtotales y total); la aplicación muestra eso y no lo
+  enviado. Una escritura sin respuesta (red o tiempo agotado) se informa como
+  resultado desconocido y **nunca se reintenta sola**.
+- **Listados por sondeo**: la API no ofrece `GET /clientes/` ni `GET /autores/`.
+  Esos listados se arman pidiendo `GET /clientes/{id}` y `GET /autores/{id}`
+  desde el 1, de a 4 a la vez, hasta 10 identificadores seguidos sin registro
+  posteriores al mayor identificador que mencionan las ventas o los libros. Como
+  la API no borra, solo más de 10 altas fallidas seguidas ocultarían a los
+  registros siguientes hasta que una venta o un libro los mencione.
+- **Stock**: se carga al registrar un libro (la API lo exige), pero no se
+  muestra ni se descuenta: la venta no controla el stock.
+- **Producción desde desarrollo**: `npm run dev` y `npm run preview` rechazan con
+  `403` toda escritura cuyo destino sea la API de producción; las pruebas
+  automatizadas no usan la red. Ver [Backend local para verificar
+  escrituras](#backend-local-para-verificar-escrituras).
 - Sin el reenvío de `/api` (por ejemplo, si se sirve `dist/` con otro servidor)
-  o con la API caída, el Catálogo no muestra libros: informa «No se pudieron
-  cargar los datos.» y el motivo. No hay respaldo local, a propósito.
-- La aplicación nunca escribe en la API: solo se envían solicitudes `GET`.
+  o con la API caída, las vistas informan «No se pudieron cargar los datos.» y
+  el motivo. No hay respaldo local, a propósito.
 
 ## Datos y almacenamiento
 
-### Datos iniciales
-
-Viven en `src/datos/local/datos-iniciales.ts`: 6 libros, 2 editoriales, 2 géneros,
-3 autores y 3 clientes ficticios, con identificadores estables (`lib-01`,
-`edi-01`, `gen-01`, `aut-01`, `cli-01`…). Editoriales, géneros y autores
-**no se guardan** en `localStorage`: se leen siempre de ese archivo. Las
-vistas no lo importan: piden los datos a los repositorios
-(`src/datos/repositorios.ts`), que para las vistas de gestión implementa un
-adaptador sobre `localStorage`; el Catálogo ya usa la API
-(`cliente-http-y-catalogo`) y `operaciones-contra-api` reemplazará el resto sin
-tocar las vistas.
-
-### Cómo funciona `localStorage`
-
-- Solo `src/datos/local/almacen-local.ts` nombra `localStorage`; los almacenes de
-  `src/datos/local/` (datos de la librería, usuarios y sesión) reciben el
-  almacenamiento ya obtenido.
-- En el **primer inicio**, la raíz de composición (`src/datos/proveedor.ts`)
-  carga los ejemplos en las claves que faltan. Al volver a abrir, se recuperan los registros guardados **sin
-  duplicar** los datos iniciales.
-- Identificadores nuevos: `lib-07`, `cli-04`, `ven-01`, etc.
+El navegador guarda únicamente dos claves, ambas de acceso y sesión (ver
+[Usuarios de demostración y seguridad](#usuarios-de-demostración-y-seguridad)):
 
 | Clave | Contenido |
 |---|---|
-| `libreria.libros` | Arreglo de libros: `id`, `titulo`, `isbn`, `precio`, `editorialId`, `generoId` (o `null`) y `autorIds` |
-| `libreria.clientes` | Arreglo de clientes: `id`, `nombreCompleto`, `email` y, en los registrados desde la interfaz, `telefono` |
-| `users` y `userData` | Usuarios y sesión: ver [Usuarios de demostración y seguridad](#usuarios-de-demostración-y-seguridad) |
-| `libreria.ventas` | Arreglo de ventas `{id, fecha, cliente, renglones, total}`; cada renglón guarda `libroId`, `titulo`, `isbn`, `cantidad`, `precioUnitario` y `subtotal` |
+| `users` | Usuarios registrados (contraseña protegida con PBKDF2) y el administrador inicial |
+| `userData` | Sesión vigente |
+
+- Solo `src/datos/local/almacen-local.ts` nombra `localStorage`; los almacenes de
+  `src/datos/local/` (usuarios y sesión) reciben el almacenamiento ya obtenido.
+- Las claves `libreria.libros`, `libreria.clientes` y `libreria.ventas` de
+  versiones anteriores **ya no se leen, escriben, migran ni borran**: quedan en el
+  navegador sin uso y ninguna vista muestra sus registros. Para quitarlas a
+  mano: Herramientas de desarrollo → **Application** (o *Almacenamiento*) →
+  **Local Storage** → origen `http://localhost:5173` (o el de la compilación
+  servida) → borrar esas tres claves.
+- No hay datos iniciales de ejemplo en el código: los libros, clientes y ventas
+  son los que tiene la API (para pruebas manuales, la siembra del backend local).
 
 ### Límites
 
 > [!IMPORTANT]
-> `localStorage` depende del **navegador**, del **perfil** y de la
-> **ubicación desde la que se abre** el proyecto. Los datos **no se comparten
-> entre usuarios** ni entre perfiles, no se respaldan en un servidor y se
-> pierden si el navegador borra los datos del sitio. No se sincronizan
-> pestañas abiertas en simultáneo.
-
-**Claves dañadas**: si una clave no contiene un arreglo JSON válido (por
-ejemplo, porque se alteró a mano), la aplicación no la repara ni la
-sobrescribe. Libros y clientes muestran los ejemplos de forma provisoria; el
-historial informa que no pudo leer las ventas. La clave se reemplaza recién
-con el próximo alta de ese tipo (ejemplos + registro nuevo).
-
-### Ubicación y estructura del catálogo guardado
-
-Herramientas de desarrollo → **Application** (o *Almacenamiento*) →
-**Local Storage** → origen `http://localhost:5173` (o el de la compilación servida) → clave `libreria.libros`. Un libro
-guardado tiene esta forma:
-
-```json
-{
-  "id": "lib-01",
-  "titulo": "El faro de los vientos",
-  "isbn": "978-987-000-001-1",
-  "precio": 1500,
-  "editorialId": "edi-01",
-  "generoId": "gen-01",
-  "autorIds": ["aut-01"]
-}
-```
-
-**Para reproducir CM-6** en una copia de prueba: confirmar una venta, editar
-**solo** el campo `precio` del libro dentro de `libreria.libros` (sin tocar
-`libreria.ventas`), recargar Historial y comparar el detalle con los importes
-confirmados.
+> `users` y `userData` dependen del **navegador**, del **perfil** y de la
+> **ubicación desde la que se abre** el proyecto: no se comparten entre
+> usuarios ni perfiles, no se respaldan en un servidor y se pierden si el
+> navegador borra los datos del sitio. Los datos de negocio, en cambio, viven en
+> la API y los ven todos los navegadores.
 
 ---
 
 ## Casos manuales: resultado observado
+
+> [!NOTE]
+> Los resultados de CM-1 a CM-8 siguientes se observaron antes de
+> `operaciones-contra-api`, cuando Libros, Clientes, Ventas e Historial
+> guardaban en `localStorage`. Esas vistas ya usan la API: los casos se vuelven a
+> ejecutar contra el backend local y se registran de nuevo (la fila de cada caso
+> se reemplaza solo con lo realmente observado).
 
 **Ejecución del 2026-11-09** (migración a Vite y TypeScript, change
 `migracion-vite-typescript`): recorrido automatizado en Google Chrome 157
@@ -516,9 +502,9 @@ src/
 │   ├── client/catalogo/    Catálogo y ficha de lectura
 │   └── admin/              libros, clientes, ventas (con comprobante) e historial
 ├── logica/                 funciones puras sin DOM: texto, dinero, fecha, catálogo, libros, clientes, ventas, usuarios, sesión
-├── datos/                  repositorios, raíz de composición (proveedor), base /api, cliente HTTP y adaptador local
-│   ├── api/                base /api, cliente HTTP de solo lectura, errores de la API, paginación y repositorios sobre la API
-│   └── local/              almacén local (único que nombra localStorage), datos iniciales, repositorios locales,
+├── datos/                  repositorios, raíz de composición (proveedor), base /api y adaptador de la API
+│   ├── api/                base /api, cliente HTTP (GET y POST), errores de la API, paginación y sondeo, repositorios sobre la API y guarda de escrituras de desarrollo
+│   └── local/              almacenamiento del navegador (único que nombra localStorage),
 │                           almacén de usuarios y sesión, contraseñas (PBKDF2) y usuario administrador inicial
 ├── types/                  tipos de dominio alineados con la API de producción
 ├── utils/                  dom.ts (mensajes, errores de campo, cierre de sesión), auth.ts y navigate.ts (sesión y navegación)
