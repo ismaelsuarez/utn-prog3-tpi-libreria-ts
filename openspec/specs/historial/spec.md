@@ -43,18 +43,22 @@ La vista Historial no SHALL ofrecer controles para editar ni para eliminar venta
 - **THEN** no encuentra ningún control para editarla ni para eliminarla
 
 ### Requirement: Historial desde ventas guardadas
-El Historial SHALL listar las ventas recuperadas del almacén, sin filas de ejemplo, con identificador, fecha, cliente y total. Si no hay ventas SHALL mostrar un mensaje de lista vacía y no presentar un detalle ficticio. Un fallo de lectura SHALL comunicarse como error, no como una consulta exitosa sin ventas.
+El Historial SHALL listar las ventas que entrega la API, recorriendo todas sus páginas y en el orden recibido, sin filas de ejemplo, con identificador, fecha, cliente y total. Si no hay ventas SHALL mostrar un mensaje de lista vacía y no presentar un detalle ficticio. Un fallo de lectura SHALL comunicarse como error, no como una consulta exitosa sin ventas.
 
 #### Scenario: Venta recuperada al abrir
 - **WHEN** se confirma una venta y luego se abre Historial
-- **THEN** aparece esa venta con los datos e importes guardados
+- **THEN** aparece esa venta con los importes que registró la API
+
+#### Scenario: Más ventas que una página
+- **WHEN** la API tiene 120 ventas
+- **THEN** el Historial muestra las 120, pedidas en páginas de 100
 
 #### Scenario: Ninguna venta confirmada
-- **WHEN** el almacén devuelve una lista de ventas vacía
+- **WHEN** la API devuelve una lista de ventas vacía
 - **THEN** se muestra «No hay ventas confirmadas.» y el detalle permanece oculto
 
 #### Scenario: Lectura fallida
-- **WHEN** falla el acceso al almacenamiento al consultar el historial
+- **WHEN** falla la consulta de ventas a la API
 - **THEN** se informa el error sin presentar las filas de maqueta ni afirmar que la consulta terminó correctamente
 
 ### Requirement: Fecha local de presentación
@@ -69,16 +73,16 @@ El Historial SHALL presentar la fecha de cada venta como `dd/mm/aaaa HH:mm`, con
 - **THEN** se muestra `05/01/2026 22:07` y la fecha ISO guardada no cambia
 
 ### Requirement: Detalle histórico independiente del catálogo
-El detalle SHALL mostrar en la misma página los renglones de la venta seleccionada y su total, leyendo exclusivamente los datos descriptivos e importes de esa venta. Cambios posteriores del catálogo o del cliente SHALL dejar intacto ese detalle. La consulta SHALL ser accesible por teclado y no ofrecer edición ni eliminación.
+El detalle SHALL mostrar en la misma página los renglones de la venta seleccionada y su total, leyendo solo los datos de esa venta que entrega la API, sin consultar el catálogo. El precio unitario, los subtotales y el total SHALL ser los registrados al confirmar; el título y el cliente, los que la API informa al consultar. La consulta SHALL ser accesible por teclado y no ofrecer edición ni eliminación.
 
 #### Scenario: Seleccionar otra venta
 - **WHEN** se activa el botón identificado de una venta distinta
 - **THEN** el detalle se actualiza con su identificador y sus renglones, sin mezclar filas de la venta anterior, y el usuario puede localizarlo mediante el foco
 
 #### Scenario: Cambio exclusivo del precio del catálogo
-- **WHEN** se modifica el precio de un libro en el catálogo guardado de una copia de prueba y se recarga el historial
+- **WHEN** en un backend local se cambia el precio de un libro ya vendido y se recarga el historial
 - **THEN** la venta anterior conserva unitario, subtotales y total confirmados (CM-6)
 
 #### Scenario: Datos descriptivos posteriores
-- **WHEN** cambian fuera de la venta los datos descriptivos de un libro o cliente
-- **THEN** el historial conserva el cliente, título e ISBN copiados al confirmar, sin depender de consultas al catálogo
+- **WHEN** después de la venta cambian, en la API, el título de un libro vendido o el nombre del cliente
+- **THEN** el detalle muestra el título y el cliente que la API informa al consultar, conserva unitario, subtotales y total confirmados, y no muestra ISBN porque la API no lo entrega

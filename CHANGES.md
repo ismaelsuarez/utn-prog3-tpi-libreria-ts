@@ -102,7 +102,7 @@ T-02 y T-03 son independientes entre sí y pueden avanzar en paralelo una vez ar
   - `knowledge-base/03_actores_y_roles.md`
 
 ### [T-05] `operaciones-contra-api`
-- **Estado**: `[ ]`
+- **Estado**: `[x]` archivado el 2026-11-09 (`openspec/changes/archive/2026-11-09-operaciones-contra-api/`)
 - **Scope**:
   - Altas de libros (con `stock` y autores con rol), clientes con perfil, ventas con totales del servidor e historial, todo contra la API mediante los repositorios.
   - Ítems abiertos de diseño: la API no ofrece `GET /clientes/` (listado de clientes), `GET /autores/` (listado de autores) ni actualización del perfil (edición del teléfono); son las operaciones marcadas «sin endpoint» en `src/datos/repositorios.ts`.
