@@ -16,11 +16,15 @@ import type { LibroDetalle, LibroNuevo } from "../types/libro";
 import type { Id } from "../types/primitivos";
 import type { Venta, VentaNueva } from "../types/venta";
 
-export interface RepositorioLibros {
+/** Lectura de libros: lo único que necesita el Catálogo, de modo que no pueda escribir. */
+export interface RepositorioLecturaLibros {
   /** `GET /libros/` (y el detalle de cada libro: la tarjeta necesita los autores). */
   listar(filtro?: FiltroLibros): Promise<LibroDetalle[]>;
   /** `GET /libros/{id}`. */
   obtener(id: Id): Promise<LibroDetalle>;
+}
+
+export interface RepositorioLibros extends RepositorioLecturaLibros {
   /** `POST /libros/`. */
   crear(libro: LibroNuevo): Promise<LibroDetalle>;
 }
