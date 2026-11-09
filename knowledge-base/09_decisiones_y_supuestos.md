@@ -145,7 +145,7 @@
 **Alternativas consideradas**: autenticación en el servidor (no es posible).
 **Justificación**: cumple la consigna con lo que el frontend puede hacer.
 **Trade-offs aceptados**: la API queda abierta; quien conozca su dirección puede llamarla sin sesión. Se documenta como limitación conocida y no es una medida de seguridad real.
-**Origen**: change `migracion-vite-typescript`, decisiones D3 y D13; el registro, el login y la sesión se implementan en `registro-login-y-sesion` (DD-21 y DD-22) y la protección de rutas en `proteccion-de-rutas-y-roles`.
+**Origen**: change `migracion-vite-typescript`, decisiones D3 y D13; el registro, el login y la sesión se implementan en `registro-login-y-sesion` (DD-21 y DD-22) y la protección de rutas en `proteccion-de-rutas-y-roles` (DD-25).
 
 ### DD-20 — Frontera de repositorios con la forma de la API
 **Decisión**: las vistas acceden a los datos solo por interfaces de repositorio asíncronas (`src/datos/repositorios.ts`) tipadas con los tipos de dominio alineados con la API; `src/datos/proveedor.ts` es la raíz de composición. Hoy los implementa un adaptador sobre el almacén local (mismas claves y formato de `localStorage`) que traduce entre la forma local y la de la API.
@@ -186,6 +186,14 @@
 **Justificación**: conserva el comportamiento visible con `1 + n` solicitudes (hoy 6); un catálogo con autores faltantes sería engañoso.
 **Trade-offs aceptados**: `1 + n` solicitudes por apertura del Catálogo (si el catálogo crece, la alternativa es cargar los autores en la ficha); el parámetro `titulo` del servidor (que interpreta `%` y `_` como comodines) queda soportado pero sin uso en las vistas.
 **Origen**: change `cliente-http-y-catalogo`, decisiones D1 a D4, D7 y D8.
+
+### DD-25 — Protección de rutas por zona y sesión cotejada con `users`
+**Decisión**: cada página decide su acceso al cargar, en `src/main.ts`, según la zona de su dirección (`auth`, `client`, `admin`) y la sesión vigente. La sesión vale solo si `userData` coincide con un usuario de `users` con el mismo email y rol (`sesionVigente`); la decisión es una función pura (`decidirAcceso`). Sin sesión, `client` y `admin` redirigen al login; un `client` en una página `admin` va al Catálogo, sin mensaje; el `admin` abre ambas zonas.
+**Contexto**: la consigna pide una función en `src/main.ts` que intercepte la carga y redirija «al login o a su zona permitida». El usuario aprobó el cotejo con `users` y el destino Catálogo el 2026-11-09.
+**Alternativas consideradas**: confiar en `userData.role`, como el repositorio base (más simple, deja abierta la falsificación de un solo campo); firmar `userData` (la clave viviría en el mismo navegador); redirigir al `client` al login (dos saltos y sugiere que perdió la sesión).
+**Justificación**: el cotejo cierra la falsificación más obvia sin costo de red y se prueba con Vitest; el destino por rol es el mismo que recibe al iniciar sesión.
+**Trade-offs aceptados**: sigue siendo del cliente: quien edite `userData` puede editar también el rol de su entrada en `users`, y las credenciales del administrador de demostración están en el README; no es una medida de seguridad real. Si `users` es ilegible, `obtenerUsuarios()` devuelve la semilla y solo la sesión del administrador sembrado sigue valiendo (falla cerrado). La decisión se repite al cargar y al restaurar desde la caché de ida y vuelta, no en vivo ante un cierre de sesión en otra pestaña.
+**Origen**: change `proteccion-de-rutas-y-roles`, decisiones D1 a D4 y D8.
 
 ## Supuestos inferidos
 

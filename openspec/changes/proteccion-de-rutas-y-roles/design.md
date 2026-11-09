@@ -41,6 +41,8 @@ Función pura `zonaDeRuta(ruta: string): Zona | null` en `src/logica/sesion.ts`:
 
 ### D2 — La sesión se coteja con `users` (cotejo, no confianza ciega en `userData`)
 
+> **Aprobada por el usuario el 2026-11-09**: la sesión vale solo si `userData` coincide con un usuario de `users` con el mismo email y rol; si no, cuenta como sin sesión.
+
 Función pura `sesionVigente(guardada: unknown, usuarios: readonly UsuarioRegistrado[]): IUser | null` en `src/logica/sesion.ts`: exige `esSesion(guardada)` y, además, que `buscarPorEmail(usuarios, guardada.email)` exista con el mismo `role`. `autenticacion.obtenerSesion()` pasa a usarla con `almacen.obtenerUsuarios()`, de modo que la intercepción, el encabezado y las páginas de acceso comparten una sola definición de sesión vigente.
 
 Balance honesto:
@@ -65,6 +67,8 @@ Balance honesto:
 Los destinos con sesión salen de `destinoPorRol`. La zona desconocida falla cerrado; no puede producir un bucle porque el login vive bajo `/auth/login/` (spec «Vistas organizadas por zona») y una prueba fija que `zonaDeRuta` de la ruta del login es `auth`.
 
 ### D4 — Destino del `client` que entra a `admin`: el Catálogo
+
+> **Aprobada por el usuario el 2026-11-09**: el `client` que entra a una página `admin` va al Catálogo, sin mensaje de error.
 
 Se redirige al destino de su rol (`destinoPorRol("client")` → Catálogo), no al login: el cliente ya tiene sesión, y mandarlo al login produciría dos saltos (login → Catálogo, porque el login redirige con sesión) o, peor, sugeriría que su sesión se perdió. La consigna admite «al login o a su zona permitida»; es el mismo destino que recibe al iniciar sesión. Sin mensaje de «sin permiso» (no se pidió; supuesto registrado).
 
@@ -116,6 +120,8 @@ Las redirecciones usan `rutaDe`, relativa a la página actual, y `navegar`; no h
 3. Sin migración de datos: no cambian las claves ni su forma. Reversión: revertir la rama; las páginas vuelven a abrirse sin sesión.
 
 ## Puntos para la aprobación del usuario
+
+**Respuesta del usuario (2026-11-09): aprobó ambas recomendaciones (1. cotejar `userData` con `users`; 2. Catálogo, sin mensaje). Los artefactos no cambian.**
 
 Gobernanza CRÍTICA: las tareas asumen estas recomendaciones; si el usuario elige otra, cambian los artefactos indicados antes de aplicar.
 

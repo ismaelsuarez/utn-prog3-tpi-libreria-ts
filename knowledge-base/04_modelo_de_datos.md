@@ -131,6 +131,11 @@ consigna del TPI. Las lee y escribe únicamente
   hexadecimal).
 - `userData` guarda exactamente `{ email, loggedIn, role }`, nunca la
   contraseña ni su huella.
+- **Sesión vigente** (`proteccion-de-rutas-y-roles`): `userData` solo cuenta si
+  tiene la forma de una sesión y `users` registra un usuario con el mismo email
+  (normalizado) y el mismo rol; si no, es como no tener sesión
+  (`sesionVigente` en `src/logica/sesion.ts`). Es una comprobación del
+  cliente: quien edita `userData` puede editar también `users`.
 - **Semilla**: en el primer inicio, si la clave `users` no existe, se guarda un
   único administrador (`src/datos/local/usuarios-iniciales.ts`) con su huella
   ya calculada. Sus credenciales de demostración figuran solo en el README.

@@ -1,13 +1,17 @@
 import { describe, expect, test } from "vitest";
 import {
   aSesion,
+  decidirAcceso,
   destinoPorRol,
   esRol,
   esCuentaCreada,
   esSesion,
   esUsuarioRegistrado,
   rutaDe,
+  sesionVigente,
+  zonaDeRuta,
 } from "../../src/logica/sesion";
+import type { IUser } from "../../src/types/IUser";
 import type { UsuarioRegistrado } from "../../src/types/usuario";
 
 function usuarioValido(): UsuarioRegistrado {
@@ -155,5 +159,120 @@ describe("esCuentaCreada", () => {
   test("es la marca que arma rutaDe", () => {
     const ruta = rutaDe("login", { cuentaCreada: true });
     expect(esCuentaCreada(ruta.slice(ruta.indexOf("?")))).toBe(true);
+  });
+});
+
+describe("zonaDeRuta", () => {
+  test.each([
+    ["/src/pages/admin/libros/libros.html", "admin"],
+    ["/libreria/src/pages/client/catalogo/catalogo.html", "client"],
+    ["/src/pages/auth/login/login.html", "auth"],
+    ["/src/pages/admin/ventas/ventas", "admin"],
+  ])("la ruta %s es de la zona %s", (ruta, zona) => {
+    expect(zonaDeRuta(ruta)).toBe(zona);
+  });
+
+  test.each(["/index.html", "/", "", "/src/pages/otra/x/x.html", "/admin.html", "/admin/libros"])(
+    "la ruta %j no tiene zona conocida",
+    (ruta) => {
+      expect(zonaDeRuta(ruta)).toBeNull();
+    },
+  );
+
+  test("la ruta del login armada por rutaDe nunca da una zona desconocida", () => {
+    const raiz = "/src/pages/admin/libros/";
+    const resuelta = new URL(rutaDe("login"), `http://localhost${raiz}libros.html`).pathname;
+    expect(zonaDeRuta(resuelta)).toBe("auth");
+  });
+
+  test("funciona bajo una subruta profunda", () => {
+    expect(zonaDeRuta("/a/b/c/src/pages/admin/historial/historial.html")).toBe("admin");
+    expect(zonaDeRuta("/a/b/c/src/pages/auth/registro/registro.html")).toBe("auth");
+  });
+});
+
+describe("sesionVigente", () => {
+  const laura = usuarioValido();
+  const sesionDeLaura = { email: "laura@correo.test", loggedIn: true, role: "client" };
+
+  test("devuelve la sesión si el email existe en users con el mismo rol", () => {
+    expect(sesionVigente(sesionDeLaura, [laura])).toEqual(sesionDeLaura);
+  });
+
+  test("el email se coteja normalizado en ambos lados y la sesión conserva el texto de userData", () => {
+    const resultado = sesionVigente({ ...sesionDeLaura, email: "  LAURA@Correo.TEST " }, [laura]);
+    expect(resultado).toEqual({ email: "  LAURA@Correo.TEST ", loggedIn: true, role: "client" });
+    expect(sesionVigente(sesionDeLaura, [{ ...laura, email: "Laura@Correo.test" }])).toEqual(
+      sesionDeLaura,
+    );
+  });
+
+  test("el resultado tiene exactamente email, loggedIn y role", () => {
+    const resultado = sesionVigente({ ...sesionDeLaura, extra: "x" }, [laura]);
+    expect(Object.keys(resultado ?? {}).sort()).toEqual(["email", "loggedIn", "role"]);
+  });
+
+  test("rol editado a admin sobre un client registrado: sin sesión", () => {
+    expect(sesionVigente({ ...sesionDeLaura, role: "admin" }, [laura])).toBeNull();
+  });
+
+  test("rol editado a client sobre un admin registrado: sin sesión", () => {
+    const admin = { ...laura, email: "admin@libreria.test", role: "admin" as const };
+    expect(sesionVigente({ email: admin.email, loggedIn: true, role: "client" }, [admin])).toBeNull();
+    expect(sesionVigente({ email: admin.email, loggedIn: true, role: "admin" }, [admin])).not.toBeNull();
+  });
+
+  test("email que no está registrado: sin sesión", () => {
+    expect(sesionVigente({ ...sesionDeLaura, email: "otra@correo.test" }, [laura])).toBeNull();
+  });
+
+  test("sin usuarios registrados: sin sesión", () => {
+    expect(sesionVigente(sesionDeLaura, [])).toBeNull();
+  });
+
+  test.each([
+    ["loggedIn en falso", { ...sesionDeLaura, loggedIn: false }],
+    ["rol superusuario", { ...sesionDeLaura, role: "superusuario" }],
+    ["texto", "laura@correo.test"],
+    ["null", null],
+    ["arreglo vacío", []],
+    ["undefined", undefined],
+  ])("sesión inválida (%s): sin sesión aunque el usuario exista", (_nombre, guardada) => {
+    expect(sesionVigente(guardada, [laura])).toBeNull();
+  });
+});
+
+describe("decidirAcceso", () => {
+  const cliente: IUser = { email: "laura@correo.test", loggedIn: true, role: "client" };
+  const admin: IUser = { email: "admin@libreria.test", loggedIn: true, role: "admin" };
+  const permitir = { tipo: "permitir" };
+  const aLogin = { tipo: "redirigir", destino: "login" };
+  const aCatalogo = { tipo: "redirigir", destino: "catalogo" };
+  const aLibros = { tipo: "redirigir", destino: "libros" };
+
+  test.each([
+    ["auth", null, permitir],
+    ["auth", cliente, aCatalogo],
+    ["auth", admin, aLibros],
+    ["client", null, aLogin],
+    ["client", cliente, permitir],
+    ["client", admin, permitir],
+    ["admin", null, aLogin],
+    ["admin", cliente, aCatalogo],
+    ["admin", admin, permitir],
+    [null, null, aLogin],
+    [null, cliente, aCatalogo],
+    [null, admin, aLibros],
+  ] as const)("zona %s con sesión %j: %j", (zona, sesion, esperada) => {
+    expect(decidirAcceso(zona, sesion)).toEqual(esperada);
+  });
+
+  test("el destino de la redirección con sesión es el de destinoPorRol", () => {
+    for (const sesion of [cliente, admin]) {
+      expect(decidirAcceso("auth", sesion)).toEqual({
+        tipo: "redirigir",
+        destino: destinoPorRol(sesion.role),
+      });
+    }
   });
 });

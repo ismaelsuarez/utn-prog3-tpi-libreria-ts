@@ -287,11 +287,42 @@ describe("obtenerSesion y cerrarSesion", () => {
     expect(servicio.obtenerSesion()).toBeNull();
   });
 
-  test("una sesión válida se devuelve con sus tres campos", () => {
+  test("una sesión válida se devuelve con sus tres campos", async () => {
+    // Cambia por diseño (D2 de proteccion-de-rutas-y-roles): la sesión vale solo
+    // si `users` registra ese email con ese rol, así que el usuario se registra antes.
+    const storage = crearStorage();
+    const servicio = crearServicio(storage);
+    await servicio.registrar(borrador({ email: "a@b.test" }));
+    storage.contenido.userData = JSON.stringify({ email: "a@b.test", loggedIn: true, role: "client" });
+    expect(servicio.obtenerSesion()).toEqual({ email: "a@b.test", loggedIn: true, role: "client" });
+  });
+
+  test("userData con la forma válida pero un email ausente de users se trata como sin sesión", () => {
     const servicio = crearServicio(
       crearStorage({ userData: JSON.stringify({ email: "a@b.test", loggedIn: true, role: "client" }) }),
     );
-    expect(servicio.obtenerSesion()).toEqual({ email: "a@b.test", loggedIn: true, role: "client" });
+    expect(servicio.obtenerSesion()).toBeNull();
+  });
+
+  test("rol editado a admin sobre un client registrado: sin sesión", async () => {
+    const storage = crearStorage();
+    const servicio = crearServicio(storage);
+    await servicio.registrar(borrador({ email: "laura@correo.test" }));
+    storage.contenido.userData = JSON.stringify({ email: "laura@correo.test", loggedIn: true, role: "admin" });
+    expect(servicio.obtenerSesion()).toBeNull();
+  });
+
+  test("la sesión del administrador sembrado sigue vigente tras ingresar y falla cerrado si users es ilegible", async () => {
+    const storage = crearStorage();
+    const servicio = crearServicio(storage);
+    const sesion = await servicio.ingresar({ email: "admin@libreria.test", contrasena: "Faro-Admin-2026" });
+    expect(servicio.obtenerSesion()).toEqual(sesion);
+
+    storage.contenido.users = "{no es json";
+    expect(servicio.obtenerSesion()).toEqual(sesion); // la semilla vuelve a registrar al administrador
+
+    storage.contenido.userData = JSON.stringify({ email: "laura@correo.test", loggedIn: true, role: "client" });
+    expect(servicio.obtenerSesion()).toBeNull();
   });
 
   test("cerrarSesion quita userData y conserva users", async () => {
