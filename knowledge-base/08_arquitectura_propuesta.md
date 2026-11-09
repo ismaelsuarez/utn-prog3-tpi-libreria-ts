@@ -41,13 +41,18 @@ proyecto/
 │   ├── logica/                 # Funciones puras, sin DOM
 │   │   ├── texto.ts, dinero.ts, fecha.ts
 │   │   ├── catalogo.ts, libros.ts, clientes.ts, ventas.ts
+│   │   ├── usuarios.ts         # validarRegistro, validarIngreso, buscarPorEmail
+│   │   └── sesion.ts           # esSesion, esUsuarioRegistrado, aSesion, destinoPorRol, rutaDe
 │   ├── datos/
 │   │   ├── repositorios.ts     # Interfaces de repositorio (marcan las operaciones sin endpoint)
-│   │   ├── proveedor.ts        # Raíz de composición
-│   │   ├── errores.ts          # ErrorDeRepositorio
+│   │   ├── proveedor.ts        # Raíz de composición (repositorios y `autenticacion`)
+│   │   ├── autenticacion.ts    # ServicioAutenticacion: registrar, ingresar, obtenerSesion, cerrarSesion
+│   │   ├── errores.ts          # ErrorDeRepositorio, ErrorDeAlmacenamiento, ErrorDeCriptografia
 │   │   ├── api/base.ts         # obtenerBaseApi: base `/api` del mismo origen
 │   │   └── local/              # Adaptador local: almacen-local.ts (único que nombra localStorage),
-│   │                           # datos-iniciales.ts, repositorios-locales.ts, tipos-locales.ts
+│   │                           # datos-iniciales.ts, repositorios-locales.ts, tipos-locales.ts;
+│   │                           # almacen-usuarios.ts (claves `users` y `userData`, almacenamiento
+│   │                           # inyectado), contrasenas.ts (PBKDF2-SHA-256), usuarios-iniciales.ts
 │   ├── types/                  # Id, Dinero, Libro, LibroDetalle, Cliente, Venta, ErrorApi, IUser, Rol…
 │   ├── utils/dom.ts            # Mensajes, vaciado de nodos, búsqueda tipada de elementos
 │   ├── styles/                 # base, disposición, componentes y una hoja por función
@@ -91,6 +96,15 @@ proyecto/
   `libreria.libros`, `libreria.clientes`, `libreria.ventas`, mismo formato que
   antes). `cliente-http-y-catalogo` y `operaciones-contra-api` los reemplazan
   por adaptadores HTTP.
+- **Usuarios y sesión** (`registro-login-y-sesion`): nunca van a la API. Los
+  atiende `src/datos/local/almacen-usuarios.ts`, separado del almacén local
+  porque es permanente, con el mismo almacenamiento inyectado y las claves
+  `users` (arreglo de `UsuarioRegistrado`: `email` normalizado, `role`,
+  `contrasena` como huella PBKDF2-SHA-256 con sal, `creadoEn`) y `userData`
+  (un `IUser`: `email`, `loggedIn`, `role`; nunca la contraseña). La clave
+  `users` se siembra con un administrador de demostración solo si falta. Sin
+  almacenamiento no hay reserva en memoria: el alta y el ingreso lanzan
+  `ErrorDeAlmacenamiento`. Las vistas usan `autenticacion` de `proveedor.ts`.
 - **Base `/api`**: el navegador solo llama a la base relativa `/api`
   (`VITE_API_BASE`). `npm run dev` y `npm run preview` la reenvían a
   `API_PROXY_TARGET` (por defecto `https://api.ismaelsuarez.me`) quitando el

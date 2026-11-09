@@ -124,7 +124,7 @@ la API de producción).
 4. **NUNCA** acceder a datos o a la red fuera de los repositorios → las vistas usan solo `src/datos/proveedor.ts`; la red se dirige únicamente a la base del mismo origen (`/api`), nunca a `https://api.ismaelsuarez.me` en forma directa.
 5. **NUNCA** insertar datos de usuario con `innerHTML` → usar `textContent` o creación de nodos.
 6. **NUNCA** tocar el DOM dentro de `src/logica/` → allí solo funciones puras; el DOM vive en los módulos de `src/pages/` y en `src/utils/dom.ts`.
-7. **NUNCA** acceder a `localStorage` fuera de `src/datos/local/almacen-local.ts` → toda lectura y escritura pasa por el almacén local, que implementa los repositorios.
+7. **NUNCA** nombrar `localStorage` fuera de `src/datos/local/almacen-local.ts` → ese archivo es el único que obtiene el almacenamiento del navegador; los almacenes de `src/datos/local/` (datos de negocio, usuarios y sesión) lo reciben inyectado y son la única vía de lectura y escritura.
 8. **NUNCA** leer del catálogo el precio de una venta confirmada → la venta guarda copia del precio unitario y de los datos descriptivos.
 9. **NUNCA** agregar edición o borrado de registros, gestión de stock ni cobros → el alcance es el de la consigna.
 10. **NUNCA** marcar un caso manual como aprobado sin ejecutarlo → el README registra el resultado realmente observado; si falla o queda pendiente, se registra el comportamiento real.

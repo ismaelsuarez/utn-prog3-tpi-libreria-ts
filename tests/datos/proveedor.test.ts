@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "vitest";
 import { obtenerAlmacenamientoDelNavegador } from "../../src/datos/local/almacen-local";
-import { crearProveedor } from "../../src/datos/proveedor";
+import { autenticacion, crearProveedor, crearServicioDeAutenticacion } from "../../src/datos/proveedor";
 import { datosIniciales } from "../../src/datos/local/datos-iniciales";
 
 interface StorageSimulado {
@@ -60,6 +60,43 @@ describe("crearProveedor", () => {
     const repos = crearProveedor(null);
     expect(await repos.libros.listar()).toHaveLength(6);
     expect(await repos.clientes.listar()).toHaveLength(3);
+  });
+});
+
+describe("crearServicioDeAutenticacion", () => {
+  test("sobre un almacenamiento vacío siembra users una sola vez y no toca userData", () => {
+    const storage = crearStorage();
+    crearServicioDeAutenticacion(storage);
+
+    expect(storage.escrituras).toEqual(["users"]);
+    const usuarios = JSON.parse(storage.contenido.users as string) as { email: string; role: string }[];
+    expect(usuarios.map((u) => [u.email, u.role])).toEqual([["admin@libreria.test", "admin"]]);
+
+    crearServicioDeAutenticacion(storage);
+    expect(storage.escrituras).toEqual(["users"]);
+  });
+
+  test("respeta un users existente", () => {
+    const existente = "[]";
+    const storage = crearStorage({ users: existente });
+    crearServicioDeAutenticacion(storage);
+    expect(storage.escrituras).toEqual([]);
+    expect(storage.contenido.users).toBe(existente);
+  });
+
+  test("expone el servicio de autenticación, sin sesión al iniciar", () => {
+    const servicio = crearServicioDeAutenticacion(crearStorage());
+    expect(servicio.obtenerSesion()).toBeNull();
+    expect(Object.keys(servicio).sort()).toEqual(["cerrarSesion", "ingresar", "obtenerSesion", "registrar"]);
+  });
+
+  test("sin almacenamiento el servicio se crea y la sesión es nula", () => {
+    expect(crearServicioDeAutenticacion(null).obtenerSesion()).toBeNull();
+  });
+
+  test("el módulo exporta el servicio ya compuesto", () => {
+    expect(typeof autenticacion.ingresar).toBe("function");
+    expect(autenticacion.obtenerSesion()).toBeNull();
   });
 });
 
