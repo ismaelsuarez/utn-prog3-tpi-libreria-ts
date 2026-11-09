@@ -113,6 +113,11 @@ El servidor de desarrollo y el de previsualización SHALL reenviar las solicitud
 - **WHEN** con `npm run dev` o `npm run preview` y el destino por defecto se envía `POST /api/clientes/`
 - **THEN** la respuesta es `403` con un cuerpo `{"detail": "…"}` que explica que el servidor de desarrollo no reenvía escrituras a la API de producción, y la API de producción no recibe la solicitud
 
+#### Scenario: Ruta que empieza con la base sin barra
+
+- **WHEN** con el destino por defecto se envía `POST /apiclientes/` (o `/apiX/libros/`, `/api%2Fclientes/`), que el reenvío tomaría porque empieza con `/api`
+- **THEN** la respuesta también es `403`, sin reenviarla: la guarda usa la misma regla de prefijo que el reenvío
+
 #### Scenario: Producción configurada en forma explícita
 
 - **WHEN** `API_PROXY_TARGET` vale `https://api.ismaelsuarez.me` y se envía `POST /api/ventas/`

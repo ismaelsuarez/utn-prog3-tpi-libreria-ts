@@ -1,21 +1,33 @@
 /// <reference types="vitest/config" />
 import { fileURLToPath } from "node:url";
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import { obtenerBaseApi } from "./src/datos/api/base";
+import { API_DE_PRODUCCION, crearIntermediarioDeGuarda } from "./src/datos/api/reenvio";
 
 const desdeRaiz = (ruta: string): string =>
   fileURLToPath(new URL(ruta, import.meta.url));
-
-const API_DE_PRODUCCION = "https://api.ismaelsuarez.me";
 
 export default defineConfig(({ mode }) => {
   // Se leen todas las variables (prefijo "") porque API_PROXY_TARGET es solo de
   // servidor: no lleva el prefijo VITE_ y nunca llega al código del navegador.
   const env = loadEnv(mode, process.cwd(), "");
   const base = obtenerBaseApi(env.VITE_API_BASE);
+  const destino = env.API_PROXY_TARGET || API_DE_PRODUCCION;
+  // Guarda: se registra antes del reenvío y responde 403 a toda escritura cuyo
+  // destino sea la API de producción (no hay variable para desactivarla).
+  const guarda = crearIntermediarioDeGuarda({ base, destino });
+  const guardaDeEscrituras: Plugin = {
+    name: "guarda-de-escrituras-a-produccion",
+    configureServer(servidor) {
+      servidor.middlewares.use(guarda);
+    },
+    configurePreviewServer(servidor) {
+      servidor.middlewares.use(guarda);
+    },
+  };
   const proxy = {
     [base]: {
-      target: env.API_PROXY_TARGET || API_DE_PRODUCCION,
+      target: destino,
       changeOrigin: true,
       rewrite: (ruta: string): string => ruta.slice(base.length),
     },
@@ -23,6 +35,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: "./",
+    plugins: [guardaDeEscrituras],
     server: { proxy },
     preview: { proxy },
     build: {
@@ -42,6 +55,7 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: "node",
       include: ["tests/**/*.test.ts"],
+      setupFiles: ["tests/preparacion-sin-red.ts"],
     },
   };
 });

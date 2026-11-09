@@ -59,6 +59,7 @@ TypeScript estricto y compilado con Vite.
 - [Imágenes y recursos](#imágenes-y-recursos)
 - [Estructura de carpetas](#estructura-de-carpetas)
 - [Entrega](#entrega)
+- [Backend local para verificar escrituras](#backend-local-para-verificar-escrituras)
 - [Para quienes desarrollan](#para-quienes-desarrollan)
 
 ---
@@ -536,6 +537,83 @@ cualquier subruta. No incluye `node_modules/` ni `dist/`.
 Quedan fuera: `tests/`, `docs/`, `discovery/`, `knowledge-base/`, `openspec/`,
 `.atl/`, `.claude/`, `.engram/`, `.githooks/`, `.git/`, `.gitignore`,
 `CHANGES.md`, `AGENTS.md`, `CLAUDE.md` y `.active-orchestrator-state.json`.
+
+---
+
+## Backend local para verificar escrituras
+
+`npm run dev` y `npm run preview` reenvían las lecturas a la API de producción,
+pero **rechazan con `403`, en el propio servidor de desarrollo, toda escritura
+(`POST`, `PUT`, `PATCH`, `DELETE`) cuyo destino sea `https://api.ismaelsuarez.me`**.
+No hay variable para desactivar esa guarda. Para probar altas y ventas se usa un
+backend local construido desde el mismo código que producción, sobre PostgreSQL
+en Docker. Requiere Docker y Git; nada de esto forma parte de la entrega.
+
+1. Clonar el backend fuera de este repositorio y preparar la red y el volumen:
+
+   ```bash
+   BACKEND=$(mktemp -d)
+   git clone https://github.com/pabloavalos25/Actividad--ibreria-api.git "$BACKEND/repo"
+   docker network create tpi-libreria-red
+   docker volume create tpi-libreria-datos
+   ```
+
+2. Levantar PostgreSQL 17 y esperar a que acepte conexiones:
+
+   ```bash
+   docker run -d --name tpi-libreria-pg --network tpi-libreria-red \
+     -e POSTGRES_USER=libreria -e POSTGRES_PASSWORD=solo-local -e POSTGRES_DB=libreria \
+     -v tpi-libreria-datos:/var/lib/postgresql/data postgres:17
+   until docker exec tpi-libreria-pg pg_isready -U libreria -d libreria; do sleep 1; done
+   ```
+
+3. Construir la imagen desde `despliegue/` (el mismo `Dockerfile` y las mismas
+   migraciones que producción) y arrancarla, publicada solo en el loopback:
+
+   ```bash
+   docker build -t tpi-libreria-api "$BACKEND/repo/despliegue"
+   docker run -d --name tpi-libreria-api --network tpi-libreria-red \
+     -e DATABASE_URL=postgresql+asyncpg://libreria:solo-local@tpi-libreria-pg:5432/libreria \
+     -e ECHO_SQL=false -p 127.0.0.1:8000:8000 tpi-libreria-api
+   until [ "$(docker inspect -f '{{.State.Health.Status}}' tpi-libreria-api)" = healthy ]; do sleep 1; done
+   ```
+
+4. Sembrar los datos de ejemplo **solo dentro del contenedor local** (vacía y
+   vuelve a cargar esa base, nunca la de producción):
+
+   ```bash
+   docker exec tpi-libreria-api python seed.py
+   ```
+
+5. Comprobar el destino **antes de cualquier escritura**: debe responder el
+   contenedor local, en el loopback.
+
+   ```bash
+   curl -s http://127.0.0.1:8000/health/ready      # {"estado":"ok","base":"disponible"}
+   ```
+
+6. Arrancar el frontend apuntando al backend local y repetir la comprobación
+   por el reenvío:
+
+   ```bash
+   API_PROXY_TARGET=http://127.0.0.1:8000 npm run dev
+   curl -s http://localhost:5173/api/health/ready  # {"estado":"ok","base":"disponible"}
+   docker logs tpi-libreria-api | tail -n 3         # muestra esa solicitud
+   ```
+
+   Nunca escribir con `API_PROXY_TARGET` vacío o distinto de `127.0.0.1`.
+
+7. Apagar y limpiar al terminar:
+
+   ```bash
+   docker rm -f tpi-libreria-api tpi-libreria-pg
+   docker network rm tpi-libreria-red
+   docker volume rm tpi-libreria-datos
+   docker rmi tpi-libreria-api
+   rm -rf "$BACKEND"
+   ```
+
+La suite automatizada (`npm test`) no necesita nada de esto: no sale a la red.
 
 ---
 
