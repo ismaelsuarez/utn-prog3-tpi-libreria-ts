@@ -132,7 +132,38 @@ estaticos() {
   espera_seguridad "404" "$h"
 }
 
+# ---------------------------------------------------------------------------
+# Reenvío de /api (solo lecturas)
+# ---------------------------------------------------------------------------
+reenvio() {
+  # Solo las rutas que empiezan exactamente con /api/ se reenvían.
+  h=$(cabeceras /api)
+  espera_estado "/api (sin barra) responde 404" "$h" 404
+  h=$(cabeceras /apiclientes/)
+  espera_estado "/apiclientes/ (prefijo pegado) responde 404" "$h" 404
+
+  h=$(cabeceras /api/health/ready)
+  espera_estado "/api/health/ready responde 200" "$h" 200
+  espera_seguridad "/api/health/ready" "$h"
+  cuerpo=$(curl -sS --max-time 15 "$BASE/api/health/ready" 2>/dev/null)
+  case "$cuerpo" in
+    *'"estado":"ok"'*) ok=0 ;;
+    *) ok=1 ;;
+  esac
+  caso "/api/health/ready informa estado ok" "$ok" "cuerpo '$(printf '%s' "$cuerpo" | head -c 60 | tr '\n' ' ')'"
+
+  # La colección sin barra final: la redirección del destino queda en el mismo origen.
+  h=$(cabeceras /api/libros)
+  espera_estado "/api/libros redirige 307" "$h" 307
+  espera_valor "/api/libros Location queda bajo /api/" "$h" location /api/libros/
+
+  h=$(cabeceras '/api/libros/?limit=1')
+  espera_estado "/api/libros/?limit=1 responde 200" "$h" 200
+  espera_contiene "/api/libros/?limit=1 es JSON" "$h" content-type application/json
+}
+
 estaticos
+reenvio
 
 echo
 echo "$((TOTAL - FALLAS)) de $TOTAL casos correctos contra $BASE"

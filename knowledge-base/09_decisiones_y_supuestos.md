@@ -250,6 +250,9 @@
 **Trade-offs aceptados**: las etiquetas fijas no reciben parches solas; sin HSTS (el TLS lo gestiona la plataforma).
 **Origen**: change `despliegue-frontend`, decisiones D1 y D3.
 
+El reenvío de `/api` de producción lo tomó la misma entrega (decisión del usuario, 2026-11-09): nginx reenvía al destino de `API_UPSTREAM` (por defecto `http://libreria_api:8000`, la API por la red interna de Easypanel; alternativa `https://api.ismaelsuarez.me`), con el nombre resuelto en cada solicitud para que el contenedor arranque aunque el destino no exista; sin reintentos; con reescritura de las `Location` del destino; con límite de cuerpo de 64 KiB; y **reenviando las escrituras**, porque la guarda de desarrollo vive en el servidor de Vite. Las pruebas de escritura del contenedor van solo contra un backend local. **Alternativas descartadas**: fallar al arrancar con un nombre literal (reinicios en bucle que ocultan la causa), la API pública por defecto (salto TLS y vuelta por el proxy del propio VPS).
+**Trade-offs aceptados**: el nombre `libreria_api` está inferido del patrón `<proyecto>_<servicio>` y debe comprobarse en Easypanel; un nombre mal escrito se ve como `502` en `/api/health/ready`, no como un contenedor caído.
+
 ## Supuestos inferidos
 
 ### SU-01 — Cada consigna equivale a un change autocontenido

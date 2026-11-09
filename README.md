@@ -599,7 +599,56 @@ contra el contenedor local y contra el sitio publicado. Comprueba la salud
 de seguridad (política de contenido estricta, `nosniff`, `Referrer-Policy`), la
 caché (`no-cache` para el HTML, un año e `immutable` para `assets/`), gzip y el
 404 de toda ruta que no sea un archivo (la aplicación es multipágina, sin
-respaldo de SPA).
+respaldo de SPA). Los casos de `/api` se explican abajo.
+
+### Reenvío de `/api` y variable `API_UPSTREAM`
+
+El navegador solo habla con su propio origen: la API de producción no envía
+cabeceras CORS. Por eso nginx reenvía toda ruta que empieza con `/api/` al destino
+de la variable `API_UPSTREAM`, que se lee **al iniciar el contenedor** (no hace
+falta reconstruir la imagen) y nunca llega al código del navegador. Se quita el
+prefijo (`/api/libros/?limit=1` llega como `/libros/?limit=1`), se conservan
+método, cuerpo y parámetros, y las redirecciones del destino (el `307` por una
+barra final) vuelven como `/api/…` del mismo origen. A diferencia de
+`npm run dev`, el servidor de producción **sí reenvía las escrituras**.
+
+| `API_UPSTREAM` | Cuándo |
+|---|---|
+| `http://libreria_api:8000` (valor por defecto) | En Easypanel: la API del proyecto `libreria` por la red interna, sin TLS ni salto por el proxy público |
+| `https://api.ismaelsuarez.me` | Alternativa si el nombre interno no resuelve; nginx presenta el nombre por SNI y verifica el certificado |
+| `http://<alias>:<puerto>` | Un backend local en una red de Docker (ver abajo) |
+
+El nombre del destino se resuelve **en cada solicitud** (con el DNS de Docker): el
+contenedor arranca y queda saludable aunque el destino todavía no exista, y mientras
+no resuelve `/api/…` responde `502` enseguida. Solo se reenvían las rutas que
+empiezan exactamente con `/api/` (`/api` y `/apiclientes/` son `404`); nginx no
+reintenta una solicitud, espera al destino hasta 30 s (más que los 10 s del cliente)
+y rechaza con `413` los cuerpos de más de 64 KiB.
+
+**Lecturas contra producción** (solo `GET`; no hay que escribir nunca contra
+`https://api.ismaelsuarez.me` desde una prueba):
+
+```bash
+docker run -d --name tpi-libreria-web-prod -e API_UPSTREAM=https://api.ismaelsuarez.me -p 127.0.0.1:8080:8080 tpi-libreria-web
+sh despliegue/comprobar.sh http://127.0.0.1:8080   # incluye /api/health/ready y el 307 de /api/libros
+docker rm -f tpi-libreria-web-prod
+```
+
+**Escrituras: solo contra el backend local.** Con el backend local de [Backend
+local para verificar escrituras](#backend-local-para-verificar-escrituras) en marcha
+(su contenedor lleva el alias de red `libreria_api`, que es el destino por defecto,
+así se prueba la imagen sin cambiar su configuración):
+
+```bash
+docker run -d --name tpi-libreria-web-local --network tpi-libreria-red -p 127.0.0.1:8081:8080 tpi-libreria-web
+curl -s http://127.0.0.1:8081/api/health/ready      # {"estado":"ok","base":"disponible"}
+docker logs tpi-libreria-api | tail -n 3             # debe mostrar esa solicitud: es el backend local
+curl -s -X POST http://127.0.0.1:8081/api/clientes/ -H 'Content-Type: application/json' \
+  -d '{"nombre":"Cliente de prueba","email":"prueba@example.test"}'   # 201 del backend local
+docker rm -f tpi-libreria-web-local
+```
+
+Antes de escribir se comprueba siempre el destino (la segunda y la tercera línea).
 
 ---
 
@@ -650,6 +699,7 @@ en Docker. Requiere Docker y Git; nada de esto forma parte de la entrega.
    docker build -t tpi-libreria-api "$BACKEND/repo/despliegue"
    docker run -d --name tpi-libreria-api --network tpi-libreria-red \
      -e DATABASE_URL=postgresql+asyncpg://libreria:solo-local@tpi-libreria-pg:5432/libreria \
+     --network-alias libreria_api \
      -e ECHO_SQL=false -p 127.0.0.1:8000:8000 tpi-libreria-api
    until [ "$(docker inspect -f '{{.State.Health.Status}}' tpi-libreria-api)" = healthy ]; do sleep 1; done
    ```

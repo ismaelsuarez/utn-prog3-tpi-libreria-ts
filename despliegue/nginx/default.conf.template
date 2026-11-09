@@ -1,5 +1,14 @@
 # Plantilla de nginx del frontend. El punto de entrada de la imagen la procesa
 # con envsubst al iniciar y deja el resultado en /etc/nginx/conf.d/default.conf.
+# Solo se sustituyen API_UPSTREAM y NGINX_LOCAL_RESOLVERS (NGINX_ENVSUBST_FILTER
+# en el Dockerfile): el resto de los `$` son variables de nginx.
+
+# Destino del reenvío de /api (variable API_UPSTREAM), sin barra final.
+# Por defecto la API por la red interna de Easypanel; alternativa pública:
+# API_UPSTREAM=https://api.ismaelsuarez.me
+map "${API_UPSTREAM}" $api_destino {
+    ~^(?<base>.*?)/*$  $base;
+}
 
 server {
     listen 8080;
@@ -18,6 +27,13 @@ server {
 
     include /etc/nginx/cabeceras-seguridad.conf;
 
+    # El nombre del destino se resuelve en cada solicitud (no al arrancar): el
+    # contenedor inicia aunque el destino aún no exista y lo sigue si cambia de
+    # dirección. NGINX_LOCAL_RESOLVERS son los servidores de /etc/resolv.conf
+    # (dentro de Easypanel, el DNS embebido de Docker, 127.0.0.11).
+    resolver ${NGINX_LOCAL_RESOLVERS} valid=30s ipv6=off;
+    resolver_timeout 5s;
+
     # Salud del contenedor: no consulta la API.
     location = /healthz {
         access_log off;
@@ -35,6 +51,39 @@ server {
     location = /index.html {
         include /etc/nginx/cabeceras-seguridad.conf;
         return 302 /src/pages/auth/login/login.html;
+    }
+
+    # Reenvío de la API: solo las rutas que empiezan exactamente con /api/
+    # (no /api ni /apiclientes/, que el servicio estático responde 404).
+    location = /api {
+        include /etc/nginx/cabeceras-seguridad.conf;
+        return 404;
+    }
+    location /api/ {
+        # "/api/x?q=1" -> "/x?q=1". Con una variable en proxy_pass nginx no
+        # reemplaza el prefijo por sí mismo, lo hace esta reescritura.
+        rewrite ^/api/(.*)$ /$1 break;
+        proxy_pass $api_destino;
+        proxy_http_version 1.1;
+        # Anfitrión del destino (libreria_api:8000, api.ismaelsuarez.me o el local).
+        proxy_set_header Host $proxy_host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        # SNI y verificación del certificado: solo actúan si el destino es https.
+        proxy_ssl_server_name on;
+        proxy_ssl_verify on;
+        proxy_ssl_verify_depth 3;
+        proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+        # Más que los 10 s del cliente HTTP: el tiempo agotado lo informa el cliente.
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+        # Una escritura nunca se repite.
+        proxy_next_upstream off;
+        client_max_body_size 64k;
+        # Toda redirección del destino (307 por barra final), absoluta o
+        # relativa, vuelve al navegador como ruta bajo /api/ del mismo origen.
+        proxy_redirect ~^(?:https?://[^/]+)?/(.*)$ /api/$1;
+        include /etc/nginx/cabeceras-seguridad.conf;
     }
 
     # Recursos con huella de contenido: cacheables por un año.
