@@ -18,7 +18,7 @@
  --ancho-maximo:77rem;
  --radio: .9rem;
 }
-body {background:linear-gradient(180deg,rgba(235,235,225,.72),rgba(236,232,219,.83)),url('../img/estanteria.webp') center center/cover fixed;color:var(--color-texto)}
+body {background:linear-gradient(180deg,rgba(235,235,225,.72),rgba(236,232,219,.83)),url('../assets/estanteria.webp') center center/cover fixed;color:var(--color-texto)}
 .encabezado {position:relative;z-index:5;background:#153b34;border-bottom:2px solid #bd935b;box-shadow:0 6px 28px rgba(8,27,19,.24)}
 .encabezado__simbolo{background:#315a50;border:1px solid rgba(242,211,165,.45);color:#f5d99f;box-shadow:inset 0 1px 0 #ffffff1a}
 .encabezado__nombre{font-size:1.55rem;letter-spacing:-.025em}
@@ -30,7 +30,7 @@ body {background:linear-gradient(180deg,rgba(235,235,225,.72),rgba(236,232,219,.
  min-height:236px;display:flex;flex-direction:column;justify-content:center;
  padding:clamp(1.8rem,4.1vw,3.6rem) clamp(1.8rem,4.3vw,3.8rem);
  margin-bottom:0;position:relative;isolation:isolate;overflow:hidden;
- background:linear-gradient(90deg,rgba(13,38,32,.97) 1%,rgba(14,45,37,.87) 50%,rgba(16,53,43,.55)),url('../img/estanteria.webp') center 40%/cover;
+ background:linear-gradient(90deg,rgba(13,38,32,.97) 1%,rgba(14,45,37,.87) 50%,rgba(16,53,43,.55)),url('../assets/estanteria.webp') center 40%/cover;
  border-radius:0 0 19px 19px;box-shadow:0 12px 35px #0d241f38;
 }
 .contenido__introduccion:after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 22% 2%,rgba(236,182,103,.2),transparent 45%);z-index:-1;pointer-events:none}

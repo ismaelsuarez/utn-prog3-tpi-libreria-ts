@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Catálogo · Librería El Faro</title>
+
+  <link rel="icon" href="data:,">
+
+  <!-- Se conserva la división original de estilos. -->
+  <link rel="stylesheet" href="../../../styles/base.css">
+  <link rel="stylesheet" href="../../../styles/disposicion.css">
+  <link rel="stylesheet" href="../../../styles/componentes.css">
+  <link rel="stylesheet" href="../../../styles/vista-inmersiva.css">
+  <link rel="stylesheet" href="../../../styles/ficha-libros.css">
+
+  <script type="module" src="./catalogo.ts"></script>
+</head>
+
+<body>
+  <header class="encabezado">
+    <div class="encabezado__interior">
+      <div class="encabezado__marca">
+        <span class="encabezado__simbolo" aria-hidden="true">✦</span>
+        <p class="encabezado__nombre">Librería El Faro</p>
+      </div>
+
+      <nav class="navegacion" aria-label="Principal">
+        <ul class="navegacion__lista">
+          <li><a class="navegacion__enlace" href="catalogo.html" aria-current="page">Catálogo</a></li>
+          <li><a class="navegacion__enlace" href="../../../../libros.html">Libros</a></li>
+          <li><a class="navegacion__enlace" href="../../../../clientes.html">Clientes</a></li>
+          <li><a class="navegacion__enlace" href="../../../../ventas.html">Ventas</a></li>
+          <li><a class="navegacion__enlace" href="../../../../historial.html">Historial</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="contenido">
+    <div class="contenido__introduccion">
+      <p class="contenido__ruta">Inicio / Catálogo</p>
+      <h1>Catálogo de libros</h1>
+      <p class="contenido__descripcion">
+        Explorá nuestra colección y encontrá toda la información sobre los libros disponibles.
+      </p>
+    </div>
+
+    <section class="seccion seccion--busqueda" aria-labelledby="titulo-busqueda">
+      <h2 id="titulo-busqueda">Buscar libros</h2>
+      <form id="form-busqueda" class="formulario" role="search">
+        <div class="campo">
+          <label class="campo__etiqueta" for="busqueda-titulo">Buscar por título</label>
+          <input class="campo__control" type="search" id="busqueda-titulo" name="titulo"
+            placeholder="Escribí el título de un libro..." autocomplete="off">
+        </div>
+      </form>
+    </section>
+
+    <section class="seccion seccion--catalogo" aria-labelledby="titulo-listado">
+      <h2 id="titulo-listado">Libros disponibles</h2>
+      <p id="catalogo-vacio" class="mensaje mensaje--vacio" hidden>
+        No hay libros registrados en el catálogo.
+      </p>
+      <p id="catalogo-sin-resultados" class="mensaje mensaje--vacio" role="status" hidden>
+        No se encontraron libros cuyo título coincida con la búsqueda.
+      </p>
+
+      <p id="catalogo-error" class="mensaje mensaje--error" role="alert" hidden></p>
+
+      <!-- La lista se genera desde el repositorio de libros con la plantilla de abajo. -->
+      <ul id="lista-catalogo" class="lista-tarjetas"></ul>
+    </section>
+
+    <!-- Plantilla usada para generar tarjetas mediante JavaScript. -->
+    <template id="plantilla-tarjeta-libro">
+      <li>
+        <article class="tarjeta">
+          <div class="tarjeta__portada">
+            <img class="tarjeta__imagen" data-campo="imagen" alt="Portada del libro" loading="lazy">
+            <div class="tarjeta__portada-fallback" aria-hidden="true">
+              <span>Portada no disponible</span>
+            </div>
+          </div>
+
+          <div class="tarjeta__contenido">
+            <div class="tarjeta__encabezado">
+              <span class="tarjeta__genero" data-campo="genero"></span>
+              <h3 class="tarjeta__titulo" data-campo="titulo"></h3>
+            </div>
+
+            <dl class="tarjeta__datos">
+              <div class="tarjeta__dato">
+                <dt>Autores</dt>
+                <dd data-campo="autores"></dd>
+              </div>
+              <div class="tarjeta__dato">
+                <dt>Editorial</dt>
+                <dd data-campo="editorial"></dd>
+              </div>
+              <div class="tarjeta__dato">
+                <dt>ISBN</dt>
+                <dd data-campo="isbn"></dd>
+              </div>
+              <div class="tarjeta__dato tarjeta__dato--precio">
+                <dt>Precio</dt>
+                <dd data-campo="precio"></dd>
+              </div>
+            </dl>
+          </div>
+        </article>
+      </li>
+    </template>
+  </main>
+
+  <footer class="pie">
+    <p>Trabajo Práctico Integrador · Programación III · UTN</p>
+    <p>Avalos Pablo, Blangetti Sofia, Suarez Ismael. Los datos son ficticios.</p>
+  </footer>
+  <!-- Ficha de lectura: no reemplaza al catálogo ni modifica sus datos. -->
+  <dialog id="ficha-libro" class="ficha-overlay" aria-labelledby="ficha-titulo" aria-describedby="ficha-sinopsis">
+    <div class="ficha-box">
+      <button type="button" class="ficha-close" id="cerrar-ficha" aria-label="Cerrar detalles">×</button>
+      <div class="ficha-inner">
+        <div class="ficha-aside">
+          <div class="ficha-portada" id="ficha-portada" aria-label="Portada ilustrativa del libro">
+            <small id="ficha-cubierta-editorial"></small>
+            <strong id="ficha-cubierta-titulo"></strong>
+            <span id="ficha-cubierta-autor"></span>
+            <img id="ficha-portada-imagen" alt="" hidden>
+          </div>
+          <p class="ficha-cubierta-hint" id="ficha-cubierta-hint">Cubierta ilustrativa de ejemplo</p>
+        </div>
+        <div class="ficha-content">
+          <p class="ficha-kicker">LIBRERÍA EL FARO / FICHA DE LECTURA</p>
+          <span class="ficha-category" id="ficha-genero"></span>
+          <h2 class="ficha-title" id="ficha-titulo"></h2>
+          <p class="ficha-author" id="ficha-autor"></p>
+          <div class="ficha-rule"></div>
+          <h3 class="ficha-desc-head">De qué trata este libro</h3>
+          <p class="ficha-synopsis" id="ficha-sinopsis"></p>
+          <p class="ficha-demo-warning" id="ficha-advertencia" hidden>Sinopsis ilustrativa de muestra, no información editorial verificada.</p>
+          <dl class="ficha-metadata">
+            <div><dt>Editorial</dt><dd id="ficha-editorial"></dd></div>
+            <div><dt>Género</dt><dd id="ficha-genero-texto"></dd></div>
+            <div class="ficha-metadata-isbn"><dt>ISBN</dt><dd id="ficha-isbn"></dd></div>
+          </dl>
+        </div>
+      </div>
+      <div class="ficha-bottom">
+        <div><div class="ficha-price-label">PRECIO DEL EJEMPLAR</div><div id="ficha-precio" class="ficha-price"></div></div>
+        <button id="volver-catalogo" type="button" class="ficha-back">← Volver al catálogo</button>
+      </div>
+    </div>
+  </dialog>
+
+</body>
+
+</html>

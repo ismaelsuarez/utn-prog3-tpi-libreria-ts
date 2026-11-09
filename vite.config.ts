@@ -29,6 +29,7 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         input: {
           index: desdeRaiz("./index.html"),
+          catalogo: desdeRaiz("./src/pages/client/catalogo/catalogo.html"),
         },
       },
     },

@@ -87,7 +87,7 @@ actual.
 
 | Vista | Archivo | Qué se hace |
 |---|---|---|
-| Catálogo | `index.html` | Buscar por título y ver los libros en tarjetas, con su ficha de lectura |
+| Catálogo | `src/pages/client/catalogo/catalogo.html` (`index.html` redirige aquí) | Buscar por título y ver los libros en tarjetas, con su ficha de lectura |
 | Libros | `libros.html` | Registrar un libro y consultar la tabla de libros |
 | Clientes | `clientes.html` | Registrar un cliente, consultar la tabla y editar sus datos de contacto |
 | Ventas | `ventas.html` | Elegir cliente, armar los renglones, confirmar y ver el comprobante |
@@ -274,8 +274,8 @@ observadas fueron a archivos locales (`file://`).
 
 | Recurso | Uso | Procedencia |
 |---|---|---|
-| `img/estanteria.webp` | Fondo decorativo (CSS) | Imagen descargada de la red; se conserva como recurso local |
-| `img/Portadas/*.png` (6 archivos) | Portadas de los libros de ejemplo en el Catálogo y en la ficha | Imágenes ajenas, tomadas de otros proyectos y cargadas por el equipo como recursos locales |
+| `src/assets/estanteria.webp` | Fondo decorativo (CSS) | Imagen descargada de la red; se conserva como recurso local |
+| `src/assets/portadas/*.png` (6 archivos) | Portadas de los libros de ejemplo en el Catálogo y en la ficha | Imágenes ajenas, tomadas de otros proyectos y cargadas por el equipo como recursos locales |
 
 Las tipografías son las del sistema operativo (`system-ui`, `Georgia`); no se
 descarga ninguna fuente. Si una portada no carga, la tarjeta muestra una
