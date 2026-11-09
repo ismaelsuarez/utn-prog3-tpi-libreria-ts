@@ -16,12 +16,12 @@ Integrantes: Avalos Pablo, Blangetti Sofia, Suarez Ismael.
 
 | Capa | Tecnologías | Observaciones |
 |---|---|---|
-| Estructura | HTML5 semántico | Una página por vista en `src/pages/<zona>/<vista>/`; `index.html` de la raíz redirige al Catálogo |
+| Estructura | HTML5 semántico | Una página por vista en `src/pages/<zona>/<vista>/`; `index.html` de la raíz redirige al login (`src/pages/auth/login/login.html`) |
 | Presentación | CSS propio en archivos externos (`src/styles/`) | Flexbox o Grid; sin frameworks ni CDNs; tipografías e imágenes locales |
 | Comportamiento | TypeScript estricto, módulos ES (`<script type="module">`) | Sin librerías de ejecución; Vite 7 compila y sirve |
 | Datos | Repositorios asíncronos (`src/datos/repositorios.ts`) con forma de la API de producción | Hoy los implementa un adaptador sobre `localStorage`; la API `https://api.ismaelsuarez.me` se consume por la base `/api` del mismo origen (`VITE_API_BASE`) con reenvío en `npm run dev` y `npm run preview` |
 | Verificación de desarrollo | Vitest (`npm test`) y `tsc` | Las pruebas viven en `tests/`, fuera de la entrega |
-| Verificación de entrega | Casos manuales en el navegador | Ocho casos (CM-1 a CM-8) registrados en el README |
+| Verificación de entrega | Casos manuales en el navegador | Doce casos (CM-1 a CM-12) registrados en el README |
 
 Requiere Node 20.19+ o 22.12+ (exigencia de Vite 7) y npm. La aplicación ya no se
 abre desde `file://`: se ejecuta con `npm run dev` o con la compilación servida.

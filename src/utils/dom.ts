@@ -1,5 +1,7 @@
 // Utilidades de DOM comunes a las vistas. Los datos de usuario se insertan
 // siempre como texto (`textContent`), nunca como HTML.
+import type { ErrorDeCampo } from "../types/formulario";
+import type { IUser } from "../types/IUser";
 
 export function mostrarMensaje(nodo: HTMLElement, texto: string): void {
   nodo.textContent = texto;
@@ -86,4 +88,63 @@ export function llenarSelect(
 /** Convierte el valor de un control en un identificador, o `null` si está vacío. */
 export function idDeValor(valor: string): number | null {
   return valor.trim() === "" ? null : Number(valor);
+}
+
+/**
+ * Quita los errores de campo: vacía cada región `error-<prefijo>-<campo>`,
+ * retira `aria-invalid` de `<prefijo>-<campo>` y oculta el resumen.
+ */
+export function limpiarErroresDeCampos(
+  prefijo: string,
+  campos: readonly string[],
+  resumen: HTMLElement,
+): void {
+  for (const campo of campos) {
+    const region = document.getElementById(`error-${prefijo}-${campo}`);
+    if (region) region.textContent = "";
+    document.getElementById(`${prefijo}-${campo}`)?.removeAttribute("aria-invalid");
+  }
+  ocultarMensaje(resumen);
+}
+
+/**
+ * Muestra cada error junto a su campo (con `aria-invalid`), el resumen en la
+ * región de alerta y lleva el foco al primer campo con error.
+ */
+export function mostrarErroresDeCampos(
+  prefijo: string,
+  errores: readonly ErrorDeCampo[],
+  resumen: HTMLElement,
+  textoDelResumen: string,
+): void {
+  for (const error of errores) {
+    const region = document.getElementById(`error-${prefijo}-${error.campo}`);
+    if (region) mostrarMensaje(region, error.mensaje);
+    document.getElementById(`${prefijo}-${error.campo}`)?.setAttribute("aria-invalid", "true");
+  }
+  mostrarMensaje(resumen, textoDelResumen);
+  const primero = errores[0];
+  if (primero) document.getElementById(`${prefijo}-${primero.campo}`)?.focus();
+}
+
+/**
+ * Si hay una sesión, muestra en el encabezado el email del usuario en curso
+ * junto al botón «Cerrar sesión» y lo conecta con `alCerrar`. Sin sesión (o en
+ * una página sin ese bloque) no hace nada y el bloque queda oculto.
+ */
+export function conectarCierreDeSesion(sesion: IUser | null, alCerrar: () => void): void {
+  const bloque = document.querySelector(".encabezado__sesion");
+  if (sesion === null || !(bloque instanceof HTMLElement)) return;
+  buscar(bloque, '[data-sesion="email"]', HTMLElement).textContent = sesion.email;
+  buscar(bloque, '[data-accion="cerrar-sesion"]', HTMLButtonElement).addEventListener(
+    "click",
+    () => {
+      try {
+        alCerrar();
+      } catch (error) {
+        console.error(`No se pudo cerrar la sesión. ${textoDeError(error)}`);
+      }
+    },
+  );
+  bloque.hidden = false;
 }

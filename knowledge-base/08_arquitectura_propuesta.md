@@ -25,13 +25,13 @@
 
 ```
 proyecto/
-├── index.html                  # Entrada: redirige al Catálogo (ruta relativa)
+├── index.html                  # Entrada: redirige al login (ruta relativa)
 ├── package.json, tsconfig.json, vite.config.ts, .env.example
 ├── src/
 │   ├── main.ts                 # Entrada común: todas las vistas la importan primero
 │   ├── vite-env.d.ts           # Tipos de Vite y variables de entorno (VITE_API_BASE)
 │   ├── pages/
-│   │   ├── auth/               # Reservada: login y registro (change registro-login-y-sesion)
+│   │   ├── auth/               # login/ y registro/ (login.html + login.ts, registro.html + registro.ts)
 │   │   ├── client/catalogo/    # catalogo.html, catalogo.ts, ficha-libro.ts, portadas.ts
 │   │   └── admin/
 │   │       ├── libros/         # libros.html, libros.ts
@@ -54,7 +54,8 @@ proyecto/
 │   │                           # almacen-usuarios.ts (claves `users` y `userData`, almacenamiento
 │   │                           # inyectado), contrasenas.ts (PBKDF2-SHA-256), usuarios-iniciales.ts
 │   ├── types/                  # Id, Dinero, Libro, LibroDetalle, Cliente, Venta, ErrorApi, IUser, Rol…
-│   ├── utils/dom.ts            # Mensajes, vaciado de nodos, búsqueda tipada de elementos
+│   ├── utils/                  # dom.ts (mensajes, búsqueda tipada, errores de campo, cierre de sesión),
+│   │                           # auth.ts (sesión y destino por rol) y navigate.ts (navegación)
 │   ├── styles/                 # base, disposición, componentes y una hoja por función
 │   └── assets/                 # estanteria.webp, portadas/, LEEME.txt
 ├── README.md

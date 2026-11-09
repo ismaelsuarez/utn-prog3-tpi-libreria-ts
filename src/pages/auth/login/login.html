@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Ingresar · Librería El Faro</title>
+    <link rel="icon" href="data:," />
+    <link href="../../../styles/base.css" rel="stylesheet" />
+    <link href="../../../styles/disposicion.css" rel="stylesheet" />
+    <link href="../../../styles/componentes.css" rel="stylesheet" />
+    <link href="../../../styles/vista-inmersiva.css" rel="stylesheet" />
+    <script type="module" src="./login.ts"></script>
+</head>
+
+<body>
+    <header class="encabezado">
+        <div class="encabezado__interior">
+            <div class="encabezado__marca">
+                <span aria-hidden="true" class="encabezado__simbolo">✦</span>
+                <p class="encabezado__nombre">Librería El Faro</p>
+            </div>
+            <nav aria-label="Acceso" class="navegacion">
+                <ul class="navegacion__lista">
+                    <li><a class="navegacion__enlace" href="../registro/registro.html">Crear cuenta</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    <!-- Oculto hasta comprobar que no hay una sesión: con sesión se redirige sin mostrar el formulario. -->
+    <main class="contenido" hidden id="contenido-acceso">
+        <div class="contenido__introduccion">
+            <p class="contenido__ruta">Acceso / Ingresar</p>
+            <h1>Ingresar</h1>
+            <p class="contenido__descripcion">Ingresá con tu email y contraseña para entrar a la librería.</p>
+        </div>
+        <section aria-labelledby="titulo-login" class="seccion seccion--panel seccion--acceso">
+            <div class="seccion__cabecera">
+                <p class="seccion__eyebrow">01 · ACCESO</p>
+                <h2 id="titulo-login">Tu cuenta</h2>
+            </div>
+
+            <p class="mensaje mensaje--correcto" hidden id="mensaje-estado" role="status"></p>
+            <p class="mensaje mensaje--error" id="mensaje-error" role="alert"></p>
+            <form class="formulario formulario--panel" id="form-login" novalidate="">
+                <div class="campo">
+                    <label class="campo__etiqueta" for="login-email">Email</label>
+                    <input aria-describedby="error-login-email" autocomplete="username" class="campo__control"
+                        id="login-email" name="email" type="email" />
+                    <p class="campo__error" id="error-login-email"></p>
+                </div>
+                <div class="campo">
+                    <label class="campo__etiqueta" for="login-contrasena">Contraseña</label>
+                    <input aria-describedby="error-login-contrasena" autocomplete="current-password"
+                        class="campo__control" id="login-contrasena" name="contrasena" type="password" />
+                    <p class="campo__error" id="error-login-contrasena"></p>
+                </div>
+                <button class="boton boton--primario" type="submit">Ingresar</button>
+            </form>
+            <p class="acceso__alternativa">¿No tenés cuenta? <a href="../registro/registro.html">Creá una</a></p>
+        </section>
+    </main>
+    <footer class="pie">
+        <p>Trabajo Práctico Integrador · Programación III · UTN</p>
+        <p>Avalos Pablo, Blangetti Sofia, Suarez Ismael. Los datos son ficticios.</p>
+    </footer>
+</body>
+
+</html>

@@ -3,6 +3,7 @@ import {
   aSesion,
   destinoPorRol,
   esRol,
+  esCuentaCreada,
   esSesion,
   esUsuarioRegistrado,
   rutaDe,
@@ -135,5 +136,24 @@ describe("rutaDe", () => {
   test("sin la opción, o con ella en falso, la dirección no lleva marca", () => {
     expect(rutaDe("login", {})).toBe("../../auth/login/login.html");
     expect(rutaDe("login", { cuentaCreada: false })).toBe("../../auth/login/login.html");
+  });
+});
+
+describe("esCuentaCreada", () => {
+  test("solo la marca `cuenta=creada` de la dirección anuncia el alta", () => {
+    expect(esCuentaCreada("?cuenta=creada")).toBe(true);
+    expect(esCuentaCreada("?otro=1&cuenta=creada")).toBe(true);
+  });
+
+  test.each(["", "?", "?cuenta=", "?cuenta=otra", "?Cuenta=creada", "?cuenta=Creada", "?x=cuenta=creada"])(
+    "no la anuncia con %j",
+    (busqueda) => {
+      expect(esCuentaCreada(busqueda)).toBe(false);
+    },
+  );
+
+  test("es la marca que arma rutaDe", () => {
+    const ruta = rutaDe("login", { cuentaCreada: true });
+    expect(esCuentaCreada(ruta.slice(ruta.indexOf("?")))).toBe(true);
   });
 });

@@ -89,3 +89,8 @@ export function rutaDe(destino: DestinoDeRuta, opciones: OpcionesDeRuta = {}): s
   const marca = destino === "login" && opciones.cuentaCreada === true ? "?cuenta=creada" : "";
   return `../../${ZONA_Y_VISTA[destino]}${marca}`;
 }
+
+/** True si la parte de búsqueda de la dirección (`location.search`) trae `cuenta=creada`. */
+export function esCuentaCreada(busqueda: string): boolean {
+  return new URLSearchParams(busqueda).get("cuenta") === "creada";
+}
