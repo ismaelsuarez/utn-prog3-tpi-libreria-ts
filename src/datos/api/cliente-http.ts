@@ -13,6 +13,12 @@ import {
 
 export const TIEMPO_LIMITE_POR_DEFECTO_MS = 10_000;
 
+/**
+ * Estados que produce el intermediario (502, 504) y no la API: ante una
+ * escritura, la API pudo haberla registrado antes de que se perdiera la respuesta.
+ */
+const ESTADOS_DEL_INTERMEDIARIO = new Set([502, 504]);
+
 /** Función de solicitud inyectable; las pruebas entregan un doble sin red. */
 export type Solicitar = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -30,8 +36,9 @@ export interface ClienteHttp {
   obtener(ruta: string, parametros?: ParametrosDeConsulta): Promise<unknown>;
   /**
    * `POST base + ruta` con `cuerpo` como JSON; entrega el JSON de la respuesta
-   * sin afirmar su forma. Sin respuesta (red o tiempo) rechaza con
-   * `resultadoIncierto` y no reintenta.
+   * sin afirmar su forma. Sin respuesta (red o tiempo), con un 502 o 504 del
+   * intermediario o con un 2xx cuyo cuerpo no es JSON rechaza con
+   * `resultadoIncierto`; nunca reintenta.
    */
   enviar(metodo: "POST", ruta: string, cuerpo: unknown): Promise<unknown>;
 }
@@ -74,13 +81,20 @@ export function crearClienteHttp(opciones: OpcionesClienteHttp): ClienteHttp {
       const texto = await respuesta.text();
 
       if (!respuesta.ok) {
+        if (esEscritura && ESTADOS_DEL_INTERMEDIARIO.has(respuesta.status)) {
+          throw new ErrorDeApi(MENSAJE_RESULTADO_INCIERTO, "http", respuesta.status, [], true);
+        }
         const { mensaje, errores } = interpretarCuerpoDeError(respuesta.status, interpretarJson(texto)?.valor);
         throw new ErrorDeApi(mensaje, "http", respuesta.status, errores);
       }
 
       const esJson = (respuesta.headers.get("content-type") ?? "").toLowerCase().includes("application/json");
       const cuerpo = esJson ? interpretarJson(texto) : null;
-      if (cuerpo === null) throw new ErrorDeApi(MENSAJE_FORMATO, "formato", respuesta.status);
+      if (cuerpo === null) {
+        // Una escritura con respuesta 2xx pudo quedar registrada aunque el cuerpo no se entienda.
+        if (esEscritura) throw new ErrorDeApi(MENSAJE_RESULTADO_INCIERTO, "formato", respuesta.status, [], true);
+        throw new ErrorDeApi(MENSAJE_FORMATO, "formato", respuesta.status);
+      }
       return cuerpo.valor;
     } catch (error) {
       if (error instanceof ErrorDeApi) throw error;

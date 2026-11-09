@@ -115,7 +115,8 @@ proyecto/
 - **Cliente HTTP** (`src/datos/api/`): `GET` con `Accept: application/json` y
   `POST` con cuerpo JSON (`enviar`); nunca `PUT`, `PATCH` ni `DELETE`. Rutas con
   barra final (`/libros/`) para evitar la redirección 307 a otro origen. Ningún
-  método se reintenta; una escritura sin respuesta (red o tiempo) rechaza con
+  método se reintenta; una escritura sin respuesta (red o tiempo), con un 502 o
+  504 del intermediario o con un 2xx ilegible rechaza con
   `resultadoIncierto` y el mensaje «No se pudo confirmar si el servidor registró
   la operación…». Toda falla se rechaza como `ErrorDeApi` (subclase de
   `ErrorDeRepositorio`, con `tipo` `http`, `red`, `tiempo` o `formato` y `estado`)

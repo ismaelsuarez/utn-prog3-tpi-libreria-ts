@@ -339,26 +339,39 @@ describe("crearClienteHttp: enviar (POST con cuerpo JSON)", () => {
     expect(error.resultadoIncierto).toBe(false);
   });
 
-  test("502 con cuerpo que no es JSON: texto fijo con el estado", async () => {
-    const respuesta = (): Response =>
-      new Response("<html>Bad Gateway</html>", { status: 502, headers: { "content-type": "text/html" } });
-    const error = await falla(
-      crearClienteHttp({ base: "/api", solicitar: solicitarCon(respuesta) }).enviar("POST", "/ventas/", {}),
+  // Un 502 o 504 lo produce el intermediario: la API pudo haber registrado el
+  // alta antes de que se perdiera la respuesta.
+  test.each([502, 504])("%i en una escritura: resultado incierto con el estado y una sola solicitud", async (estado) => {
+    const solicitar = solicitarCon(
+      () => new Response("<html>Gateway</html>", { status: estado, headers: { "content-type": "text/html" } }),
     );
+    const error = await falla(crearClienteHttp({ base: "/api", solicitar }).enviar("POST", "/ventas/", {}));
     expect(error.tipo).toBe("http");
-    expect(error.message).toBe("El servidor respondió con un error (502).");
+    expect(error.estado).toBe(estado);
+    expect(error.resultadoIncierto).toBe(true);
+    expect(error.message).toBe(MENSAJE_RESULTADO_INCIERTO);
+    expect(solicitar).toHaveBeenCalledTimes(1);
+  });
+
+  test("500 en una escritura: error del servidor, sin resultado incierto", async () => {
+    const solicitar = solicitarCon(
+      () => new Response("Internal Server Error", { status: 500, headers: { "content-type": "text/plain" } }),
+    );
+    const error = await falla(crearClienteHttp({ base: "/api", solicitar }).enviar("POST", "/ventas/", {}));
+    expect(error.message).toBe("El servidor respondió con un error (500).");
     expect(error.resultadoIncierto).toBe(false);
   });
 
-  test("201 que no es JSON: error de formato, sin resultado incierto", async () => {
-    const respuesta = (): Response =>
-      new Response("<!doctype html>", { status: 201, headers: { "content-type": "text/html" } });
-    const error = await falla(
-      crearClienteHttp({ base: "/api", solicitar: solicitarCon(respuesta) }).enviar("POST", "/ventas/", {}),
+  test("201 que no es JSON: el alta respondió como hecha, pero su resultado es incierto", async () => {
+    const solicitar = solicitarCon(
+      () => new Response("<!doctype html>", { status: 201, headers: { "content-type": "text/html" } }),
     );
+    const error = await falla(crearClienteHttp({ base: "/api", solicitar }).enviar("POST", "/ventas/", {}));
     expect(error.tipo).toBe("formato");
-    expect(error.message).toBe("La respuesta del servidor no tiene el formato esperado.");
-    expect(error.resultadoIncierto).toBe(false);
+    expect(error.estado).toBe(201);
+    expect(error.resultadoIncierto).toBe(true);
+    expect(error.message).toBe(MENSAJE_RESULTADO_INCIERTO);
+    expect(solicitar).toHaveBeenCalledTimes(1);
   });
 
   test("falla de red: resultado incierto con el mensaje fijo y una sola solicitud", async () => {

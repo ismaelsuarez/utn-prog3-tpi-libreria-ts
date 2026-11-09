@@ -197,7 +197,7 @@
 **Origen**: change `proteccion-de-rutas-y-roles`, decisiones D1 a D4 y D8.
 
 ### DD-26 — Escrituras contra la API: solo `GET` y `POST`, sin reintentos, resultado desconocido
-**Decisión**: el cliente HTTP suma `enviar("POST", ruta, cuerpo)` con cuerpo JSON; no hay `PUT`, `PATCH` ni `DELETE`. Una escritura sin respuesta (red o tiempo agotado) se rechaza con `resultadoIncierto` y un mensaje fijo, tras una sola solicitud; cada formulario impide un segundo envío mientras el primero está en curso. Los límites que la API no valida y harían fallar el servidor (longitudes, precio y stock máximos) se validan antes de enviar.
+**Decisión**: el cliente HTTP suma `enviar("POST", ruta, cuerpo)` con cuerpo JSON; no hay `PUT`, `PATCH` ni `DELETE`. Una escritura sin respuesta (red o tiempo agotado), con un 502 o 504 (los produce el intermediario, no la API, que pudo haberla registrado) o con una respuesta 2xx cuyo cuerpo no es JSON se rechaza con `resultadoIncierto` y un mensaje fijo, tras una sola solicitud; cada formulario impide un segundo envío mientras el primero está en curso. Los límites que la API no valida y harían fallar el servidor (longitudes, precio y stock máximos) se validan antes de enviar.
 **Contexto**: las altas no son idempotentes (un reintento puede duplicar un registro) y la API no se puede modificar.
 **Alternativas consideradas**: reintentos automáticos con clave de idempotencia (la API no la ofrece); `solicitar(método, …)` genérico (dejaría `DELETE` y `PUT` a un paso).
 **Justificación**: el operador decide con el listado a la vista; ningún duplicado es accidental.

@@ -37,12 +37,22 @@ Cada alta SHALL resolverse con la representación que devuelve la API (`201`), i
 
 ### Requirement: Resultado desconocido de una escritura
 
-Cuando una escritura no recibe respuesta (falla de red o tiempo agotado), el error SHALL indicar que no se sabe si la API la registró, y el acceso a datos no SHALL reintentarla automáticamente.
+Cuando una escritura no recibe respuesta (falla de red o tiempo agotado), recibe un 502 o un 504 (estados del intermediario, no de la API) o recibe una respuesta 2xx cuyo cuerpo no es JSON, el error SHALL indicar que no se sabe si la API la registró, y el acceso a datos no SHALL reintentarla automáticamente.
 
 #### Scenario: Tiempo agotado en un alta
 
 - **WHEN** un `POST` no recibe respuesta en 10 segundos
 - **THEN** la operación se rechaza con un error que informa que no se pudo confirmar si se guardó, y se hizo una sola solicitud
+
+#### Scenario: Error del intermediario en un alta
+
+- **WHEN** un `POST` recibe un 502 o un 504
+- **THEN** la operación se rechaza con el mismo error de resultado desconocido, conserva el estado y se hizo una sola solicitud
+
+#### Scenario: Alta aceptada con un cuerpo ilegible
+
+- **WHEN** un `POST` recibe un 201 cuyo cuerpo no es JSON
+- **THEN** la operación se rechaza con el error de resultado desconocido, no con el de formato
 
 #### Scenario: Rechazo con respuesta
 
@@ -149,12 +159,12 @@ Toda falla de una solicitud a la API SHALL rechazarse con un error cuyo mensaje 
 
 #### Scenario: Respuesta de error sin cuerpo JSON
 
-- **WHEN** la respuesta tiene estado 502 y un cuerpo que no es JSON
+- **WHEN** la respuesta a una lectura tiene estado 502 y un cuerpo que no es JSON
 - **THEN** el error informa «El servidor respondió con un error (502).»
 
 #### Scenario: Respuesta correcta que no es JSON
 
-- **WHEN** la respuesta tiene estado 200 pero su cuerpo no es JSON (por ejemplo, una página HTML porque falta el reenvío de `/api`)
+- **WHEN** la respuesta a una lectura tiene estado 200 pero su cuerpo no es JSON (por ejemplo, una página HTML porque falta el reenvío de `/api`)
 - **THEN** el error informa «La respuesta del servidor no tiene el formato esperado.»
 
 #### Scenario: Falla de red

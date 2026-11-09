@@ -13,8 +13,9 @@ export type TipoDeErrorApi = "http" | "red" | "tiempo" | "formato";
 
 /**
  * Falla al consultar la API. `estado` es el código HTTP, o `null` si no hubo
- * respuesta. `resultadoIncierto` es verdadero solo en una escritura que no
- * obtuvo respuesta (red o tiempo): no se sabe si el servidor la registró.
+ * respuesta. `resultadoIncierto` es verdadero solo en una escritura sin
+ * respuesta, con un 502 o 504 del intermediario o con un 2xx ilegible (ver
+ * `cliente-http.ts`), es decir, cuando no se sabe si la API la registró.
  */
 export class ErrorDeApi extends ErrorDeRepositorio {
   readonly tipo: TipoDeErrorApi;
