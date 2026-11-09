@@ -9,3 +9,7 @@ Thumbs.db
 *.swp
 .vscode/
 .idea/
+
+# Dependencias y compilación
+node_modules/
+dist/

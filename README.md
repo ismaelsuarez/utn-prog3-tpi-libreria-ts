@@ -52,13 +52,33 @@ base de datos, API ni inicio de sesión**.
 
 ## Cómo abrir el proyecto
 
-1. Descomprimir o copiar la carpeta del proyecto.
-2. Abrir `index.html` con un navegador (doble clic sobre el archivo).
+Requisitos: Node 20.19 o superior (o 22.12 o superior), exigencia de Vite 7, y
+npm.
+
+```bash
+npm install        # una sola vez: instala las dependencias de desarrollo
+npm run dev        # servidor de desarrollo en http://localhost:5173
+npm run build      # comprueba los tipos y genera la compilación en dist/
+npm run preview    # sirve dist/ localmente
+npm test           # corre la suite de Vitest una sola vez
+```
+
+1. Ejecutar `npm install` y luego `npm run dev`.
+2. Abrir la dirección que informa el servidor (por defecto `http://localhost:5173`):
+   la página de entrada lleva al Catálogo.
 3. Navegar entre las vistas con la barra superior.
 
-No requiere npm, instalación de dependencias, servidor ni conexión a Internet.
-El proyecto se abre directamente desde `file://`, con scripts clásicos (sin
-`type="module"`), estilos y recursos locales.
+El proyecto ya no se abre con doble clic desde `file://`: los módulos de
+TypeScript necesitan un servidor. Los estilos, imágenes y scripts siguen siendo
+locales, sin librerías de ejecución ni CDNs.
+
+**Cambio de origen**: lo guardado en el navegador cuando se abría desde
+`file://` no se ve en `http://localhost:5173`, porque `localStorage` es propio de
+cada origen. Es esperado: en el origen nuevo se vuelven a cargar los ejemplos.
+
+**API de producción**: el navegador usa la base `/api` del mismo origen
+(`VITE_API_BASE`); `npm run dev` y `npm run preview` la reenvían a
+`https://api.ismaelsuarez.me` (variable `API_PROXY_TARGET`). Ver `.env.example`.
 
 ## Navegación entre vistas
 
@@ -296,14 +316,13 @@ Quedan fuera: `tests/`, `docs/`, `discovery/`, `knowledge-base/`, `openspec/`,
 
 ### Pruebas de la lógica
 
-Sin instalar dependencias:
-
 ```bash
-node --test tests/*.test.js
+npm test         # Vitest, una sola corrida (tests/**/*.test.ts)
+npx tsc          # comprobación de tipos de src/ y tests/
 ```
 
-Usar el patrón `tests/*.test.js`: `node --test tests/` no funciona en Windows
-ni en Node 24. Estas pruebas no sustituyen los recorridos en el navegador.
+Las pruebas no necesitan navegador y no sustituyen los recorridos manuales
+(CM-1 a CM-8).
 
 ### Memoria compartida (Engram)
 

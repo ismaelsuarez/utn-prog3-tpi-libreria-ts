@@ -16,25 +16,29 @@ Integrantes: Avalos Pablo, Blangetti Sofia, Suarez Ismael.
 
 | Capa | Tecnologías | Observaciones |
 |---|---|---|
-| Estructura | HTML5 semántico | Varias páginas, una por vista; `index.html` es la entrada |
-| Presentación | CSS propio en archivos externos | Flexbox o Grid; sin frameworks ni CDNs; tipografías e imágenes locales |
-| Comportamiento | JavaScript nativo (scripts clásicos) | Sin librerías; sin `type="module"` |
-| Persistencia | `localStorage` del navegador | Libros, clientes y ventas |
-| Verificación de desarrollo | `node --test` (runner integrado de Node) | Solo durante el desarrollo; se excluye de la entrega |
+| Estructura | HTML5 semántico | Una página por vista en `src/pages/<zona>/<vista>/`; `index.html` de la raíz redirige al Catálogo |
+| Presentación | CSS propio en archivos externos (`src/styles/`) | Flexbox o Grid; sin frameworks ni CDNs; tipografías e imágenes locales |
+| Comportamiento | TypeScript estricto, módulos ES (`<script type="module">`) | Sin librerías de ejecución; Vite 7 compila y sirve |
+| Datos | Repositorios asíncronos (`src/datos/repositorios.ts`) con forma de la API de producción | Hoy los implementa un adaptador sobre `localStorage`; la API `https://api.ismaelsuarez.me` se consume por la base `/api` del mismo origen (`VITE_API_BASE`) con reenvío en `npm run dev` y `npm run preview` |
+| Verificación de desarrollo | Vitest (`npm test`) y `tsc` | Las pruebas viven en `tests/`, fuera de la entrega |
 | Verificación de entrega | Casos manuales en el navegador | Ocho casos (CM-1 a CM-8) registrados en el README |
 
-No hay npm, empaquetador, transpilador, API, base de datos ni servidor. El
-proyecto se abre directamente desde `file://`.
+Requiere Node 20.19+ o 22.12+ (exigencia de Vite 7) y npm. La aplicación ya no se
+abre desde `file://`: se ejecuta con `npm run dev` o con la compilación servida.
+La API de producción no se puede modificar ni redesplegar: todo cambio va en el
+frontend. Limitación conocida: la autenticación y los roles viven solo en el
+cliente (`localStorage`), de modo que la API queda abierta.
 
 Detalle completo: [knowledge-base/02_descripcion_general.md](knowledge-base/02_descripcion_general.md)
 
 ### Comandos
 
 ```bash
-# Abrir el proyecto: abrir index.html en el navegador (sin servidor ni npm)
-
-# Pruebas automatizadas de la lógica pura
-node --test tests/
+npm install        # instala las dependencias de desarrollo
+npm run dev        # servidor de desarrollo (reenvía /api a la API de producción)
+npm run build      # tsc (tipos estrictos) y compilación de producción en dist/
+npm run preview    # sirve dist/ con el mismo reenvío de /api
+npm test           # Vitest, una sola corrida
 ```
 
 ---
@@ -113,23 +117,24 @@ No se crean changes adicionales: lo transversal se incluye en alguno de los seis
 
 > Reglas globales ya definidas en `~/.claude/CLAUDE.md` (orquestador, gobernanza, TDD, engram, commits convencionales sin coautoría de IA): el proyecto las hereda. Aquí viven solo las reglas **específicas de este proyecto**.
 
-Son contrato; romperlas es un defecto. Las reglas 1 a 4 provienen de la
-consigna: incumplirlas se informa en la evaluación.
+Son contrato; romperlas es un defecto. Las reglas 1 a 4 fijan la arquitectura
+de la serie TypeScript (la consigna exige Vite, TypeScript estricto y datos desde
+la API de producción).
 
-1. **NUNCA** usar librerías, frameworks ni CDNs de CSS o JavaScript → todo recurso (estilos, scripts, tipografías, imágenes) es propio y local.
-2. **NUNCA** usar `<script type="module">` ni `import`/`export` → scripts clásicos con el espacio de nombres `Libreria` y exportación dual, porque el proyecto se abre desde `file://`.
-3. **NUNCA** agregar `package.json`, dependencias ni herramientas de compilación → las pruebas usan `node --test` en `tests/`, carpeta excluida de la entrega.
-4. **NUNCA** usar `fetch`, API ni servidor → los datos salen de `js/datos/` y de `localStorage`.
+1. **NUNCA** usar librerías de ejecución, frameworks ni CDNs de CSS o JavaScript → todo recurso (estilos, scripts, tipografías, imágenes) es propio y local; las únicas dependencias son de desarrollo: `vite`, `typescript`, `vitest` y `@types/node`.
+2. **NUNCA** usar scripts clásicos ni el espacio de nombres global `Libreria` → módulos ES de TypeScript con `import`/`export` y `import type` para los tipos.
+3. **NUNCA** dejar que `npm run build` falle ni usar `any` explícito → los tipos se declaran en `src/types/` y `tsc` corre en modo estricto sobre `src/` y `tests/`.
+4. **NUNCA** acceder a datos o a la red fuera de los repositorios → las vistas usan solo `src/datos/proveedor.ts`; la red se dirige únicamente a la base del mismo origen (`/api`), nunca a `https://api.ismaelsuarez.me` en forma directa.
 5. **NUNCA** insertar datos de usuario con `innerHTML` → usar `textContent` o creación de nodos.
-6. **NUNCA** tocar el DOM dentro de `js/logica/` → allí solo funciones puras; el DOM vive en `js/paginas/` y `js/interfaz.js`.
-7. **NUNCA** acceder a `localStorage` fuera de `js/almacen.js` → toda lectura y escritura pasa por el almacén.
+6. **NUNCA** tocar el DOM dentro de `src/logica/` → allí solo funciones puras; el DOM vive en los módulos de `src/pages/` y en `src/utils/dom.ts`.
+7. **NUNCA** acceder a `localStorage` fuera de `src/datos/local/almacen-local.ts` → toda lectura y escritura pasa por el almacén local, que implementa los repositorios.
 8. **NUNCA** leer del catálogo el precio de una venta confirmada → la venta guarda copia del precio unitario y de los datos descriptivos.
 9. **NUNCA** agregar edición o borrado de registros, gestión de stock ni cobros → el alcance es el de la consigna.
 10. **NUNCA** marcar un caso manual como aprobado sin ejecutarlo → el README registra el resultado realmente observado; si falla o queda pendiente, se registra el comportamiento real.
 11. **NUNCA** dar por terminada una vista sin comprobarla a 320 px y a 1280 px, con teclado y foco visible → sin desplazamiento horizontal de la página; las tablas se desplazan dentro de su contenedor.
 12. **NUNCA** aplicar de `responsive-design` nada que requiera librerías → solo su parte de CSS puro.
 13. **Idioma**: código (nombres de archivos, funciones y propiedades), interfaz y documentación en español neutro. Esta regla reemplaza, para este proyecto, el valor por defecto global de artefactos en inglés.
-14. **NUNCA** usar `var` en JavaScript → declarar con `const` por defecto y con `let` solo cuando la variable se reasigna. Cada script clásico mantiene su código dentro de una función envolvente, porque `const` y `let` de nivel superior comparten un mismo ámbito entre los scripts de la página y dos declaraciones con el mismo nombre producen un error.
+14. **NUNCA** usar `var` → declarar con `const` por defecto y con `let` solo cuando la variable se reasigna. Cada archivo es un módulo con su propio ámbito: no hace falta función envolvente.
 
 15. **NUNCA** empezar a trabajar sin traer primero la memoria compartida → al iniciar una sesión, y después de cada `git pull`, `git merge` o cambio de rama, ejecutar `engram sync --import` en la raíz del proyecto. Antes de eso, comprobar que los hooks estén activos con `git config core.hooksPath`; si no devuelve `.githooks`, ejecutar `git config core.hooksPath .githooks`.
 16. **NUNCA** hacer un commit sin la memoria actualizada → antes de cada `git commit`, ejecutar `engram sync` y sumar la carpeta con `git add .engram`, de modo que el commit y el `git push` lleven lo último. El hook `pre-commit` lo hace solo; si los hooks no están activos, hacerlo a mano.
@@ -167,10 +172,10 @@ los tres integrantes y sus agentes compartan decisiones y hallazgos.
 6. /opsx:archive <nombre> + marcar [x]           → cerrar el change en CHANGES.md
 ```
 
-- La lógica pura se escribe con pruebas primero (`node --test`); el DOM y
-  `localStorage` se verifican con los casos manuales.
+- La lógica pura se escribe con pruebas primero (Vitest, `npm test`); el DOM se
+  verifica con los casos manuales.
 - Repositorio: <https://github.com/ismaelsuarez/utn-prog3-tpi-libreria> (público, rama `main`).
-- No forman parte de la entrega: `tests/`, `docs/`, `discovery/`,
+- No forman parte de la entrega: `node_modules/`, `dist/`, `tests/`, `docs/`, `discovery/`,
   `knowledge-base/`, `openspec/`, `.atl/`, `.claude/`, `CHANGES.md`,
   `AGENTS.md`, `CLAUDE.md` y `.active-orchestrator-state.json`.
 
