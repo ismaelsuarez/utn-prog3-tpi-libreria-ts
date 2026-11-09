@@ -19,7 +19,7 @@ Integrantes: Avalos Pablo, Blangetti Sofia, Suarez Ismael.
 | Estructura | HTML5 semántico | Una página por vista en `src/pages/<zona>/<vista>/`; `index.html` de la raíz redirige al login (`src/pages/auth/login/login.html`) |
 | Presentación | CSS propio en archivos externos (`src/styles/`) | Flexbox o Grid; sin frameworks ni CDNs; tipografías e imágenes locales |
 | Comportamiento | TypeScript estricto, módulos ES (`<script type="module">`) | Sin librerías de ejecución; Vite 7 compila y sirve |
-| Datos | Repositorios asíncronos (`src/datos/repositorios.ts`) con forma de la API de producción | Hoy los implementa un adaptador sobre `localStorage`; la API `https://api.ismaelsuarez.me` se consume por la base `/api` del mismo origen (`VITE_API_BASE`) con reenvío en `npm run dev` y `npm run preview` |
+| Datos | Repositorios asíncronos (`src/datos/repositorios.ts`) con forma de la API de producción | El Catálogo lee los libros de la API `https://api.ismaelsuarez.me` (solo `GET`) por la base `/api` del mismo origen (`VITE_API_BASE`), con reenvío en `npm run dev` y `npm run preview`; las vistas de gestión (Libros, Clientes, Ventas e Historial) siguen sobre un adaptador de `localStorage` hasta `operaciones-contra-api` |
 | Verificación de desarrollo | Vitest (`npm test`) y `tsc` | Las pruebas viven en `tests/`, fuera de la entrega |
 | Verificación de entrega | Casos manuales en el navegador | Doce casos (CM-1 a CM-12) registrados en el README |
 

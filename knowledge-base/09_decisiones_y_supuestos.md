@@ -171,6 +171,22 @@
 **Trade-offs aceptados**: sin almacenamiento no hay reserva en memoria para la sesión; el registro y el ingreso muestran un error en lugar de fingir una sesión que se perdería al navegar.
 **Origen**: change `registro-login-y-sesion`, decisión D3.
 
+### DD-23 — Orígenes de datos durante la transición: Catálogo sobre la API, gestión local
+**Decisión**: hasta `operaciones-contra-api`, la vista Catálogo lee los libros de la API de producción por `repositorioCatalogo` (solo lectura, `proveedor.ts`) y Libros, Clientes, Ventas e Historial siguen sobre el almacén local, de modo que cada vista tenga un único origen coherente. Un libro dado de alta en Libros no aparece en el Catálogo. No se agrega aviso en la interfaz: se documenta en el README y en los casos manuales.
+**Contexto**: las vistas de gestión escriben y sus identificadores (`lib-01`, 1…) no coinciden con los de la API; cambiar todos los repositorios de lectura juntos habría dejado a Ventas confirmando contra libros locales con números de la API. El usuario aceptó esta recomendación el 2026-11-09.
+**Alternativas consideradas**: dejar `proveedor.ts` local hasta `operaciones-contra-api` (sin divergencia, pero el Catálogo no leería la API en esta entrega); repositorio de libros mixto (lectura HTTP, alta local); decidir el origen por la zona de la dirección dentro de `proveedor.ts`.
+**Justificación**: la API es la fuente de los datos de negocio y el Catálogo es solo de lectura; el resto se conecta cuando existan las escrituras.
+**Trade-offs aceptados**: divergencia visible entre el Catálogo (producción) y la gestión (ejemplos locales) hasta `operaciones-contra-api`; sin la API el Catálogo informa el error y no muestra datos de otro origen.
+**Origen**: change `cliente-http-y-catalogo`, decisiones D5 y D6.
+
+### DD-24 — Autores por detalle con concurrencia acotada y errores de la API como `ErrorDeApi`
+**Decisión**: como `GET /libros/` no trae autores, el listado de libros sobre la API se completa con `GET /libros/{id}` con a lo sumo 4 consultas simultáneas; si una falla, el listado se rechaza. Toda falla del cliente HTTP es un `ErrorDeApi` con mensaje en texto y tiempo límite de 10 s por solicitud; el filtro por título del Catálogo sigue siendo local.
+**Contexto**: la tarjeta del Catálogo muestra los autores y el tipo `LibroDetalle` no admite autores ausentes. El usuario aceptó esta recomendación el 2026-11-09.
+**Alternativas consideradas**: cargar los autores solo al abrir la ficha o quitarlos de la tarjeta (cambian la especificación del Catálogo); `GET /autores/{id}/libros` (no hay `GET /autores/`); validar cada DTO en tiempo de ejecución (mucho código sin beneficio con fixtures reales).
+**Justificación**: conserva el comportamiento visible con `1 + n` solicitudes (hoy 6); un catálogo con autores faltantes sería engañoso.
+**Trade-offs aceptados**: `1 + n` solicitudes por apertura del Catálogo (si el catálogo crece, la alternativa es cargar los autores en la ficha); el parámetro `titulo` del servidor (que interpreta `%` y `_` como comodines) queda soportado pero sin uso en las vistas.
+**Origen**: change `cliente-http-y-catalogo`, decisiones D1 a D4, D7 y D8.
+
 ## Supuestos inferidos
 
 ### SU-01 — Cada consigna equivale a un change autocontenido
