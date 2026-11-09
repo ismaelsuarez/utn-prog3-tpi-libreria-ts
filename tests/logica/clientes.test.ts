@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { validarCliente, type BorradorCliente } from "../../src/logica/clientes";
+import { validarCliente, validarPerfil, type BorradorCliente } from "../../src/logica/clientes";
 
 const guardadosDeEjemplo = [
   { id: 1, email: "laura.mendoza@correo.test" },
@@ -157,5 +157,80 @@ describe("validarCliente: conjunto", () => {
     });
     expect(errores, JSON.stringify(errores)).toHaveLength(2);
     expect(errores.map((error) => error.campo).sort()).toEqual(["email", "nombre"]);
+  });
+});
+
+// Reglas nuevas de `operaciones-contra-api`: dirección opcional y límites que la
+// API no valida (nombre 100, email 255, teléfono 30, dirección 255).
+describe("validarCliente: dirección", () => {
+  test("la dirección es opcional: ausente, vacía o con espacios no producen errores", () => {
+    expect(validar(datosValidos())).toEqual([]);
+    expect(validar({ ...datosValidos(), direccion: "" })).toEqual([]);
+    expect(validar({ ...datosValidos(), direccion: "   " })).toEqual([]);
+  });
+
+  test("acepta una dirección de 255 caracteres y rechaza una de 256", () => {
+    expect(validar({ ...datosValidos(), direccion: "d".repeat(255) })).toEqual([]);
+    const e = unicoError({ ...datosValidos(), direccion: "d".repeat(256) }, "direccion");
+    expect(e?.mensaje).toBe("La dirección no puede superar los 255 caracteres.");
+  });
+});
+
+describe("validarCliente: límites del servidor", () => {
+  test("acepta un nombre de 100 caracteres y rechaza uno de 101", () => {
+    expect(validar({ ...datosValidos(), nombre: "n".repeat(100) })).toEqual([]);
+    const e = unicoError({ ...datosValidos(), nombre: "n".repeat(101) }, "nombre");
+    expect(e?.mensaje).toBe("El nombre no puede superar los 100 caracteres.");
+  });
+
+  test("acepta un email de 255 caracteres y rechaza uno de 256", () => {
+    const conLargo = (largo: number): string => `${"a".repeat(largo - "@correo.test".length)}@correo.test`;
+    expect(validar({ ...datosValidos(), email: conLargo(255) })).toEqual([]);
+    const e = unicoError({ ...datosValidos(), email: conLargo(256) }, "email");
+    expect(e?.mensaje).toBe("El email no puede superar los 255 caracteres.");
+  });
+
+  test("acepta un teléfono válido de 30 caracteres y rechaza uno válido de 31", () => {
+    const conLargo = (largo: number): string => `11${" ".repeat(largo - 10)}55550123`;
+    expect(conLargo(30)).toHaveLength(30);
+    expect(validar({ ...datosValidos(), telefono: conLargo(30) })).toEqual([]);
+    expect(conLargo(31)).toHaveLength(31);
+    const e = unicoError({ ...datosValidos(), telefono: conLargo(31) }, "telefono");
+    expect(e?.mensaje).toBe("El teléfono no puede superar los 30 caracteres.");
+  });
+
+  test("un teléfono de 31 caracteres y letras informa el formato, un solo error", () => {
+    const e = unicoError({ ...datosValidos(), telefono: "a".repeat(31) }, "telefono");
+    expect(e?.mensaje).toBe("Ingresá un teléfono válido (entre 7 y 15 dígitos).");
+  });
+
+  test("el teléfono con 6 dígitos o con letras sigue rechazándose", () => {
+    unicoError({ ...datosValidos(), telefono: "555-012" }, "telefono");
+    unicoError({ ...datosValidos(), telefono: "11 5555-01ab" }, "telefono");
+  });
+});
+
+describe("validarPerfil (para «Completar perfil»)", () => {
+  test("acepta teléfono válido con o sin dirección", () => {
+    expect(validarPerfil({ telefono: "11 5555-0123" })).toEqual([]);
+    expect(validarPerfil({ telefono: "11 5555-0123", direccion: "Calle 1" })).toEqual([]);
+  });
+
+  test("exige el teléfono y limita la dirección con las mismas reglas del alta", () => {
+    expect(validarPerfil({ telefono: "" })).toEqual([{ campo: "telefono", mensaje: "El teléfono es obligatorio." }]);
+    expect(validarPerfil({})).toEqual([{ campo: "telefono", mensaje: "El teléfono es obligatorio." }]);
+    expect(validarPerfil({ telefono: "123456" }).map((e) => e.campo)).toEqual(["telefono"]);
+    expect(validarPerfil({ telefono: "11 5555-0123", direccion: "d".repeat(256) }).map((e) => e.campo)).toEqual([
+      "direccion",
+    ]);
+  });
+
+  test("no valida nombre ni email", () => {
+    expect(validarPerfil({ telefono: "11 5555-0123" })).toEqual([]);
+  });
+
+  test("validarCliente y validarPerfil dan el mismo error de teléfono", () => {
+    const delAlta = validar({ ...datosValidos(), telefono: "12" }).filter((e) => e.campo === "telefono");
+    expect(validarPerfil({ telefono: "12" })).toEqual(delAlta);
   });
 });

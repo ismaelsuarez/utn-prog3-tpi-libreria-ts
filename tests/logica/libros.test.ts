@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { validarLibro, type BorradorLibro } from "../../src/logica/libros";
+import { esRolDeAutoria, validarLibro, type BorradorLibro } from "../../src/logica/libros";
 import type { Libro } from "../../src/types/libro";
 import {
   autoresDeEjemplo,
@@ -20,6 +20,7 @@ function datosValidos(): BorradorLibro {
     titulo: "El taller de las traducciones",
     isbn: "978-987-000-099-9",
     precio: 1490,
+    stock: 5,
     editorial_id: 2,
     genero_id: 2,
     autores: [
@@ -180,5 +181,115 @@ describe("validarLibro: conjunto", () => {
     const errores = validar({ ...datosValidos(), titulo: "", precio: 0 });
     expect(errores, JSON.stringify(errores)).toHaveLength(2);
     expect(errores.map((error) => error.campo).sort()).toEqual(["precio", "titulo"]);
+  });
+});
+
+// Reglas nuevas de `operaciones-contra-api`: la API exige `stock` y no valida las
+// longitudes ni la precisión, de modo que un exceso fallaría en el servidor.
+describe("validarLibro: stock", () => {
+  test.each([[""], ["   "], ["-1"], ["2,5"], ["2.5"], ["abc"], ["1e3"], [-1], [2.5], [Number.NaN]])(
+    "rechaza el stock %j y lo señala",
+    (stock) => {
+      unicoError({ ...datosValidos(), stock }, "stock");
+    },
+  );
+
+  test("el stock vacío informa que es obligatorio", () => {
+    expect(unicoError({ ...datosValidos(), stock: "" }, "stock")?.mensaje).toBe("El stock es obligatorio.");
+  });
+
+  test("el stock no entero o negativo informa que debe ser un entero desde cero", () => {
+    expect(unicoError({ ...datosValidos(), stock: "-1" }, "stock")?.mensaje).toBe(
+      "El stock debe ser un número entero mayor o igual que cero.",
+    );
+    expect(unicoError({ ...datosValidos(), stock: "abc" }, "stock")?.mensaje).toBe(
+      "El stock debe ser un número entero mayor o igual que cero.",
+    );
+  });
+
+  test("el stock cero es válido, como texto y como número", () => {
+    expect(validar({ ...datosValidos(), stock: "0" })).toEqual([]);
+    expect(validar({ ...datosValidos(), stock: 0 })).toEqual([]);
+  });
+
+  test("acepta el máximo 2 147 483 647 y rechaza el siguiente", () => {
+    expect(validar({ ...datosValidos(), stock: "2147483647" })).toEqual([]);
+    expect(validar({ ...datosValidos(), stock: 2147483647 })).toEqual([]);
+    const e = unicoError({ ...datosValidos(), stock: "2147483648" }, "stock");
+    expect(e?.mensaje).toBe("El stock no puede superar 2 147 483 647.");
+    unicoError({ ...datosValidos(), stock: 2147483648 }, "stock");
+  });
+
+  test("un entero escrito con ceros a la izquierda o espacios es válido", () => {
+    expect(validar({ ...datosValidos(), stock: " 007 " })).toEqual([]);
+  });
+});
+
+describe("validarLibro: longitudes que la API no valida", () => {
+  test("acepta un título de 200 caracteres y rechaza uno de 201", () => {
+    expect(validar({ ...datosValidos(), titulo: "t".repeat(200) })).toEqual([]);
+    const e = unicoError({ ...datosValidos(), titulo: "t".repeat(201) }, "titulo");
+    expect(e?.mensaje).toBe("El título no puede superar los 200 caracteres.");
+  });
+
+  test("acepta un ISBN de 20 caracteres y rechaza uno de 21", () => {
+    expect(validar({ ...datosValidos(), isbn: "9".repeat(20) })).toEqual([]);
+    const e = unicoError({ ...datosValidos(), isbn: "9".repeat(21) }, "isbn");
+    expect(e?.mensaje).toBe("El ISBN no puede superar los 20 caracteres.");
+  });
+
+  test("los espacios de los extremos no cuentan para la longitud", () => {
+    expect(validar({ ...datosValidos(), titulo: ` ${"t".repeat(200)} `, isbn: ` ${"9".repeat(20)} ` })).toEqual([]);
+  });
+
+  test("un título vacío sigue informando que es obligatorio y no el límite", () => {
+    expect(unicoError({ ...datosValidos(), titulo: "" }, "titulo")?.mensaje).toBe("El título es obligatorio.");
+  });
+});
+
+describe("validarLibro: precio máximo", () => {
+  test("acepta 99 999 999,99 y rechaza lo que lo supera", () => {
+    expect(validar({ ...datosValidos(), precio: 99999999.99 })).toEqual([]);
+    expect(validar({ ...datosValidos(), precio: "99999999.99" })).toEqual([]);
+    const e = unicoError({ ...datosValidos(), precio: "100000000" }, "precio");
+    expect(e?.mensaje).toBe("El precio no puede superar 99 999 999,99.");
+    unicoError({ ...datosValidos(), precio: 100000000.5 }, "precio");
+  });
+
+  test("se compara el precio ya redondeado al centavo, que es el que se envía", () => {
+    unicoError({ ...datosValidos(), precio: "99999999.995" }, "precio");
+    expect(validar({ ...datosValidos(), precio: "99999999.994" })).toEqual([]);
+  });
+
+  test("un precio con más de dos decimales dentro del límite es válido", () => {
+    expect(validar({ ...datosValidos(), precio: "1500.125" })).toEqual([]);
+  });
+});
+
+describe("validarLibro: rol de autoría", () => {
+  test.each(["autor", "coautor", "traductor", "ilustrador"])("acepta el rol %s", (rol) => {
+    expect(validar({ ...datosValidos(), autores: [{ autor_id: 1, rol, orden: 1 }] })).toEqual([]);
+  });
+
+  test("rechaza un rol fuera de los cuatro y lo señala en autores", () => {
+    const e = unicoError({ ...datosValidos(), autores: [{ autor_id: 1, rol: "editor", orden: 1 }] }, "autores");
+    expect(e?.mensaje).toBe("Hay autores con un rol que no es válido.");
+    unicoError({ ...datosValidos(), autores: [{ autor_id: 1, rol: "", orden: 1 }] }, "autores");
+  });
+
+  test("autor desconocido y rol inválido a la vez producen un solo error de autores", () => {
+    const errores = validar({
+      ...datosValidos(),
+      autores: [
+        { autor_id: 99, rol: "editor", orden: 1 },
+      ],
+    });
+    expect(errores.filter((error) => error.campo === "autores")).toHaveLength(1);
+  });
+
+  test("esRolDeAutoria reconoce solo los cuatro roles de la API", () => {
+    expect(esRolDeAutoria("traductor")).toBe(true);
+    expect(esRolDeAutoria("Autor")).toBe(false);
+    expect(esRolDeAutoria("")).toBe(false);
   });
 });

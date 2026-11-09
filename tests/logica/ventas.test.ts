@@ -385,6 +385,54 @@ describe("construirVenta", () => {
   });
 });
 
+describe("cantidad máxima de la API (2 147 483 647)", () => {
+  const MAXIMO = 2_147_483_647;
+
+  test("acepta exactamente el máximo", () => {
+    const resultado = calcular(1, MAXIMO);
+    expect(resultado.ok).toBe(true);
+    expect(renglonesDe(resultado)[0]?.cantidad).toBe(MAXIMO);
+  });
+
+  test("rechaza el siguiente, señala la cantidad y no entrega renglones", () => {
+    const resultado = calcular(1, MAXIMO + 1);
+    expect(resultado.ok).toBe(false);
+    expect(resultado.errores).toEqual([
+      { campo: "cantidad", mensaje: "La cantidad no puede superar 2 147 483 647." },
+    ]);
+    expect("renglones" in resultado).toBe(false);
+  });
+
+  test("agregarRenglon rechaza una cantidad mayor que el máximo", () => {
+    const resultado = agregarRenglon([], 1, MAXIMO + 1, [libro(1500)]);
+    expect(resultado.errores).toEqual([
+      { campo: "cantidad", mensaje: "La cantidad no puede superar 2 147 483 647." },
+    ]);
+  });
+
+  test("agregarRenglon rechaza la acumulación que supera el máximo sin modificar el borrador", () => {
+    const borrador: RenglonBorrador[] = [{ libro_id: 1, cantidad: MAXIMO }];
+    const resultado = agregarRenglon(borrador, 1, 1, [libro(1)]);
+    expect(resultado.ok).toBe(false);
+    expect(resultado.errores[0]?.campo).toBe("cantidad");
+    expect(resultado.errores[0]?.mensaje).toBe("La cantidad no puede superar 2 147 483 647.");
+    expect(borrador).toEqual([{ libro_id: 1, cantidad: MAXIMO }]);
+  });
+
+  test("cambiarCantidad rechaza una cantidad mayor que el máximo", () => {
+    const resultado = cambiarCantidad([{ libro_id: 1, cantidad: 1 }], 1, MAXIMO + 1, [libro(1500)]);
+    expect(resultado.errores[0]?.mensaje).toBe("La cantidad no puede superar 2 147 483 647.");
+  });
+
+  test("una cantidad no entera, cero o negativa conserva su mensaje de siempre", () => {
+    for (const cantidad of [0, -1, 1.5, "abc", ""]) {
+      expect(agregarRenglon([], 1, cantidad, [libro(1500)]).errores).toEqual([
+        { campo: "cantidad", mensaje: "La cantidad debe ser un entero positivo seguro." },
+      ]);
+    }
+  });
+});
+
 describe("codigoDeVenta", () => {
   test("muestra el identificador entero con el formato ven-XX de la versión anterior", () => {
     expect(codigoDeVenta(1)).toBe("ven-01");

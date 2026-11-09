@@ -71,7 +71,7 @@ async function iniciar(): Promise<void> {
     };
   }
 
-  function normalizarDatos(datos: BorradorCliente): Required<BorradorCliente> {
+  function normalizarDatos(datos: BorradorCliente): Required<Pick<BorradorCliente, "nombre" | "email" | "telefono">> {
     return {
       nombre: datos.nombre.trim(),
       email: normalizarEmail(datos.email),

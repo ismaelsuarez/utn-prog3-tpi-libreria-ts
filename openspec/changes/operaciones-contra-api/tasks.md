@@ -43,12 +43,12 @@ Gobernanza ALTO: ninguna tarea de los grupos 1 a 10 empieza antes de cerrar el g
 
 ## 4. Lógica pura de validación y errores
 
-- [ ] 4.1 RED/GREEN en `src/logica/libros.ts`: stock (vacío, negativo, decimal, texto, mayor que 2 147 483 647, cero válido), título > 200, ISBN > 20, precio > 99 999 999,99, rol fuera de los cuatro; verificar en `tests/logica/libros.test.ts`, conservando los casos existentes
-- [ ] 4.2 RED/GREEN en `src/logica/clientes.ts`: teléfono > 30 caracteres, dirección opcional > 255, nombre > 100, email > 255, y la validación del perfil sola (para «Completar perfil»); verificar en `tests/logica/clientes.test.ts`, conservando los casos existentes
-- [ ] 4.3 RED/GREEN en `src/logica/ventas.ts`: cantidad o acumulación mayor que 2 147 483 647 rechazada; verificar en `tests/logica/ventas.test.ts`
-- [ ] 4.4 RED/GREEN: `erroresDeFormulario` (D3) traduce `loc` de la API a los nombres de los controles y ubica el 409 del alta de cliente en el email; verificar con una prueba nueva en `tests/logica/`
-- [ ] 4.5 Actualizar `knowledge-base/05_reglas_de_negocio.md` con las reglas nuevas (límites, rol, perfil de una sola vez, venta sin control de stock); verificar que cada regla nueva cita su spec
-- [ ] 4.6 Commit `feat(logica): validate API limits, roles and client profile`
+- [x] 4.1 RED/GREEN en `src/logica/libros.ts`: stock (vacío, negativo, decimal, texto, mayor que 2 147 483 647, cero válido), título > 200, ISBN > 20, precio > 99 999 999,99, rol fuera de los cuatro; verificar en `tests/logica/libros.test.ts`, conservando los casos existentes
+- [x] 4.2 RED/GREEN en `src/logica/clientes.ts`: teléfono > 30 caracteres, dirección opcional > 255, nombre > 100, email > 255, y la validación del perfil sola (para «Completar perfil»); verificar en `tests/logica/clientes.test.ts`, conservando los casos existentes
+- [x] 4.3 RED/GREEN en `src/logica/ventas.ts`: cantidad o acumulación mayor que 2 147 483 647 rechazada; verificar en `tests/logica/ventas.test.ts`
+- [x] 4.4 RED/GREEN: `erroresDeFormulario` (D3) traduce `loc` de la API a los nombres de los controles y ubica el 409 del alta de cliente en el email; verificar con una prueba nueva en `tests/logica/`
+- [x] 4.5 Actualizar `knowledge-base/05_reglas_de_negocio.md` con las reglas nuevas (límites, rol, perfil de una sola vez, venta sin control de stock); verificar que cada regla nueva cita su spec
+- [x] 4.6 Commit `feat(logica): validate API limits, roles and client profile`
 
 ## 5. Conmutación a la API y retiro del almacén local de negocio [alto riesgo: contrato de datos y formato persistido]
 

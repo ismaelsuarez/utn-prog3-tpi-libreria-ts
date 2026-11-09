@@ -9,7 +9,7 @@ import {
 } from "../../../datos/proveedor";
 import { nombreGenero, nombresAutores } from "../../../logica/catalogo";
 import { formatearImporte } from "../../../logica/dinero";
-import { validarLibro, type BorradorLibro } from "../../../logica/libros";
+import { esRolDeAutoria, validarLibro, type BorradorLibro } from "../../../logica/libros";
 import type { Autor } from "../../../types/autor";
 import type { ErrorDeCampo } from "../../../types/formulario";
 import {
@@ -91,6 +91,8 @@ async function iniciar(): Promise<void> {
       titulo: campoTitulo.value,
       isbn: campoIsbn.value,
       precio: campoPrecio.value,
+      // Dato provisorio hasta que la vista Libros pida el stock (grupo 6).
+      stock: 0,
       editorial_id: idDeValor(campoEditorial.value),
       genero_id: idDeValor(campoGenero.value),
       autores: marcadas.map((casilla, posicion) => ({
@@ -143,11 +145,12 @@ async function iniciar(): Promise<void> {
       titulo: borrador.titulo.trim(),
       isbn: borrador.isbn.trim(),
       precio: Number(borrador.precio),
-      // Dato provisorio: el formulario pedirá el stock en `operaciones-contra-api`.
       stock: 0,
       editorial_id: borrador.editorial_id,
       genero_id: borrador.genero_id ?? null,
-      autores: [...(borrador.autores ?? [])],
+      autores: (borrador.autores ?? []).flatMap(({ autor_id, rol, orden }) =>
+        esRolDeAutoria(rol) ? [{ autor_id, rol, orden }] : [],
+      ),
     });
 
     await renderizarListado();

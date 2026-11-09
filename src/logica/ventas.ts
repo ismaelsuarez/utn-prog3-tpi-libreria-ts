@@ -16,6 +16,7 @@ import type { ErrorDeCampo } from "../types/formulario";
 import type { Dinero, FechaIso, Id } from "../types/primitivos";
 import type { Renglon } from "../types/venta";
 import { aCentavos, centavosADinero } from "./dinero";
+import { ENTERO_MAXIMO_DE_LA_API, ENTERO_MAXIMO_DE_LA_API_TEXTO } from "./limites";
 
 /** Renglón de un borrador de venta, tal como lo arma el formulario. */
 export interface RenglonBorrador {
@@ -53,6 +54,7 @@ export type ResultadoConstruccion =
   | { ok: false; errores: ErrorDeCampo[] };
 
 const MENSAJE_CANTIDAD = "La cantidad debe ser un entero positivo seguro.";
+const MENSAJE_CANTIDAD_MAXIMA = `La cantidad no puede superar ${ENTERO_MAXIMO_DE_LA_API_TEXTO}.`;
 const FORMATO_FECHA =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
 
@@ -60,13 +62,19 @@ function rechazo(campo: string, mensaje: string): { ok: false; errores: ErrorDeC
   return { ok: false, errores: [{ campo, mensaje }] };
 }
 
-function cantidadValida(cantidad: unknown): cantidad is number | string {
+function esEnteroPositivoSeguro(cantidad: unknown): cantidad is number | string {
   return (
     (typeof cantidad === "number" ||
       (typeof cantidad === "string" && cantidad.trim() !== "")) &&
     Number.isSafeInteger(Number(cantidad)) &&
     Number(cantidad) > 0
   );
+}
+
+/** Mensaje de rechazo de una cantidad, o `null` si es un entero positivo que la API acepta. */
+function mensajeDeCantidad(cantidad: unknown): string | null {
+  if (!esEnteroPositivoSeguro(cantidad)) return MENSAJE_CANTIDAD;
+  return Number(cantidad) > ENTERO_MAXIMO_DE_LA_API ? MENSAJE_CANTIDAD_MAXIMA : null;
 }
 
 interface LibroResuelto {
@@ -90,8 +98,9 @@ function calcular<R extends RenglonBorrador>(
   let totalCentavos = 0;
   const calculados: RenglonCalculado[] = [];
   for (const renglon of renglones) {
-    if (!cantidadValida(renglon.cantidad)) {
-      errores.push({ campo: "cantidad", mensaje: MENSAJE_CANTIDAD });
+    const mensajeCantidad = mensajeDeCantidad(renglon.cantidad);
+    if (mensajeCantidad !== null) {
+      errores.push({ campo: "cantidad", mensaje: mensajeCantidad });
       continue;
     }
     const libro = resolverLibro(renglon);
@@ -153,7 +162,8 @@ export function agregarRenglon(
   cantidad: unknown,
   libros: readonly LibroVendible[],
 ): ResultadoCalculo {
-  if (!cantidadValida(cantidad)) return rechazo("cantidad", MENSAJE_CANTIDAD);
+  const mensajeCantidad = mensajeDeCantidad(cantidad);
+  if (mensajeCantidad !== null) return rechazo("cantidad", mensajeCantidad);
   const existente = renglones.some((renglon) => renglon.libro_id === libroId);
   const nuevos: RenglonBorrador[] = existente
     ? renglones.map((renglon) =>
@@ -171,7 +181,8 @@ export function cambiarCantidad(
   cantidad: unknown,
   libros: readonly LibroVendible[],
 ): ResultadoCalculo {
-  if (!cantidadValida(cantidad)) return rechazo("cantidad", MENSAJE_CANTIDAD);
+  const mensajeCantidad = mensajeDeCantidad(cantidad);
+  if (mensajeCantidad !== null) return rechazo("cantidad", mensajeCantidad);
   if (!renglones.some((renglon) => renglon.libro_id === libroId)) {
     return rechazo("libro", "El libro no pertenece al borrador.");
   }
