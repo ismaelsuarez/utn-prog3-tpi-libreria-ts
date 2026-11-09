@@ -53,7 +53,7 @@ T-01 migracion-vite-typescript
 T-02 y T-03 son independientes entre sí y pueden avanzar en paralelo una vez archivado T-01. Camino crítico: `T-01 → T-03 → T-04 → T-05 → T-06`.
 
 ### [T-01] `migracion-vite-typescript`
-- **Estado**: `[ ]`
+- **Estado**: `[x]` archivado el 2026-11-09 (`openspec/changes/archive/2026-11-09-migracion-vite-typescript/`)
 - **Scope**:
   - Migra la base técnica sin cambiar el comportamiento visible: `package.json`, Vite 7, TypeScript estricto, Vitest, `vite.config.ts` multipágina con `base: "./"` y reenvío de `/api` en `server.proxy` y `preview.proxy`.
   - Vistas en `src/pages/<zona>/<vista>/` (Catálogo en `client`; Libros, Clientes, Ventas e Historial en `admin`; `auth` reservada) cargadas con `<script type="module">`; `index.html` de la raíz redirige al Catálogo.
