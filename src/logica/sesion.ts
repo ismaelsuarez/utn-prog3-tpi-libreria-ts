@@ -1,18 +1,15 @@
-// Lógica pura de la sesión: validación de lo guardado, destino según el rol y
-// rutas entre páginas. Sin DOM ni almacenamiento (regla dura 6); la consumen el
-// servicio de autenticación y, más adelante, la protección de rutas.
+// Lógica pura de la sesión: validación de lo guardado (cotejada con `users`),
+// destino según el rol, rutas entre páginas, zona de una dirección y decisión de
+// acceso. Sin DOM ni almacenamiento (regla dura 6); la consumen el servicio de
+// autenticación y la intercepción de la carga en `src/main.ts`.
+import type { DecisionDeAcceso, DestinoDeRuta, Zona } from "../types/acceso";
 import type { IUser } from "../types/IUser";
 import type { Rol } from "../types/Rol";
 import type { UsuarioRegistrado } from "../types/usuario";
+import { normalizarEmail } from "./texto";
+import { buscarPorEmail } from "./usuarios";
 
-export type DestinoDeRuta =
-  | "login"
-  | "registro"
-  | "catalogo"
-  | "libros"
-  | "clientes"
-  | "ventas"
-  | "historial";
+export type { DestinoDeRuta };
 
 export interface OpcionesDeRuta {
   /** Agrega `?cuenta=creada` para que el login anuncie el alta (solo con `login`). */
@@ -74,6 +71,59 @@ export function esUsuarioRegistrado(valor: unknown): valor is UsuarioRegistrado 
 /** La sesión que se guarda en `userData`: sin la contraseña ni su huella. */
 export function aSesion(usuario: Pick<UsuarioRegistrado, "email" | "role">): IUser {
   return { email: usuario.email, loggedIn: true, role: usuario.role };
+}
+
+/**
+ * La sesión vigente: `guardada` (lo leído de `userData`) debe ser una sesión
+ * válida y `users` debe registrar ese email con ese mismo rol. Cualquier otra
+ * cosa cuenta como sin sesión. Sigue siendo una comprobación del cliente: quien
+ * edita `userData` puede editar también `users`.
+ */
+export function sesionVigente(
+  guardada: unknown,
+  usuarios: readonly UsuarioRegistrado[],
+): IUser | null {
+  if (!esSesion(guardada)) return null;
+  const registrado = buscarPorEmail(usuarios, guardada.email);
+  if (registrado === null || registrado.role !== guardada.role) return null;
+  return aSesion(guardada);
+}
+
+const ZONAS: readonly Zona[] = ["auth", "client", "admin"];
+
+/**
+ * Zona de una dirección (`location.pathname`): el primero de los tres últimos
+ * segmentos (`<zona>/<vista>/<archivo>`). Ignora el prefijo, así que sirve igual
+ * en `npm run dev`, en la compilación y bajo una subruta. `null` si no es una
+ * zona conocida.
+ */
+export function zonaDeRuta(ruta: string): Zona | null {
+  const segmentos = ruta.split("/");
+  if (segmentos.length < 3) return null;
+  const zona = segmentos[segmentos.length - 3];
+  return ZONAS.find((conocida) => conocida === zona) ?? null;
+}
+
+/**
+ * Decide si una página de `zona` se muestra con `sesion` o a dónde se redirige.
+ * Sin sesión, solo la zona `auth` se muestra; con sesión, `auth` y la zona
+ * desconocida llevan al destino del rol y `admin` queda para el rol `admin`.
+ * Una zona desconocida falla cerrado.
+ */
+export function decidirAcceso(zona: Zona | null, sesion: IUser | null): DecisionDeAcceso {
+  if (sesion === null) {
+    return zona === "auth" ? { tipo: "permitir" } : { tipo: "redirigir", destino: "login" };
+  }
+  const aSuDestino: DecisionDeAcceso = { tipo: "redirigir", destino: destinoPorRol(sesion.role) };
+  if (zona === "client") return { tipo: "permitir" };
+  if (zona === "admin") return sesion.role === "admin" ? { tipo: "permitir" } : aSuDestino;
+  return aSuDestino;
+}
+
+/** True si ambas son la misma sesión (mismo email normalizado y rol) o ambas faltan. */
+export function mismaSesion(a: IUser | null, b: IUser | null): boolean {
+  if (a === null || b === null) return a === b;
+  return normalizarEmail(a.email) === normalizarEmail(b.email) && a.role === b.role;
 }
 
 export function destinoPorRol(rol: Rol): "libros" | "catalogo" {

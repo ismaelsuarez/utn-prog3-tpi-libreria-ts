@@ -1,12 +1,12 @@
 // Página de login: valida que los campos no estén vacíos, comprueba las
 // credenciales con el servicio de autenticación y pasa al destino del rol. Ante
 // credenciales incorrectas muestra un único mensaje, sin revelar cuál dato falló.
-// Si ya hay una sesión válida redirige sin mostrar el formulario.
+// La redirección con sesión iniciada la decide `src/main.ts` antes de este código.
 import "../../../main";
 import { autenticacion } from "../../../datos/proveedor";
 import { esCuentaCreada } from "../../../logica/sesion";
 import { validarIngreso } from "../../../logica/usuarios";
-import { irAlDestinoDelRol, obtenerSesion } from "../../../utils/auth";
+import { irAlDestinoDelRol } from "../../../utils/auth";
 import {
   elementoPorId,
   limpiarErroresDeCampos,
@@ -21,11 +21,6 @@ const CAMPOS = ["email", "contrasena"] as const;
 const MENSAJE_CREDENCIALES = "El email o la contraseña no son correctos.";
 
 function iniciar(): void {
-  const sesion = obtenerSesion();
-  if (sesion !== null) {
-    irAlDestinoDelRol(sesion);
-    return;
-  }
   elementoPorId("contenido-acceso", HTMLElement).hidden = false;
 
   const formulario = elementoPorId("form-login", HTMLFormElement);

@@ -76,8 +76,16 @@ proyecto/
   lo compila y sirve. La aplicación ya no se abre desde `file://`.
 - Cada módulo de vista importa **primero** `../../../main` (entrada común) y
   luego sus dependencias con `import`/`export` (los tipos con `import type`).
-  Es el punto donde el change `proteccion-de-rutas-y-roles` intercepta la carga
-  de cada página, también al recargar.
+  Ahí `interceptarCargaDePagina()` decide el acceso (`proteccion-de-rutas-y-roles`,
+  DD-25): lee la zona de la dirección con `zonaDeRuta` y la sesión con
+  `obtenerSesion()`, y aplica `decidirAcceso`. Los siete HTML nacen con
+  `<body hidden>` y la intercepción lo quita solo si permite la página; si
+  redirige, `main.ts` espera en el nivel superior una promesa que no se cumple
+  (`await new Promise<never>(() => {})`), de modo que el módulo de la vista no
+  llega a evaluarse (no lee datos, no pide `/api`, no conecta controles). La
+  decisión se repite al recargar y en `pageshow` con `persisted` (caché de ida y
+  vuelta; en `pagehide` el cuerpo se oculta). Las redirecciones usan `rutaDe`
+  (rutas relativas), así que funcionan bajo una subruta.
 - Cada módulo de vista define `async function iniciar()` que espera los
   repositorios, pinta y conecta eventos; si falla, `arrancar` muestra un
   mensaje de error en texto en la región de mensajes de la vista.
@@ -147,7 +155,8 @@ proyecto/
   se resolverán solo en el cliente (`registro-login-y-sesion` y
   `proteccion-de-rutas-y-roles`). **Limitación conocida**: la API queda
   abierta; la protección de rutas por rol es una guía de uso, no una medida de
-  seguridad real (DD-19).
+  seguridad real (DD-19, DD-25). La sesión se coteja con `users` (mismo email y
+  rol), lo que cierra solo la falsificación de un campo de `userData`.
 - **Validación de entrada**: en el cliente, mediante funciones puras, antes de
   agregar cualquier registro. No representa integridad garantizada por un
   servidor.

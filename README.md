@@ -36,8 +36,8 @@ TypeScript estricto y compilado con Vite.
 > por la base `/api` del mismo origen (`cliente-http-y-catalogo`); Libros,
 > Clientes, Ventas e Historial siguen guardando en `localStorage` hasta
 > `operaciones-contra-api` (ver [Origen de los datos](#origen-de-los-datos)). El registro y el inicio de sesión ya existen
-> (`registro-login-y-sesion`); la protección de las páginas según el rol llega
-> con `proteccion-de-rutas-y-roles`. Todo vive solo en el navegador: la API no
+> (`registro-login-y-sesion`) y las páginas se protegen según el rol
+> (`proteccion-de-rutas-y-roles`). Todo vive solo en el navegador: la API no
 > tiene usuarios y queda abierta (ver [Usuarios de demostración y
 > seguridad](#usuarios-de-demostración-y-seguridad)).
 
@@ -105,8 +105,22 @@ cada origen. Es esperado: en el origen nuevo se vuelven a cargar los ejemplos.
 
 Las cinco páginas de la librería comparten la misma barra de navegación, que
 indica la vista actual, y muestran en el encabezado el email del usuario en curso
-con el botón «Cerrar sesión». Las páginas de acceso (login y registro) no la
-muestran y se enlazan entre sí.
+con el botón «Cerrar sesión». La barra ofrece solo las vistas que el rol puede
+abrir: el administrador ve las cinco y el cliente solo el Catálogo. Las páginas
+de acceso (login y registro) no la muestran y se enlazan entre sí.
+
+**Quién puede abrir cada página** (lo decide `src/main.ts` al cargar cada página,
+por la carpeta de zona de su dirección y la sesión vigente):
+
+| Sesión | Login y registro | Catálogo (`/client/`) | Libros, Clientes, Ventas e Historial (`/admin/`) |
+|---|---|---|---|
+| Sin sesión | se muestran | redirige al login | redirige al login |
+| `client` | redirige al Catálogo | se muestra | redirige al Catálogo, sin mensaje |
+| `admin` | redirige a Libros | se muestra | se muestran |
+
+La página pedida no se ve ni ejecuta su código mientras se redirige; la decisión se
+repite al recargar y al volver atrás con el historial. La sesión solo vale si
+`userData` coincide con un usuario de `users` (mismo email y mismo rol).
 
 | Vista | Archivo | Qué se hace |
 |---|---|---|
@@ -236,11 +250,20 @@ con el rol `client` y llega al Catálogo; la página no ofrece elegir el rol.
 > [!WARNING]
 > **Limitación de seguridad**: el registro, el login, la sesión y los roles
 > existen **solo en el navegador**. Cualquiera con acceso al navegador puede editar
-> `userData` (por ejemplo, escribir `role: "admin"`) sin conocer ninguna
-> contraseña, y la API de producción no exige autenticación. La huella evita
+> `users` y `userData` sin conocer ninguna contraseña (ver el párrafo siguiente),
+> y la API de producción no exige autenticación. La huella evita
 > exponer en `localStorage` las contraseñas escritas, nada más: no es seguridad
 > real. Si se borra `users` del navegador, el administrador de demostración se
 > vuelve a crear al abrir cualquier página; los demás usuarios se pierden.
+>
+> **La protección de rutas tampoco es seguridad real**: ordena el uso de la
+> aplicación en el navegador (un cliente no llega a las vistas de gestión desde la
+> barra ni escribiendo su dirección), pero decide solo con lo guardado en el
+> navegador. Como la sesión se coteja con `users`, cambiar solo el `role` de
+> `userData` no alcanza; quien edite también el `role` de su entrada en `users`
+> sí entra, y las credenciales de demostración del administrador están en este
+> archivo. Cualquiera puede además llamar a la API de producción, que no exige
+> autenticación.
 
 ## Origen de los datos
 
@@ -370,7 +393,7 @@ integrante ni una auditoría con lector de pantalla.
 | Caso | Resultado esperado | Resultado observado | Estado |
 |---|---|---|---|
 | **CM-9** Registro: email inválido, duplicado en mayúsculas, contraseña corta, repetición distinta y alta correcta | Los rechazos muestran el error junto al campo, marcan el campo inválido y llevan el foco al primero; el alta agrega un `client` y lleva al login con el aviso | Campos Email, Contraseña y Repetir contraseña, botón «Crear cuenta», sin selector de rol y con enlace al login. Todo vacío: «El email es obligatorio.», «La contraseña es obligatoria.», «Repetí la contraseña.» con resumen «Revisá los campos marcados. No se creó la cuenta.», tres campos `aria-invalid` y foco en Email. `ana@`: «El email no tiene un formato válido.»; 7 caracteres: «La contraseña debe tener entre 8 y 64 caracteres.» (foco en Contraseña); repetición distinta: «Las contraseñas no coinciden.»; `ADMIN@libreria.test` y `  LAURA@Correo.TEST ` (con `laura@correo.test` ya registrado): «Ese email ya está registrado.» y `users` idéntico antes y después. Alta de `laura@correo.test`: `users` pasa de 1 a 2 elementos (`admin` y `client`), no hay `userData` y el login abre con `?cuenta=creada` y «Cuenta creada. Ingresá con tu email y contraseña.» | ✅ Aprobado |
-| **CM-10** Login por rol, credenciales incorrectas, campos vacíos y `userData` | El administrador llega a Libros y el cliente al Catálogo; las credenciales incorrectas dan un único mensaje; `userData` no lleva la contraseña | Campos vacíos: «Ingresá tu email.» y «Ingresá tu contraseña.» (foco en el primero con error); sin el parámetro `?cuenta=creada` el aviso de cuenta creada no se muestra. Contraseña equivocada y email inexistente: el mismo «El email o la contraseña no son correctos.» y `userData` sin crear. `  ADMIN@Libreria.TEST ` con la contraseña de demostración: llega a `libros.html` y `userData` es exactamente `{"email":"admin@libreria.test","loggedIn":true,"role":"admin"}`. `LAURA@correo.test`: llega a `catalogo.html` y `userData` es `{"email":"laura@correo.test","loggedIn":true,"role":"client"}`. Con `userData` ilegible o con `role` `"superusuario"`, login y Ventas cargan como sin sesión y el encabezado no muestra el bloque de sesión. Con `setItem` que lanza: registro y login muestran «No se pudo acceder al almacenamiento del navegador. Revisá que no esté bloqueado e intentá nuevamente.» y no navegan | ✅ Aprobado |
+| **CM-10** Login por rol, credenciales incorrectas, campos vacíos y `userData` | El administrador llega a Libros y el cliente al Catálogo; las credenciales incorrectas dan un único mensaje; `userData` no lleva la contraseña | Campos vacíos: «Ingresá tu email.» y «Ingresá tu contraseña.» (foco en el primero con error); sin el parámetro `?cuenta=creada` el aviso de cuenta creada no se muestra. Contraseña equivocada y email inexistente: el mismo «El email o la contraseña no son correctos.» y `userData` sin crear. `  ADMIN@Libreria.TEST ` con la contraseña de demostración: llega a `libros.html` y `userData` es exactamente `{"email":"admin@libreria.test","loggedIn":true,"role":"admin"}`. `LAURA@correo.test`: llega a `catalogo.html` y `userData` es `{"email":"laura@correo.test","loggedIn":true,"role":"client"}`. Con `userData` ilegible o con `role` `"superusuario"`, el login carga como sin sesión y Ventas **redirige al login** (con `proteccion-de-rutas-y-roles`; antes cargaba sin sesión) y el encabezado no muestra el bloque de sesión. Con `setItem` que lanza: registro y login muestran «No se pudo acceder al almacenamiento del navegador. Revisá que no esté bloqueado e intentá nuevamente.» y no navegan | ✅ Aprobado |
 | **CM-11** Cierre de sesión y acceso con sesión iniciada | «Cerrar sesión» quita `userData`, conserva `users` y lleva al login; login y registro redirigen con sesión | Las cinco vistas muestran el email y «Cerrar sesión» con sesión iniciada. Desde Ventas, el botón deja `userData` en `null`, `users` igual y abre `login.html`; también con el teclado (foco por Tab con contorno visible y Espacio). Con sesión de administrador, login y registro redirigen a Libros; con sesión de cliente, el login redirige al Catálogo, sin mostrar el formulario | ✅ Aprobado |
 | **CM-12** Inspección de `users` y entrada por `index.html`, también bajo una subruta | Sin la contraseña en texto plano; la raíz lleva al login | Tras registrar `Faro-2026`, ninguna clave de `localStorage` contiene ese texto; dos usuarios con la misma contraseña tienen huellas distintas (2 huellas distintas). Con `npm run preview` y con `dist/` copiada a `/libreria/` de un servidor estático, `index.html` llega a `…/src/pages/auth/login/login.html`; las páginas de login y registro responden 200 (no se revisaron las solicitudes de recursos ni la consola); el alta, el ingreso (al Catálogo) y el cierre de sesión (de vuelta al login) funcionan en ambas direcciones | ✅ Aprobado |
 
@@ -409,6 +432,35 @@ recorrido por la navegación llega a cada vista; `dist/` no contiene la direcci�
 responde 200 por el reenvío. En las cinco vistas todas las solicitudes
 observadas fueron `GET` al mismo origen de la aplicación; no se escribe en la
 API de producción.
+
+### Casos manuales de la protección de rutas (`proteccion-de-rutas-y-roles`)
+
+**Ejecución del 2026-11-09**: recorrido automatizado en Google Chrome 157 (modo
+headless, mediante el protocolo de herramientas de desarrollo), con un perfil
+nuevo por pasada, contra `npm run dev` (puerto 5173), `npm run preview` (4173) y
+la compilación copiada a la subruta `/libreria/` de un servidor estático local
+(8090); las tres pasadas dieron el mismo resultado (76 comprobaciones cada una,
+todas correctas). `API_PROXY_TARGET` apuntó a un puerto local cerrado, de modo
+que el Catálogo con sesión mostró el error del reenvío (esperado) y nada llegó a
+la API de producción. «Sin ver el contenido» se comprobó dentro de la página con
+un observador: el cuerpo nunca tuvo diseño visible, el navegador no registró
+`first-paint` ni `first-contentful-paint` y el código de la vista no conectó
+ningún control (0 oyentes en elementos; con acceso permitido las vistas conectan de 1 a 11).
+No reemplaza una pasada visual en el navegador habitual de cada integrante ni una
+auditoría con lector de pantalla.
+
+| Caso | Resultado esperado | Resultado observado | Estado |
+|---|---|---|---|
+| **CM-13** Sin sesión, las cinco páginas de `client` y `admin` y las de acceso | Catálogo, Libros, Clientes, Ventas e Historial redirigen al login sin mostrar contenido; el Catálogo no pide `/api`; login y registro se muestran | Las cinco páginas (son cinco, no seis: el Catálogo y cuatro de gestión) llegan a `login.html`, nunca se ven ni pintan y su código no se ejecuta; 0 solicitudes a `/api`, sin 404 ni excepciones. Login y registro se muestran con su formulario; `index.html` lleva al login | ✅ Aprobado |
+| **CM-14** Rol `client`, rol `admin` y sesiones falsificadas | `client` en Libros, Clientes, Ventas e Historial llega al Catálogo sin ver lo pedido y su navegación solo trae el Catálogo; `admin` abre las cinco y ve los cinco enlaces en orden; una sesión que no coincide con `users` cuenta como sin sesión | `client` (`laura@correo.test`): el Catálogo se muestra con un único enlace, «Catálogo», marcado como página actual, y su email en el encabezado; Libros, Clientes, Ventas e Historial llegan a `catalogo.html` sin verse ni conectar controles (y sin mensaje); login y registro con su sesión llevan al Catálogo. `admin`: las cinco vistas se muestran con «Catálogo, Libros, Clientes, Ventas, Historial» en ese orden; login y registro llevan a Libros. `userData` con rol `admin` editado sobre `laura@correo.test` (registrada como `client`), con un email ausente de `users`, con JSON ilegible, `loggedIn` en falso, rol `"superusuario"`, `[]` y `null`: Libros y Catálogo llevan al login en los siete casos. Con `users` ilegible el administrador sembrado sigue entrando (semilla) y un cliente deja de valer. A 320 px y a 1280 px el Catálogo del cliente no tiene desplazamiento horizontal ni huecos en la navegación (capturas revisadas: Catálogo del cliente a 320 px y a 1280 px y Libros del administrador a 320 px); con Tab el foco pasa por «Catálogo» y «Cerrar sesión» con contorno visible de 3 px | ✅ Aprobado |
+| **CM-15** Recarga e historial | La decisión se repite al recargar y al volver atrás; Libros no se ve después de cerrar la sesión; con sesión, Atrás muestra Libros | Con Ventas abierta, `userData` quitado y recarga: login. Login por la interfaz como administrador → Libros → Ventas → «Cerrar sesión» (login, `userData` quitado, `users` intacto) → Atrás: Chrome restauró Libros desde la caché de ida y vuelta (`pageshow` con `persisted`, cuerpo oculto en ese instante) y pasó al login sin que Libros llegara a verse. Libros → Clientes → Atrás con sesión: Libros restaurado desde la caché y visible. Con eventos `pagehide` y `pageshow` con `persisted` simulados: `pagehide` oculta el cuerpo, `pageshow` con la misma sesión lo muestra, sin sesión pasa al login, con otro usuario permitido (`mario@correo.test`) recarga con su email, y de cliente a administrador en el Catálogo recarga con los cinco enlaces | ✅ Aprobado |
+| **CM-16** Compilación bajo la subruta `/libreria/` | Las redirecciones quedan dentro de la subruta, sin 404; el Catálogo sin sesión no hace solicitudes a `/api` | Sin sesión, Libros llega a `…/libreria/src/pages/auth/login/login.html`; con `client`, Ventas llega al Catálogo de la subruta; con `admin`, las cinco vistas se muestran. En las tres pasadas todo el conjunto de CM-13 a CM-15 dio lo mismo. Las únicas respuestas 404 del servidor estático (16) fueron `GET /api/libros/` del Catálogo con sesión, porque ese servidor no reenvía `/api`; ninguna redirección dio 404 | ✅ Aprobado |
+
+**No ejecutado**: CM-1 a CM-8 (las vistas de gestión y el Catálogo no cambian, salvo que ahora exigen la sesión del rol); el aviso de `storage` (cerrar la sesión en otra pestaña con la página abierta no la oculta hasta recargar o volver, por diseño); Firefox y Safari (solo Chrome); la caché de ida y vuelta con otros navegadores; la protección frente a quien edite a la vez `userData` y `users` (no es seguridad real, ver arriba).
+
+**Regresión de CM-9 a CM-12** (repetidos el 2026-11-09 con las tres direcciones de arriba, 27 comprobaciones por pasada, todas correctas): CM-9, CM-10 y CM-12 dieron los resultados ya registrados; la única diferencia es la pedida por este change (CM-10: `userData` ilegible o con rol desconocido hace que Ventas redirija al login en lugar de cargar sin sesión). CM-11: «Cerrar sesión» con la barra espaciadora deja `userData` en `null`, `users` igual y abre el login; login y registro con sesión redirigen sin mostrar el formulario (ahora lo decide `src/main.ts`). CM-A6 no cambia: la raíz lleva al login y el Catálogo del administrador se muestra.
+
+---
 
 ### Casos manuales del Catálogo desde la API (`cliente-http-y-catalogo`)
 
@@ -500,7 +552,7 @@ npx tsc          # comprobación de tipos de src/ y tests/
 ```
 
 Las pruebas no necesitan navegador y no sustituyen los recorridos manuales
-(CM-1 a CM-12).
+(CM-1 a CM-16).
 
 ### Memoria compartida (Engram)
 

@@ -14,7 +14,7 @@
     <script type="module" src="./login.ts"></script>
 </head>
 
-<body>
+<body hidden>
     <header class="encabezado">
         <div class="encabezado__interior">
             <div class="encabezado__marca">
@@ -28,7 +28,7 @@
             </nav>
         </div>
     </header>
-    <!-- Oculto hasta comprobar que no hay una sesión: con sesión se redirige sin mostrar el formulario. -->
+    <!-- Oculto hasta que el código de la página lo muestra; con sesión, `src/main.ts` redirige antes de que corra. -->
     <main class="contenido" hidden id="contenido-acceso">
         <div class="contenido__introduccion">
             <p class="contenido__ruta">Acceso / Ingresar</p>

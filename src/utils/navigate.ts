@@ -3,3 +3,8 @@
 export function navegar(ruta: string): void {
   window.location.replace(ruta);
 }
+
+/** Recarga la página actual (se vuelve a decidir el acceso con la sesión de ese momento). */
+export function recargar(): void {
+  window.location.reload();
+}

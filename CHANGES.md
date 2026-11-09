@@ -91,14 +91,14 @@ T-02 y T-03 son independientes entre sí y pueden avanzar en paralelo una vez ar
   - `knowledge-base/09_decisiones_y_supuestos.md` (DD-19)
 
 ### [T-04] `proteccion-de-rutas-y-roles`
-- **Estado**: `[ ]`
+- **Estado**: `[x]` archivado el 2026-11-09 (`openspec/changes/archive/2026-11-09-proteccion-de-rutas-y-roles/`)
 - **Scope**:
   - Intercepción de la carga de cada página en `src/main.ts` (que todas las vistas importan primero): sin sesión, redirige al login; un usuario con rol `client` que entra a `/admin/` es redirigido; `admin` alcanza `admin` y `client`.
   - Navegación y cierre de sesión según el rol.
 - **Dependencias**: `T-03`
 - **Governance**: CRÍTICO (control de acceso, aunque solo en el cliente)
 - **Leer antes**:
-  - `openspec/changes/migracion-vite-typescript/design.md` (D3 y D4)
+  - `openspec/changes/archive/2026-11-09-migracion-vite-typescript/design.md` (D3 y D4)
   - `knowledge-base/03_actores_y_roles.md`
 
 ### [T-05] `operaciones-contra-api`

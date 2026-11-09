@@ -57,9 +57,21 @@ Páginas que requieren sesión, según la zona:
 - Zona `client` (`client` y `admin`): Catálogo.
 - Zona `admin` (solo `admin`): Libros, Clientes, Ventas e Historial.
 
-Hasta que `proteccion-de-rutas-y-roles` (T-04) agregue la intercepción en
-`src/main.ts`, estas páginas todavía se abren por su dirección sin sesión. La
-estructura de archivos está en `08_arquitectura_propuesta.md`.
+`src/main.ts` decide el acceso al cargar cada página (`proteccion-de-rutas-y-roles`,
+DD-25), por la zona de la dirección y la sesión vigente (la de `userData`, que
+debe coincidir con un usuario de `users`):
+
+| Sesión | Zona `auth` | Zona `client` | Zona `admin` |
+|---|---|---|---|
+| Sin sesión | se muestra | login | login |
+| `client` | Catálogo | se muestra | Catálogo (sin mensaje) |
+| `admin` | Libros | se muestra | se muestra |
+
+La página pedida no se ve mientras se redirige, la decisión se repite al
+recargar y al volver con el historial, y la navegación del encabezado ofrece a
+cada rol solo las vistas que puede abrir (el `client`, solo el Catálogo). Es una
+guía de uso del lado del cliente, no seguridad real. La estructura de archivos
+está en `08_arquitectura_propuesta.md`.
 
 ## Consideraciones de accesibilidad para el operador
 

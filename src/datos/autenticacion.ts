@@ -3,7 +3,7 @@
 // protección de contraseñas. Las páginas de acceso lo obtienen de
 // `proveedor.ts` y no conocen el almacenamiento (regla dura 4).
 import { buscarPorEmail, validarRegistro } from "../logica/usuarios";
-import { aSesion, esSesion } from "../logica/sesion";
+import { aSesion, sesionVigente } from "../logica/sesion";
 import { normalizarEmail } from "../logica/texto";
 import type { ErrorDeCampo } from "../types/formulario";
 import type { IUser } from "../types/IUser";
@@ -26,7 +26,10 @@ export interface ServicioAutenticacion {
    * `null` sin tocar `userData` (no distingue cuál de los dos datos falló).
    */
   ingresar(credenciales: CredencialesIngreso): Promise<IUser | null>;
-  /** La sesión vigente validada, o `null` si no hay o `userData` es inválido. */
+  /**
+   * La sesión vigente, o `null` si no hay, `userData` es inválido o no coincide
+   * con un usuario de `users` (mismo email y mismo rol).
+   */
   obtenerSesion(): IUser | null;
   /** Quita `userData`; `users` no cambia. */
   cerrarSesion(): void;
@@ -106,8 +109,7 @@ export function crearServicioAutenticacion(
     },
 
     obtenerSesion() {
-      const guardada = almacen.leerSesion();
-      return esSesion(guardada) ? aSesion(guardada) : null;
+      return sesionVigente(almacen.leerSesion(), almacen.obtenerUsuarios());
     },
 
     cerrarSesion() {

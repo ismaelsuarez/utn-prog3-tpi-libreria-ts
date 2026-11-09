@@ -148,3 +148,26 @@ export function conectarCierreDeSesion(sesion: IUser | null, alCerrar: () => voi
   );
   bloque.hidden = false;
 }
+
+/** Muestra la página: quita `hidden` del `body` (las páginas nacen ocultas hasta decidir el acceso). */
+export function mostrarPagina(): void {
+  document.body.hidden = false;
+}
+
+/** Oculta la página entera (por ejemplo antes de que el navegador la guarde en su caché de ida y vuelta). */
+export function ocultarPagina(): void {
+  document.body.hidden = true;
+}
+
+/**
+ * Quita del DOM el elemento de lista de cada enlace de la navegación del
+ * encabezado cuya dirección `puedeAbrir` rechaza. Recibe la ruta (`pathname`) ya
+ * resuelta; no decide nada por su cuenta. Se quita (no se oculta) para que
+ * tampoco lo anuncien las tecnologías de asistencia.
+ */
+export function ajustarNavegacion(puedeAbrir: (ruta: string) => boolean): void {
+  for (const enlace of document.querySelectorAll<HTMLAnchorElement>("a.navegacion__enlace")) {
+    if (puedeAbrir(new URL(enlace.href).pathname)) continue;
+    (enlace.closest("li") ?? enlace).remove();
+  }
+}
