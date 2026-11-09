@@ -1,0 +1,102 @@
+# Tasks
+
+Plan de `migracion-vite-typescript`; esta lista no acredita implementación. Referencias: [propuesta](proposal.md), [diseño](design.md) y deltas de [compilacion-y-pruebas](specs/compilacion-y-pruebas/spec.md), [acceso-a-datos](specs/acceso-a-datos/spec.md), [estructura-y-navegacion](specs/estructura-y-navegacion/spec.md) y [datos-locales](specs/datos-locales/spec.md).
+
+Disciplina (TDD estricto): cada tarea de comportamiento empieza por su prueba fallida (RED observado y registrado), sigue con la implementación mínima (GREEN), triangula con un segundo caso y refactoriza con la suite verde. En una migración, RED es la prueba `.test.ts` que importa el módulo TypeScript todavía inexistente. Las vistas y el DOM no tienen runner automatizado (D9): su verificación es la ejecución en navegador de los casos manuales indicados, registrando el resultado realmente observado. Registrar en cada tarea el comando y su resultado.
+
+Unidades de trabajo: cada grupo marcado «Commit» es un commit con mensaje de Conventional Commits en la rama `feat/migracion-vite-typescript`, con sus pruebas y su documentación. El tamaño orientativo es de unas 400 líneas de autoría (sin contar `package-lock.json` ni archivos movidos sin cambios); los grupos que lo superan por código migrado lo explican en su evidencia sin partirse artificialmente. El commit de herramientas toca dependencias (riesgo, ítem 5) y va solo.
+
+Seguridad operativa: ninguna tarea envía POST, PUT, PATCH ni DELETE a `https://api.ismaelsuarez.me`; solo se admiten GET de verificación y de captura de ejemplos.
+
+## 1. Red de seguridad
+
+- [ ] 1.1 Crear la rama `feat/migracion-vite-typescript` desde `main`, registrar `node --version` y la línea base `node --test tests/*.test.js` (esperado: **153 pruebas, 138 aprobadas, 15 fallidas**, todas en `tests/clientes.test.js` por el teléfono obligatorio) con la lista nominal de las 15 fallidas; detenerse y reportar si el resultado difiere. No corregir nada en esta tarea. Confirmar las fronteras públicas a probar: funciones exportadas de `src/logica/*`, `crearAlmacenLocal`, los repositorios locales, la raíz de composición, `obtenerBaseApi` y `formatearImporte`.
+- [ ] 1.2 Copiar el commit base a un directorio temporal (`mktemp -d`, fuera del repositorio) para la comparación diferencial en navegador de las tareas 7.x y 8.4, y registrar la ruta para borrarla al final. — Verificación: la copia abre `index.html` desde `file://` con el catálogo de seis libros.
+
+## 2. Herramientas Vite + TypeScript y reglas del proyecto (Commit: `build: add vite and strict typescript tooling`)
+
+- [ ] 2.1 Agregar `package.json` (`"type": "module"`, `private`, scripts `dev`, `build` = `tsc && vite build`, `preview`, `test` = `vitest run`, `engines.node` según Vite 7), instalar con `npm install` `vite@^7.1.2`, `typescript@~5.8.3`, `@types/node` y la versión de `vitest` cuya dependencia par acepte Vite 7 (registrar la salida de `npm view vitest@<versión> peerDependencies`), y versionar `package-lock.json`. — Verificación: `npm ls vite typescript vitest` sin errores.
+- [ ] 2.2 Agregar `tsconfig.json` copiado del repositorio base con `include: ["src", "tests"]` (D2), `src/vite-env.d.ts`, `src/main.ts` (entrada común sin lógica, D4) y `vite.config.ts` con `base: "./"`, `build.rollupOptions.input` (por ahora solo `index.html`) y el bloque `test` (`environment: "node"`, `include: ["tests/**/*.test.ts"]`, `passWithNoTests: true` hasta la tarea 3.1). — Verificación: `npx tsc` termina con código 0; `npm run dev` sirve la aplicación actual (las páginas de la raíz con scripts clásicos) y el catálogo muestra seis libros sin errores en la consola.
+- [ ] 2.3 Sumar `node_modules/` y `dist/` a `.gitignore` y crear `.env.example` con `VITE_API_BASE=/api` y `API_PROXY_TARGET=https://api.ismaelsuarez.me` comentados. — Verificación: `git status --short` no lista `node_modules/` tras instalar.
+- [ ] 2.4 Actualizar `CLAUDE.md` y `AGENTS.md` (copias idénticas) según D13: stack, comandos, reglas duras 1 a 4, 6, 7 y 14 reescritas; reglas vigentes conservadas; frases obsoletas («se abre sin npm ni servidor», «La entrega no incluye dependencias ni herramientas de compilación») quitadas; limitación conocida de autenticación solo en el cliente; lista de lo excluido de la entrega revisada (`node_modules/`, `dist/`). Actualizar la sección de instalación y comandos del `README.md` (Node mínimo, `npm install`, `npm run dev`, `npm run build`, `npm run preview`, `npm test`, aviso de que lo guardado desde `file://` no se ve en `localhost`). — Verificación: `diff CLAUDE.md AGENTS.md` vacío; búsqueda de `node --test`, `file://` y `scripts clásicos` en ambos archivos sin coincidencias vigentes; lectura del README.
+
+## 3. Roadmap y decisiones (Commit: `docs: record typescript series roadmap and decisions`)
+
+- [ ] 3.1 Agregar a `CHANGES.md` la serie TypeScript de seis changes (`migracion-vite-typescript`, `cliente-http-y-catalogo`, `registro-login-y-sesion`, `proteccion-de-rutas-y-roles`, `operaciones-contra-api`, `despliegue-frontend`) con dependencias, alcance y «Leer antes», conservando la serie JavaScript C-01 a C-06 como historial; reemplazar las restricciones transversales obsoletas (sin npm, sin `fetch`, sin `type="module"`). Incluir los ítems abiertos para el change 5 (sin `GET /clientes/`, sin `GET /autores/`, sin actualización de perfil) y para el change 2 (cómo obtener autores del listado; mezcla de orígenes de datos). — Verificación: lectura; cada change nuevo tiene dependencias y alcance.
+- [ ] 3.2 Agregar a `knowledge-base/09_decisiones_y_supuestos.md` las decisiones nuevas (migración a Vite + TypeScript estricto; API de producción intocable como fuente de datos de negocio; base `/api` del mismo origen con reenvío; autenticación y roles solo en el cliente como limitación conocida; frontera de repositorios con forma de la API) y marcar DD-03 y DD-04 como reemplazadas, sin borrarlas. — Verificación: lectura; cada decisión nueva tiene contexto, decisión y consecuencias como las existentes.
+
+## 4. Base de la API del mismo origen (Commit: `feat(datos): define same-origin api base and dev proxy`)
+
+- [ ] 4.1 RED: `tests/datos/api/base.test.ts` con `obtenerBaseApi` (sin valor → `/api`; `""` → `/api`; `"/servicio/"` → `/servicio`; `"/api"` → `/api`); GREEN en `src/datos/api/base.ts`; declarar `VITE_API_BASE` en `ImportMetaEnv`; quitar `passWithNoTests`. — Verificación: RED observado (módulo inexistente), luego `npm test` verde y `npx tsc` con código 0.
+- [ ] 4.2 Configurar en `vite.config.ts` `server.proxy` y `preview.proxy` para `/api` (destino desde `API_PROXY_TARGET` leído con `loadEnv`, `https://api.ismaelsuarez.me` por defecto, `changeOrigin: true`, quitar el prefijo). — Verificación: con `npm run dev`, `curl -s -o /dev/null -w '%{http_code}' http://localhost:5173/api/health/live` → `200` y `curl -s 'http://localhost:5173/api/libros/?limit=1'` devuelve un arreglo JSON (solo GET).
+
+## 5. Tipos de dominio (Commit: `feat(types): add domain types aligned with production api`)
+
+- [ ] 5.1 RED: capturar con GET respuestas reales (`/libros/?limit=2`, `/libros/{id}` de uno de ellos, `/editoriales/?limit=2`, `/generos/?limit=2`, `/ventas/?limit=1`, `/clientes/{id}` del cliente de esa venta) y escribirlas en `tests/fixtures/api/*.ts` con `satisfies <Tipo>`, más líneas `// @ts-expect-error` que deben fallar (`precio` numérico en `Libro`, `rol` fuera de la unión en `AutorConRol`, `genero` ausente en lugar de `null`). — Verificación: `npx tsc` falla porque los tipos no existen.
+- [ ] 5.2 GREEN: escribir `src/types/` según D5 (primitivos, editorial, género, autor y autoría, libro, cliente y perfil, venta y renglón, error de la API, paginación y filtro, `ErrorDeCampo`, `IUser` y `Rol` idénticos al base). — Verificación: `npx tsc` con código 0 (los `@ts-expect-error` se cumplen); búsqueda de `any` explícito en `src/` y `tests/` sin coincidencias.
+
+## 6. Lógica pura en TypeScript
+
+Cada tarea registra la tabla de correspondencia caso anterior → caso nuevo; los casos que dejan de aplicar se listan con su sustituto y motivo.
+
+### Commit: `refactor(logica): migrate text, money and catalog logic to typescript`
+
+- [ ] 6.1 RED: `tests/logica/texto.test.ts` con los 8 casos de `tests/texto.test.js`; GREEN: `src/logica/texto.ts`. — Verificación: 8/8 en `npm test`.
+- [ ] 6.2 RED: `tests/logica/dinero.test.ts` (`aCentavos`: `1.005` → `101`, `"2350.50"` → `235050`, negativo y no finito → `null`; `aDinero`: `2350.5` → `"2350.50"`, `1990.9` → `"1990.90"`, `1500` → `"1500.00"`; `formatearImporte("1500.00")` → `"$ 1500,00"`); GREEN: `src/logica/dinero.ts` con las reglas de centavos de `js/logica/ventas.js`. — Verificación: casos verdes y triangulación con un precio de texto y uno numérico.
+- [ ] 6.3 RED: `tests/logica/catalogo.test.ts` con los 15 casos de `tests/catalogo.test.js` sobre `LibroDetalle` (filtro parcial sin distinguir mayúsculas, vacío, inexistente, estados del listado) y los casos de resolvedores reemplazados por `nombreGenero` (`null` → «Sin clasificar») y `nombresAutores` (orden por `orden`, varios autores); GREEN: `src/logica/catalogo.ts`. — Verificación: casos verdes; `node --test tests/*.test.js` mantiene su línea base.
+
+### Commit: `refactor(logica): migrate book and client validation to typescript`
+
+- [ ] 6.4 RED: `tests/logica/libros.test.ts` con los 26 casos de `tests/libros.test.js` reformados a `LibroNuevo` y `Libro[]`; GREEN: `src/logica/libros.ts` con las mismas reglas y mensajes. — Verificación: casos verdes con los mismos mensajes de error.
+- [ ] 6.5 RED: `tests/logica/clientes.test.ts` con los 19 casos de `tests/clientes.test.js` usando `nombre`; los 15 que fallaban en la línea base suman un teléfono válido al fixture y conservan su aserción (dejar constancia caso por caso, D9); agregar un caso de teléfono faltante y uno fuera de 7–15 dígitos si no existen; GREEN: `src/logica/clientes.ts`. — Verificación: 19/19 más los agregados.
+
+### Commit: `refactor(logica): migrate sale calculations to typescript`
+
+- [ ] 6.6 RED: `tests/logica/ventas.test.ts` con los 23 casos de `tests/ventas.test.js` usando `libro_id` y precios `Dinero` (subtotales 3000 y 2000 y total 5000 como `"3000.00"`, `"2000.00"`, `"5000.00"`; cantidades 0, negativa y decimal rechazadas; repetidos acumulados; fecha inválida rechazada), más un caso con precio numérico; GREEN: `src/logica/ventas.ts` usando `src/logica/dinero.ts`. — Verificación: casos verdes y mismos mensajes.
+
+## 7. Almacén local y repositorios
+
+### Commit: `refactor(datos): migrate local store to an injectable typescript module`
+
+- [ ] 7.1 RED: `tests/datos/local/datos-iniciales.test.ts` con los 9 casos de `tests/datos-iniciales.test.js` más `pais` y `nacionalidad` presentes; GREEN: `src/datos/local/datos-iniciales.ts`. — Verificación: casos verdes.
+- [ ] 7.2 RED: `tests/datos/local/almacen-local.test.ts` con los 39 casos de `tests/almacen.test.js` sobre `crearAlmacenLocal(storage)` con almacenamiento simulado inyectado (los casos con contexto `vm` pasan a instancias nuevas de la fábrica); GREEN: `src/datos/local/almacen-local.ts` con las mismas claves, formato, siembra, conservación de contenido ilegible, error de ventas ilegibles y degradación a memoria. — Verificación: casos verdes; una prueba confirma que el resultado no cambia si existe `globalThis.localStorage`.
+
+### Commit: `feat(datos): add typed repositories with a local adapter`
+
+- [ ] 7.3 Declarar las interfaces de `src/datos/repositorios.ts` (D6), con comentario en cada operación sin endpoint en la API. RED: `tests/datos/local/repositorios-locales.test.ts` (libro `lib-07` → `id: 7` y `obtener(7)` lo devuelve; `precio` `2350.5` → `"2350.50"`; editorial y género anidados y género `null`; autores con `rol: "autor"` y `orden` por posición; `stock: 0`; cliente con `nombre` y `perfil` desde `telefono` o `null`; `crearPerfil` y `actualizarTelefono` guardan el teléfono; venta guardada → `Venta` con importes `Dinero`; `crear(VentaNueva)` copia el precio vigente, calcula subtotales y total y los conserva aunque luego cambie el precio del libro; identificador inexistente → promesa rechazada); GREEN: `src/datos/local/repositorios-locales.ts`. — Verificación: casos verdes y el formato guardado en el almacenamiento simulado es idéntico al de la versión anterior.
+- [ ] 7.4 RED: `tests/datos/proveedor.test.ts` (`crearProveedor(storage)` siembra una sola vez las claves ausentes y respeta las presentes); GREEN: `src/datos/proveedor.ts` con las instancias por defecto sobre el almacenamiento del navegador, obtenido mediante una función exportada por `src/datos/local/almacen-local.ts`. — Verificación: casos verdes; búsqueda de `localStorage` en `src/` con coincidencias solo en `src/datos/local/almacen-local.ts`.
+
+## 8. Vistas por zona
+
+Cada tarea mueve una vista a su zona, la reescribe como módulo con `iniciar()` asíncrono y mensaje de error en texto (D12), agrega su entrada a `rollupOptions.input`, enlaza sus hojas desde `src/styles/` y deja la navegación recorrible desde todas las páginas (nuevas y de la raíz). Verificación común: `npm run build` y `npm test` verdes, consola sin errores, vista a 320 px y 1280 px sin desplazamiento horizontal de página, recorrido completo con teclado y foco visible, comparación con la copia base de la tarea 1.2.
+
+### Commit: `refactor(catalogo): move catalog to the client zone as a typescript module`
+
+- [ ] 8.1 Mover las siete hojas a `src/styles/` y las imágenes a `src/assets/` (D11), crear `src/utils/dom.ts` y convertir `index.html` raíz en la redirección relativa al Catálogo (D3). — Verificación: abrir `/` lleva a la vista Catálogo; `img/estanteria.webp` se ve de fondo.
+- [ ] 8.2 Crear `src/pages/client/catalogo/catalogo.html` + `catalogo.ts` (importa `main` primero y los repositorios desde `proveedor`) y `ficha-libro.ts` (recibe los libros cargados; portadas por importación). Ejecutar CM-1 (búsqueda parcial en mayúsculas, vacía e inexistente con su mensaje), tarjeta con ISBN, editorial, género, autores y precio con dos decimales, «Sin clasificar», libro con varios autores, ficha de lectura con portada, y un título con `<` y `&` mostrado como texto. — Verificación: resultado observado registrado; la dirección contiene `/client/`.
+
+### Commit: `refactor(libros): move books view to the admin zone`
+
+- [ ] 8.3 Crear `src/pages/admin/libros/libros.html` + `libros.ts` con selectores de editorial, género y autores desde los repositorios y alta por `RepositorioLibros.crear` (`stock: 0` provisorio, autores con `rol: "autor"` y `orden`). Ejecutar CM-2 (ISBN duplicado rechazado, libro nuevo registrado y visible en el listado y en el Catálogo sin recargar la página de alta). — Verificación: resultado observado; dirección con `/admin/`; `libreria.libros` conserva el formato anterior.
+
+### Commit: `refactor(clientes): move clients view to the admin zone`
+
+- [ ] 8.4 Crear `src/pages/admin/clientes/clientes.html` + `clientes.ts` con alta (`crear` + `crearPerfil` del teléfono), listado y edición (`actualizar` + `actualizarTelefono`). Ejecutar CM-3 (email inválido, existente en mayúsculas y nuevo) y la edición de un cliente con el mismo email propio. — Verificación: resultado observado; `libreria.clientes` conserva el formato anterior.
+
+### Commit: `refactor(ventas): move sales and history views to the admin zone`
+
+- [ ] 8.5 Crear `src/pages/admin/ventas/ventas.html` + `ventas.ts` + `ticket-venta.ts` (borrador con la lógica pura, confirmación por `RepositorioVentas.crear`, comprobante con la `Venta` devuelta). Ejecutar CM-4 (sin cliente, cantidades 0/negativa/decimal, libro repetido acumulado) y CM-5 (2 × 1500 y 1 × 2000 → subtotales `$ 3000,00` y `$ 2000,00`, total `$ 5000,00`). — Verificación: resultado observado; el borrador se conserva ante un error.
+- [ ] 8.6 Crear `src/pages/admin/historial/historial.html` + `historial.ts`. Ejecutar CM-6 (alterar solo el precio del libro en `libreria.libros`, recargar el Historial y comprobar unitarios, subtotales y total sin cambios) y CM-7 (altas y venta, recarga sin duplicados). — Verificación: resultado observado.
+
+## 9. Limpieza y verificación integral (Commit: `chore: remove legacy scripts and verify the migrated app`)
+
+- [ ] 9.1 Borrar `libros.html`, `clientes.html`, `ventas.html`, `historial.html`, `js/`, `css/`, `img/`, `recursos/` y `tests/*.test.js` de la raíz; dejar `rollupOptions.input` con `index.html` y las cinco vistas. — Verificación: `npm test` verde con un total que cubre la tabla de correspondencia completa (153 casos anteriores mapeados o justificados); `npm run build` con código 0; búsqueda sin coincidencias de `any` explícito, `var `, `Libreria`, `innerHTML` con datos de usuario y `localStorage` fuera de `src/datos/local/almacen-local.ts`; `type="module"` en cada vista.
+- [ ] 9.2 Actualizar `knowledge-base/08_arquitectura_propuesta.md` (estructura de `src/`, zonas, carga de módulos con `main` primero, frontera de repositorios, base `/api` y reenvío, variables de entorno, verificación con Vitest y casos manuales, seguridad con la limitación de autenticación en el cliente) y la estructura de carpetas del `README.md`. — Verificación: lectura; las rutas citadas existen.
+- [ ] 9.3 Verificar la compilación servida: copiar `dist/` a una subruta de un directorio temporal (`mktemp -d`), servirla con un servidor estático local y abrir `/libreria/index.html`; además `npm run preview` con `GET /api/health/live` → 200 por el reenvío. — Verificación: redirección al Catálogo dentro de la subruta, las cinco vistas cargan sin 404 ni errores; `grep -r "api.ismaelsuarez.me" dist/` sin coincidencias.
+- [ ] 9.4 Ejecutar CM-1 a CM-8 completos con `npm run dev` (CM-8: las cinco vistas a 320 px y 1280 px, teclado y foco visible) y comparar con la copia base; registrar en el README el resultado realmente observado, con la fecha y los comandos nuevos, sin marcar aprobado ningún caso no ejecutado. Borrar los directorios temporales de 1.2 y 9.3. — Verificación: tabla del README actualizada; diferencias con la base solo en rutas y modo de apertura.
+- [ ] 9.5 Revisar los deltas contra el resultado y ejecutar `openspec validate migracion-vite-typescript --strict`; presentar la implementación y sus verificaciones para revisión. — Verificación: validación sin errores y evidencia por requisito de cada delta.
+
+## Workflow follow-up
+
+- La marca en `CHANGES.md` y el traslado a `openspec/changes/archive/` corresponden a `/opsx:archive`, no a este apply.
+- Push y pull request quedan a decisión del equipo.
