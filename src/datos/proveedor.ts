@@ -53,12 +53,19 @@ export const repositorioAutores = repositorios.autores;
 export const repositorioClientes = repositorios.clientes;
 export const repositorioVentas = repositorios.ventas;
 
-/**
- * Libros de la API de producción para el Catálogo. Crear el repositorio no hace
- * solicitudes: la red se usa recién al llamar `listar` u `obtener`.
- */
-export const repositorioCatalogo: RepositorioLecturaLibros = crearRepositoriosApi(
+const librosDeLaApi = crearRepositoriosApi(
   crearClienteHttp({ base: obtenerBaseApi(import.meta.env.VITE_API_BASE) }),
 ).libros;
+
+/**
+ * Libros de la API de producción para el Catálogo, solo de lectura: expone
+ * únicamente `listar` y `obtener`, aunque el adaptador también sepa crear. Crear
+ * el repositorio no hace solicitudes: la red se usa recién al llamar `listar` u
+ * `obtener`.
+ */
+export const repositorioCatalogo: RepositorioLecturaLibros = {
+  listar: librosDeLaApi.listar,
+  obtener: librosDeLaApi.obtener,
+};
 
 export const autenticacion = crearServicioDeAutenticacion(obtenerAlmacenamientoDelNavegador());

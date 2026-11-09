@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import { ErrorDeApi } from "../../../src/datos/api/errores-api";
-import { mapearConLimite, recorrerPaginas } from "../../../src/datos/api/paginacion";
+import { mapearConLimite, recorrerPaginas, sondearPorIdentificador } from "../../../src/datos/api/paginacion";
 
 /** Servidor simulado con `total` elementos numerados desde 1. */
 function servidorCon(total: number): ReturnType<typeof vi.fn<(limit: number, offset: number) => Promise<number[]>>> {
@@ -198,5 +198,133 @@ describe("mapearConLimite", () => {
       throw fallo;
     });
     await expect(resultado).rejects.toBe(fallo);
+  });
+});
+
+interface Registro {
+  id: number;
+}
+
+/**
+ * Servidor simulado: responde 404 a todo identificador que no esté en
+ * `existentes`. Registra el orden de las consultas y cuántas hubo en curso a la
+ * vez (cada consulta tarda un turno de microtareas, para que se solapen).
+ */
+function sondeoCon(existentes: readonly number[], fallos: Record<number, unknown> = {}) {
+  const consultados: number[] = [];
+  let enCurso = 0;
+  let maximo = 0;
+  const obtener = vi.fn(async (id: number): Promise<Registro> => {
+    consultados.push(id);
+    enCurso += 1;
+    maximo = Math.max(maximo, enCurso);
+    await Promise.resolve();
+    await Promise.resolve();
+    enCurso -= 1;
+    if (Object.hasOwn(fallos, id)) throw fallos[id];
+    if (existentes.includes(id)) return { id };
+    throw new ErrorDeApi("Cliente no encontrado", "http", 404);
+  });
+  return { obtener, consultados, maximoEnCurso: (): number => maximo };
+}
+
+const rango = (desde: number, hasta: number): number[] =>
+  Array.from({ length: hasta - desde + 1 }, (_, i) => desde + i);
+
+describe("sondearPorIdentificador", () => {
+  test("clientes 1, 2 y 3 y 404 del 4 al 13: los entrega en orden y no pide el 14", async () => {
+    const { obtener, consultados } = sondeoCon([1, 2, 3]);
+    const encontrados = await sondearPorIdentificador(obtener);
+    expect(encontrados).toEqual([{ id: 1 }, { id: 2 }, { id: 3 }]);
+    expect([...consultados].sort((a, b) => a - b)).toEqual(rango(1, 13));
+    expect(consultados).not.toContain(14);
+  });
+
+  test("hueco menor que el límite: 1, 2 y 9 con 404 del 3 al 8", async () => {
+    const { obtener, consultados } = sondeoCon([1, 2, 9]);
+    expect(await sondearPorIdentificador(obtener)).toEqual([{ id: 1 }, { id: 2 }, { id: 9 }]);
+    // Tras el 9 hacen falta otros 10 ausentes seguidos: se llega al 19 y no al 20.
+    expect(Math.max(...consultados)).toBe(19);
+  });
+
+  test("identificador conocido por otra fuente: no se detiene antes del 25 y lo incluye", async () => {
+    const { obtener, consultados } = sondeoCon([1, 2, 3, 25]);
+    const encontrados = await sondearPorIdentificador(obtener, { conocidos: [3, 25, 2] });
+    expect(encontrados.map((r) => r.id)).toEqual([1, 2, 3, 25]);
+    expect(consultados).toContain(25);
+    // Después del mayor conocido se aplican los 10 ausentes seguidos: 26 a 35.
+    expect(Math.max(...consultados)).toBe(35);
+  });
+
+  test("un conocido ausente no extiende el sondeo cuando ya hubo 10 ausentes seguidos hasta él", async () => {
+    const { obtener, consultados } = sondeoCon([1]);
+    expect(await sondearPorIdentificador(obtener, { conocidos: [12] })).toEqual([{ id: 1 }]);
+    expect(Math.max(...consultados)).toBe(12);
+  });
+
+  test("sin ningún registro: pide del 1 al 10 y entrega una lista vacía", async () => {
+    const { obtener, consultados } = sondeoCon([]);
+    expect(await sondearPorIdentificador(obtener)).toEqual([]);
+    expect([...consultados].sort((a, b) => a - b)).toEqual(rango(1, 10));
+  });
+
+  test("nunca hay más de 4 consultas en curso", async () => {
+    const { obtener, maximoEnCurso } = sondeoCon([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    await sondearPorIdentificador(obtener);
+    expect(maximoEnCurso()).toBe(4);
+  });
+
+  test("respeta una concurrencia y un hueco configurados", async () => {
+    const { obtener, consultados, maximoEnCurso } = sondeoCon([1, 2]);
+    expect(await sondearPorIdentificador(obtener, { concurrencia: 2, hueco: 3 })).toEqual([{ id: 1 }, { id: 2 }]);
+    expect(maximoEnCurso()).toBe(2);
+    expect(Math.max(...consultados)).toBe(5);
+  });
+
+  test("entrega por identificador creciente aunque las respuestas lleguen en otro orden", async () => {
+    const existentes = [1, 2, 3, 4, 5, 6];
+    // Dentro de cada tanda de 4, los identificadores más altos responden primero.
+    const obtener = (id: number): Promise<Registro> =>
+      new Promise<Registro>((resolver, rechazar) => {
+        setTimeout(() => {
+          if (existentes.includes(id)) resolver({ id });
+          else rechazar(new ErrorDeApi("no", "http", 404));
+        }, (10 - id) * 2);
+      });
+    expect((await sondearPorIdentificador(obtener)).map((r) => r.id)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  test("una falla 500 rechaza todo el listado con su mensaje, sin entregar una lista parcial", async () => {
+    const fallo = new ErrorDeApi("Error interno", "http", 500);
+    const { obtener } = sondeoCon([1, 2, 3, 4], { 3: fallo });
+    await expect(sondearPorIdentificador(obtener)).rejects.toBe(fallo);
+  });
+
+  test("una falla sin respuesta (red) rechaza el listado", async () => {
+    const fallo = new ErrorDeApi("No se pudo conectar con el servidor.", "red");
+    const { obtener } = sondeoCon([1, 2], { 2: fallo });
+    const error = await sondearPorIdentificador(obtener).catch((e: unknown) => e);
+    expect(error).toBe(fallo);
+    expect((error as ErrorDeApi).message).toBe("No se pudo conectar con el servidor.");
+  });
+
+  test("un error que no es de la API tampoco cuenta como ausente", async () => {
+    const fallo = new TypeError("boom");
+    const { obtener } = sondeoCon([1], { 2: fallo });
+    await expect(sondearPorIdentificador(obtener)).rejects.toBe(fallo);
+  });
+
+  test("tras la falla no se inician consultas nuevas", async () => {
+    const fallo = new ErrorDeApi("Error interno", "http", 500);
+    const { obtener, consultados } = sondeoCon(rango(1, 40), { 2: fallo });
+    await expect(sondearPorIdentificador(obtener)).rejects.toBe(fallo);
+    await new Promise((resolver) => setTimeout(resolver, 5));
+    expect(Math.max(...consultados)).toBeLessThanOrEqual(5);
+  });
+
+  test("un 404 con otro estado de error (403) no cuenta como ausente", async () => {
+    const prohibido = new ErrorDeApi("Prohibido", "http", 403);
+    const { obtener } = sondeoCon([1], { 2: prohibido });
+    await expect(sondearPorIdentificador(obtener)).rejects.toBe(prohibido);
   });
 });

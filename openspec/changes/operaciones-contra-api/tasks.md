@@ -35,11 +35,11 @@ Gobernanza ALTO: ninguna tarea de los grupos 1 a 10 empieza antes de cerrar el g
 
 ## 3. Adaptadores de la API: sondeo y escrituras [alto riesgo: escrituras a un sistema externo]
 
-- [ ] 3.1 RED/GREEN: `sondearPorIdentificador` (tandas de 4, 404 como ausente, corte tras 10 ausentes seguidos pasado el mayor conocido, rechazo ante otra falla, orden por identificador); verificar con los escenarios de la spec `acceso-a-datos` («Clientes consecutivos», «Hueco menor que el límite», «Identificador conocido por otra fuente», «Falla distinta de 404») en `tests/datos/api/paginacion.test.ts`
-- [ ] 3.2 Fixtures de `POST /libros/`, `POST /clientes/`, `POST /clientes/{id}/perfil`, `POST /ventas/`, `GET /clientes/{id}` y `GET /autores/{id}` copiados de los esquemas del árbol desplegado, con `satisfies`; verificar con `npm run build` (falla si un tipo no coincide)
-- [ ] 3.3 RED/GREEN: `clientes.listar` (sondeo con identificadores conocidos por las ventas), `clientes.obtener`, `autores.listar` (sondeo con `autor_id` de los detalles de libros); verificar en `tests/datos/api/repositorios-api.test.ts`
-- [ ] 3.4 RED/GREEN: `libros.crear` (precio redondeado al centavo como texto, `autores` con rol y orden), `clientes.crear`, `clientes.crearPerfil` (dirección vacía como `null`), `ventas.crear` (solo `cliente_id` y renglones) y `ventas.listar` (todas las páginas); cada prueba comprueba método, dirección, cuerpo y que se entrega lo que devolvió la API; verificar en `tests/datos/api/repositorios-api.test.ts`
-- [ ] 3.5 Commit `feat(api): add write adapters and id probing for clients and authors`
+- [x] 3.1 RED/GREEN: `sondearPorIdentificador` (tandas de 4, 404 como ausente, corte tras 10 ausentes seguidos pasado el mayor conocido, rechazo ante otra falla, orden por identificador); verificar con los escenarios de la spec `acceso-a-datos` («Clientes consecutivos», «Hueco menor que el límite», «Identificador conocido por otra fuente», «Falla distinta de 404») en `tests/datos/api/paginacion.test.ts`
+- [x] 3.2 Fixtures de `POST /libros/`, `POST /clientes/`, `POST /clientes/{id}/perfil`, `POST /ventas/`, `GET /clientes/{id}` y `GET /autores/{id}` copiados de los esquemas del árbol desplegado, con `satisfies`; verificar con `npm run build` (falla si un tipo no coincide)
+- [x] 3.3 RED/GREEN: `clientes.listar` (sondeo con identificadores conocidos por las ventas), `clientes.obtener`, `autores.listar` (sondeo con `autor_id` de los detalles de libros); verificar en `tests/datos/api/repositorios-api.test.ts`
+- [x] 3.4 RED/GREEN: `libros.crear` (precio redondeado al centavo como texto, `autores` con rol y orden), `clientes.crear`, `clientes.crearPerfil` (dirección vacía como `null`), `ventas.crear` (solo `cliente_id` y renglones) y `ventas.listar` (todas las páginas); cada prueba comprueba método, dirección, cuerpo y que se entrega lo que devolvió la API; verificar en `tests/datos/api/repositorios-api.test.ts`
+- [x] 3.5 Commit `feat(api): add write adapters and id probing for clients and authors`
 
 ## 4. Lógica pura de validación y errores
 

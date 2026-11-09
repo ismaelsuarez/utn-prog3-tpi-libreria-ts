@@ -44,8 +44,9 @@ export interface RepositorioAutores {
   listar(): Promise<Autor[]>;
 }
 
-export interface RepositorioClientes {
-  /** SIN ENDPOINT: la API no ofrece `GET /clientes/`. */
+/** Operaciones de clientes que ofrece la API (`GET` por identificador y `POST`). */
+export interface RepositorioClientesApi {
+  /** SIN ENDPOINT: la API no ofrece `GET /clientes/`; el adaptador de la API lo arma por sondeo. */
   listar(): Promise<Cliente[]>;
   /** `GET /clientes/{id}`. */
   obtener(id: Id): Promise<Cliente>;
@@ -53,6 +54,10 @@ export interface RepositorioClientes {
   crear(cliente: ClienteNuevo): Promise<Cliente>;
   /** `POST /clientes/{id}/perfil`. */
   crearPerfil(id: Id, perfil: PerfilNuevo): Promise<Perfil>;
+}
+
+/** Transitorio: las dos operaciones siguientes se retiran al conmutar las vistas a la API. */
+export interface RepositorioClientes extends RepositorioClientesApi {
   /** `PATCH /clientes/{id}`. */
   actualizar(id: Id, cambios: ClienteCambios): Promise<Cliente>;
   /** SIN ENDPOINT: la API no ofrece actualizar el perfil (teléfono) de un cliente. */
