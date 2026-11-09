@@ -81,8 +81,8 @@ Gobernanza ALTO: ninguna tarea de los grupos 1 a 10 empieza antes de cerrar el g
 
 ## 9. Comprobaciones automáticas de integración
 
-- [ ] 9.1 `npm test`, `npm run build` y `grep -r "api.ismaelsuarez.me" dist/` (sin resultados); verificar los tres
-- [ ] 9.2 Comprobación diferencial: para cada lectura existente (Catálogo con `npm run dev` y destino por defecto), comparar estado y cuerpo contra la línea base en una copia temporal fuera del repositorio (`mktemp -d`); verificar que no hay diferencias no pedidas
+- [x] 9.1 `npm test`, `npm run build` y `grep -r "api.ismaelsuarez.me" dist/` (sin resultados); verificar los tres (observado el 2026-11-09: 23 archivos, 619/619 pruebas; `tsc --noEmit` y `npm run build` en verde; `dist/` sin coincidencias; en `src/` solo la constante de `src/datos/api/reenvio.ts`)
+- [x] 9.2 Comprobación diferencial: para cada lectura existente (Catálogo con `npm run dev` y destino por defecto), comparar estado y cuerpo contra la línea base en una copia temporal fuera del repositorio (`mktemp -d`); verificar que no hay diferencias no pedidas (observado: copia de `125ba53` con `git archive`; 19 lecturas `GET` por el reenvío, 0 diferencias de estado, tipo y cuerpo; el Catálogo muestra las mismas 5 tarjetas y hace las mismas 6 solicitudes. Solo lecturas: ninguna escritura contra el destino por defecto)
 
 ## 10. Verificación manual contra el backend local (nunca producción)
 
