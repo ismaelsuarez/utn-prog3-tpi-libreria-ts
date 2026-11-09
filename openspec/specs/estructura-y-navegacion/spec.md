@@ -7,22 +7,15 @@ Define la página de entrada, las cinco vistas de la librería y la navegación 
 ## Requirements
 
 ### Requirement: Página de entrada
-El proyecto SHALL tener `index.html` como página de entrada, y esa página SHALL mostrar la vista Catálogo.
+El proyecto SHALL tener `index.html` en la raíz como página de entrada, y esa página SHALL redirigir de inmediato a la vista Catálogo, sin contenido propio de la librería.
 
 #### Scenario: Apertura del proyecto
-- **WHEN** el operador abre `index.html` en el navegador
-- **THEN** se muestra la vista Catálogo con el título de la librería
+- **WHEN** el operador abre la dirección raíz de la aplicación (servidor de desarrollo o compilación servida)
+- **THEN** el navegador pasa a la vista Catálogo, que muestra el título de la librería
 
-### Requirement: Apertura sin servidor
-Todas las páginas SHALL funcionar abiertas directamente desde el sistema de archivos, sin servidor, sin npm y sin conexión a Internet, y no SHALL cargar ningún recurso externo al proyecto.
-
-#### Scenario: Apertura desde el sistema de archivos
-- **WHEN** el operador abre cualquiera de las páginas con doble clic desde la carpeta del proyecto
-- **THEN** la página se muestra completa y la consola del navegador no registra errores
-
-#### Scenario: Sin recursos externos
-- **WHEN** se revisan los recursos que solicita cualquier página
-- **THEN** todos pertenecen a la carpeta del proyecto y ninguno proviene de otra dirección
+#### Scenario: Entrada servida desde una subruta
+- **WHEN** la compilación se sirve bajo una subruta y el operador abre su `index.html`
+- **THEN** la redirección llega a la vista Catálogo dentro de esa misma subruta
 
 ### Requirement: Cinco vistas
 El proyecto SHALL ofrecer cinco vistas, cada una en su propia página: Catálogo, Libros, Clientes, Ventas e Historial.
@@ -63,3 +56,21 @@ Todo control cuya operación todavía no esté implementada SHALL identificarse 
 #### Scenario: Estado declarado en el README
 - **WHEN** el docente lee el README durante la Etapa 1
 - **THEN** encuentra la lista de pantallas que son maquetas y la lista de interacciones que ya funcionan
+
+### Requirement: Vistas organizadas por zona
+Cada vista SHALL publicarse en `src/pages/<zona>/<vista>/<vista>.html`, con las zonas `auth`, `admin` y `client`. La vista Catálogo SHALL estar en la zona `client`; las vistas Libros, Clientes, Ventas e Historial SHALL estar en la zona `admin`.
+
+#### Scenario: Rutas de las vistas
+- **WHEN** se recorren las cinco vistas
+- **THEN** la dirección del Catálogo contiene `/client/` y las direcciones de Libros, Clientes, Ventas e Historial contienen `/admin/`
+
+#### Scenario: Navegación con las rutas nuevas
+- **WHEN** el operador usa cualquier enlace de la navegación
+- **THEN** llega a la vista elegida en su zona, sin respuestas 404
+
+### Requirement: Recursos propios y solicitudes del mismo origen
+Las páginas SHALL cargar solo estilos, scripts, tipografías e imágenes del propio proyecto, y toda solicitud de datos SHALL dirigirse al mismo origen de la aplicación.
+
+#### Scenario: Recursos solicitados por una vista
+- **WHEN** se revisan las solicitudes de red de cualquier vista
+- **THEN** todas se dirigen al mismo origen de la aplicación y ninguna a otra dirección

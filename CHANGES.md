@@ -1,20 +1,20 @@
 # CHANGES — Secuencia de Implementación
 
-> Índice canónico de todos los changes del proyecto **TPI: frontend de una librería** (UTN, Programación III).
-> Hay exactamente **seis changes**, uno por ejercicio de la consigna (100 puntos). No existen changes de «preparación», «infraestructura» ni «pruebas»: lo transversal está incluido en alguno de los seis.
+> Índice canónico de los changes del proyecto **TPI: frontend de una librería** (UTN, Programación III).
+> Hay dos series. La **serie TypeScript (T-01 a T-06)** es la vigente: migra el proyecto a Vite + TypeScript estricto y lo conecta con la API de producción. La **serie JavaScript (C-01 a C-06)**, uno por ejercicio de la consigna original (100 puntos), está **archivada** y se conserva como historial.
 > Cada change se recorre con el ciclo `/opsx:explore` → `/opsx:propose` → `/opsx:apply` → `/opsx:archive`.
 > **Leer este archivo antes de ejecutar cualquier `/opsx:propose`.**
 
-Equipo: Avalos Pablo, Blangetti Sofia y Suarez Ismael. En este documento «Integrante A/B/C» designa un puesto de trabajo en paralelo; el reparto nominal de tareas sigue abierto (PA-07 en `knowledge-base/10_preguntas_abiertas.md`).
+Equipo: Avalos Pablo, Blangetti Sofia y Suarez Ismael. En este documento «Integrante A/B/C» designa un puesto de trabajo en paralelo en la serie JavaScript; el reparto nominal de tareas sigue abierto (PA-07 en `knowledge-base/10_preguntas_abiertas.md`).
 
-Restricciones que valen para todos los changes (ver `knowledge-base/09_decisiones_y_supuestos.md`):
+Restricciones que valen para todos los changes de la serie TypeScript (ver `knowledge-base/09_decisiones_y_supuestos.md`, DD-16 a DD-20):
 
-- Solo HTML, CSS y JavaScript nativos. Sin librerías, frameworks, CDNs, `fetch`, API, servidor ni npm en la entrega. `index.html` se abre directamente desde `file://`.
-- Varias páginas HTML, una por vista (DD-01). Scripts clásicos con `<script src>`; **no** se usa `type="module"` (DD-03).
-- La lógica pura (sin DOM) vive en `js/logica/` con exportación dual y se prueba con `node --test` desde `tests/`, carpeta que se excluye de la entrega (DD-04).
-- CSS propio y local, en archivos externos (DD-05).
-- Los datos escritos por el usuario se insertan en el DOM como texto (`textContent`, creación de nodos), nunca como HTML.
-- El almacén de datos se crea en el change 3 con interfaz estable; el change 4 ya escribe libros y clientes en `localStorage`; el change 5 escribe ventas; el change 6 consolida la carga inicial sin duplicados, el README y los casos manuales (DD-09).
+- Vite 7 y TypeScript estricto (`tsc` sin errores, sin `any` explícito), con la estructura del repositorio base `chiro45/proteger_rutas`: `src/pages/{auth,admin,client}/<vista>/`, `src/main.ts` como entrada común, `src/types/`, `src/utils/`.
+- Sin librerías de ejecución ni CDNs: las únicas dependencias son de desarrollo (`vite`, `typescript`, `vitest`, `@types/node`). Módulos ES con `import`/`export`; los tipos con `import type`.
+- La API de producción `https://api.ismaelsuarez.me` **no se puede modificar ni redesplegar**: todo cambio va en el frontend. El navegador la llama siempre por la base `/api` del mismo origen (`VITE_API_BASE`), con reenvío en desarrollo (`server.proxy`) y en producción (contenedor del change T-06); la API no envía cabeceras CORS.
+- Las vistas acceden a los datos solo por los repositorios de `src/datos/repositorios.ts`, asíncronos y con la forma de la API. La lógica pura (sin DOM) vive en `src/logica/` y se prueba con Vitest desde `tests/`.
+- CSS propio y local en `src/styles/`; los datos de usuario se insertan en el DOM como texto (`textContent`, creación de nodos), nunca como HTML.
+- Limitación conocida: la autenticación y los roles viven solo en el cliente (`localStorage`); la API queda abierta.
 
 ---
 
@@ -27,6 +27,108 @@ Restricciones que valen para todos los changes (ver `knowledge-base/09_decisione
 5. Marcar el checkbox `[x]` del change en este archivo (campo **Estado**).
 
 ---
+
+## Serie TypeScript (vigente)
+
+### Árbol de dependencias
+
+```
+T-01 migracion-vite-typescript
+  ├── T-02 cliente-http-y-catalogo ─────────────┐
+  └── T-03 registro-login-y-sesion              │
+        └── T-04 proteccion-de-rutas-y-roles    │
+              └── T-05 operaciones-contra-api ◄─┘ (depende de T-02 y T-04)
+                    └── T-06 despliegue-frontend
+```
+
+| Change | Depende de |
+|---|---|
+| T-01 | ninguna |
+| T-02 | T-01 |
+| T-03 | T-01 |
+| T-04 | T-03 |
+| T-05 | T-02, T-04 |
+| T-06 | T-05 |
+
+T-02 y T-03 son independientes entre sí y pueden avanzar en paralelo una vez archivado T-01. Camino crítico: `T-01 → T-03 → T-04 → T-05 → T-06`.
+
+### [T-01] `migracion-vite-typescript`
+- **Estado**: `[x]` archivado el 2026-11-09 (`openspec/changes/archive/2026-11-09-migracion-vite-typescript/`)
+- **Scope**:
+  - Migra la base técnica sin cambiar el comportamiento visible: `package.json`, Vite 7, TypeScript estricto, Vitest, `vite.config.ts` multipágina con `base: "./"` y reenvío de `/api` en `server.proxy` y `preview.proxy`.
+  - Vistas en `src/pages/<zona>/<vista>/` (Catálogo en `client`; Libros, Clientes, Ventas e Historial en `admin`; `auth` reservada) cargadas con `<script type="module">`; `index.html` de la raíz redirige al Catálogo.
+  - Tipos de dominio en `src/types/` alineados con los DTO de la API de producción, e interfaces de repositorio asíncronas en `src/datos/repositorios.ts` con un adaptador sobre el almacén local actual (mismas claves y formato de `localStorage`).
+  - Lógica pura y almacén migrados a TypeScript con sus pruebas en Vitest; documentación y reglas duras actualizadas.
+- **Dependencias**: ninguna
+- **Governance**: ALTO (cambia herramientas, estructura de carpetas, sistema de módulos y fija los contratos —zonas, tipos, repositorios, `/api`— que dan por hechos los cinco changes siguientes)
+- **Leer antes**:
+  - `openspec/changes/migracion-vite-typescript/` (proposal, design y deltas)
+  - `knowledge-base/08_arquitectura_propuesta.md` y `knowledge-base/09_decisiones_y_supuestos.md` (DD-16 a DD-20)
+
+### [T-02] `cliente-http-y-catalogo`
+- **Estado**: `[ ]`
+- **Scope**:
+  - Cliente `fetch` tipado sobre la base `/api` (`obtenerBaseApi`), con manejo de `ErrorApi`, estados de carga y mensajes de error en texto.
+  - Adaptadores HTTP de `RepositorioLibros` (lectura), `RepositorioEditoriales` y `RepositorioGeneros` que reemplazan a los locales sin tocar las vistas; el Catálogo pasa a leer de la API.
+  - Ítem abierto: `LibroRead` no incluye autores, solo `LibroDetalleRead`; decidir cómo obtener los autores para el listado (detalle por libro, paginación con `limit` 1–100 y `offset`, sin total).
+  - Ítem abierto: mezcla de orígenes de datos (catálogo desde la API y vistas de gestión todavía locales, con identificadores que no coinciden); decidir si los repositorios de lectura cambian todos juntos.
+- **Dependencias**: `T-01`
+- **Governance**: MEDIO (primera conexión real con la API; solo lectura)
+- **Leer antes**:
+  - `openspec/changes/migracion-vite-typescript/design.md` (D5, D6 y D10)
+  - `knowledge-base/09_decisiones_y_supuestos.md` (DD-16 a DD-20)
+
+### [T-03] `registro-login-y-sesion`
+- **Estado**: `[ ]`
+- **Scope**:
+  - Vistas `login` y `registro` en la zona `auth`; usuarios en `localStorage` (`users`, `userData`) con una semilla `admin`; sesión con `IUser` y `Rol`. `index.html` de la raíz pasa a apuntar al login.
+  - Decide cómo se suma la contraseña al arreglo `"users"` del repositorio base.
+  - Autenticación solo en el cliente (limitación conocida): no hay endpoints de autenticación en la API.
+- **Dependencias**: `T-01`
+- **Governance**: CRÍTICO (autenticación y credenciales)
+- **Leer antes**:
+  - `openspec/changes/migracion-vite-typescript/design.md` (D3, D4 y D5)
+  - `knowledge-base/09_decisiones_y_supuestos.md` (DD-19)
+
+### [T-04] `proteccion-de-rutas-y-roles`
+- **Estado**: `[ ]`
+- **Scope**:
+  - Intercepción de la carga de cada página en `src/main.ts` (que todas las vistas importan primero): sin sesión, redirige al login; un usuario con rol `client` que entra a `/admin/` es redirigido; `admin` alcanza `admin` y `client`.
+  - Navegación y cierre de sesión según el rol.
+- **Dependencias**: `T-03`
+- **Governance**: CRÍTICO (control de acceso, aunque solo en el cliente)
+- **Leer antes**:
+  - `openspec/changes/migracion-vite-typescript/design.md` (D3 y D4)
+  - `knowledge-base/03_actores_y_roles.md`
+
+### [T-05] `operaciones-contra-api`
+- **Estado**: `[ ]`
+- **Scope**:
+  - Altas de libros (con `stock` y autores con rol), clientes con perfil, ventas con totales del servidor e historial, todo contra la API mediante los repositorios.
+  - Ítems abiertos de diseño: la API no ofrece `GET /clientes/` (listado de clientes), `GET /autores/` (listado de autores) ni actualización del perfil (edición del teléfono); son las operaciones marcadas «sin endpoint» en `src/datos/repositorios.ts`.
+  - Agrega a los formularios los campos que la API exige (stock, rol de autoría, dirección del perfil).
+- **Dependencias**: `T-02`, `T-04`
+- **Governance**: ALTO (primeras escrituras contra la API de producción, que no se puede modificar ni restaurar)
+- **Leer antes**:
+  - `openspec/changes/migracion-vite-typescript/design.md` (D5, D6 y D7)
+  - `knowledge-base/04_modelo_de_datos.md` y `knowledge-base/05_reglas_de_negocio.md`
+
+### [T-06] `despliegue-frontend`
+- **Estado**: `[ ]`
+- **Scope**:
+  - Contenedor `nginx` que sirve la compilación y reenvía `/api` a la API de producción, desplegado en Easypanel en `libreria.ismaelsuarez.me`.
+  - README final y armado de la entrega (zip).
+- **Dependencias**: `T-05`
+- **Governance**: ALTO (entrega y entorno)
+- **Leer antes**:
+  - `openspec/changes/migracion-vite-typescript/design.md` (D10)
+  - `knowledge-base/08_arquitectura_propuesta.md`
+
+---
+
+# Serie JavaScript C-01 a C-06 (historial archivado)
+
+> Los seis changes siguientes se completaron y archivaron entre el 2026-10-13 y el 2026-10-16. Describen el proyecto en JavaScript clásico y se conservan sin cambios como historial: las rutas `js/` y `css/` que citan fueron reemplazadas por la estructura de `src/` (change T-01), y sus restricciones («sin npm», «sin `fetch`», «sin `type="module"`», `node --test`) ya no rigen.
 
 ## Árbol de dependencias
 

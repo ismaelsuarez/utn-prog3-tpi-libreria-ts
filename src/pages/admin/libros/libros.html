@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Libros · Librería El Faro</title>
+<link rel="icon" href="data:,"/>
+<link href="../../../styles/base.css" rel="stylesheet"/>
+<link href="../../../styles/disposicion.css" rel="stylesheet"/>
+<link href="../../../styles/componentes.css" rel="stylesheet"/>
+<link href="../../../styles/vista-inmersiva.css" rel="stylesheet"/>
+<script type="module" src="./libros.ts"></script>
+</head>
+<body>
+<header class="encabezado">
+<div class="encabezado__interior">
+<div class="encabezado__marca">
+<span aria-hidden="true" class="encabezado__simbolo">✦</span>
+<p class="encabezado__nombre">Librería El Faro</p>
+</div>
+<nav aria-label="Principal" class="navegacion">
+<ul class="navegacion__lista">
+<li><a class="navegacion__enlace" href="../../client/catalogo/catalogo.html">Catálogo</a></li>
+<li><a class="navegacion__enlace" href="libros.html" aria-current="page">Libros</a></li>
+<li><a class="navegacion__enlace" href="../clientes/clientes.html">Clientes</a></li>
+<li><a class="navegacion__enlace" href="../ventas/ventas.html">Ventas</a></li>
+<li><a class="navegacion__enlace" href="../historial/historial.html">Historial</a></li>
+</ul>
+</nav>
+</div>
+</header>
+<main class="contenido">
+<div class="contenido__introduccion">
+<p class="contenido__ruta">Inicio / Libros</p>
+<h1>Gestión de libros</h1>
+<p class="contenido__descripcion">Registrá títulos, organizá sus datos bibliográficos y consultá el inventario de la librería.</p>
+</div>
+<section aria-labelledby="titulo-alta-libro" class="seccion seccion--panel"><div class="seccion__cabecera"><p class="seccion__eyebrow">01 · REGISTRO</p><h2 id="titulo-alta-libro">Nuevo libro</h2><p class="seccion__descripcion">Completá los datos del ejemplar para incorporarlo al catálogo.</p></div>
+
+<p class="mensaje mensaje--correcto" id="mensaje-estado" role="status"></p>
+<p class="mensaje mensaje--error" id="mensaje-error" role="alert"></p>
+<form class="formulario formulario--panel" id="form-libro" novalidate="">
+<div class="campo">
+<label class="campo__etiqueta" for="libro-titulo">Título</label>
+<input aria-describedby="error-libro-titulo" class="campo__control" id="libro-titulo" name="titulo" type="text"/>
+<p class="campo__error" id="error-libro-titulo"></p>
+</div>
+<div class="campo">
+<label class="campo__etiqueta" for="libro-isbn">ISBN</label>
+<input aria-describedby="error-libro-isbn" class="campo__control" id="libro-isbn" name="isbn" type="text"/>
+<p class="campo__error" id="error-libro-isbn"></p>
+</div>
+<div class="campo">
+<label class="campo__etiqueta" for="libro-precio">Precio</label>
+<input aria-describedby="error-libro-precio" class="campo__control" id="libro-precio" min="0.01" name="precio" step="0.01" type="number"/>
+<p class="campo__error" id="error-libro-precio"></p>
+</div>
+<div class="campo">
+<label class="campo__etiqueta" for="libro-editorial">Editorial</label>
+<select aria-describedby="error-libro-editorial" class="campo__control" id="libro-editorial" name="editorial">
+<option value="">Elegir una editorial</option>
+</select>
+<p class="campo__error" id="error-libro-editorial"></p>
+</div>
+<div class="campo">
+<label class="campo__etiqueta" for="libro-genero">Género</label>
+<select aria-describedby="error-libro-genero" class="campo__control" id="libro-genero" name="genero">
+<option value="">Sin clasificar</option>
+</select>
+<p class="campo__error" id="error-libro-genero"></p>
+</div>
+<fieldset aria-describedby="error-libro-autores" class="grupo-opciones" id="libro-autores">
+<legend>Autores</legend>
+</fieldset>
+<p class="campo__error" id="error-libro-autores"></p>
+<button class="boton boton--primario" type="submit">Registrar libro</button>
+</form>
+</section>
+<section aria-labelledby="titulo-listado-libros" class="seccion seccion--listado"><div class="seccion__cabecera"><p class="seccion__eyebrow">02 · INVENTARIO</p><h2 id="titulo-listado-libros">Libros registrados</h2><p class="seccion__descripcion">Listado de títulos con sus datos bibliográficos y precios.</p></div>
+
+<p class="mensaje mensaje--vacio" hidden="" id="libros-vacio">No hay libros registrados.</p>
+<div class="tabla-contenedor">
+<table class="tabla tabla--profesional tabla--ancha" id="tabla-libros">
+<caption>Libros registrados en la librería</caption>
+<thead>
+<tr>
+<th scope="col">Título</th>
+<th scope="col">ISBN</th>
+<th scope="col">Editorial</th>
+<th scope="col">Género</th>
+<th scope="col">Autores</th>
+<th scope="col">Precio</th>
+</tr>
+</thead>
+<tbody id="filas-libros">
+</tbody>
+</table>
+</div>
+</section>
+<template id="plantilla-opcion-autor">
+<label class="grupo-opciones__opcion"><input name="autores" type="checkbox" value=""/> <span data-campo="nombre"></span></label>
+</template>
+<template id="plantilla-fila-libro">
+<tr>
+<td data-campo="titulo"></td>
+<td data-campo="isbn"></td>
+<td data-campo="editorial"></td>
+<td data-campo="genero"></td>
+<td data-campo="autores"></td>
+<td data-campo="precio"></td>
+</tr>
+</template>
+</main>
+<footer class="pie">
+<p>Trabajo Práctico Integrador · Programación III · UTN</p>
+<p>Avalos Pablo, Blangetti Sofia, Suarez Ismael. Los datos son ficticios.</p>
+</footer>
+</body>
+</html>

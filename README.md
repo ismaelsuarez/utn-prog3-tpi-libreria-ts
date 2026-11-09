@@ -26,14 +26,23 @@ Unidad HTML, CSS y JavaScript · Revisor de la unidad: Prof. Matías Torres
 ## Resumen
 
 Frontend de una librería ficticia: catálogo con buscador, alta de libros y
-clientes, venta simulada con comprobante e historial de ventas. Todo funciona
-en el navegador: los datos se guardan en `localStorage` y **no hay servidor,
-base de datos, API ni inicio de sesión**.
+clientes, venta simulada con comprobante e historial de ventas, escrito en
+TypeScript estricto y compilado con Vite.
 
 > [!NOTE]
-> Los datos son ficticios. Las validaciones y el almacenamiento del navegador
-> sirven para la práctica; no representan seguridad ni integridad garantizada
-> por un servidor. No se gestionan stock, cobros ni facturación fiscal.
+> **Estado de la migración**: las vistas acceden a los datos solo mediante
+> repositorios con la forma de la API de producción
+> (`https://api.ismaelsuarez.me`). Por ahora esos repositorios guardan los datos
+> en `localStorage`; los changes `cliente-http-y-catalogo` y
+> `operaciones-contra-api` los conectarán con la API a través de la base `/api`
+> del mismo origen. El registro, el inicio de sesión y los roles llegan con
+> `registro-login-y-sesion` y `proteccion-de-rutas-y-roles`, y vivirán solo en
+> el navegador: la API no tiene usuarios y queda abierta.
+
+> [!NOTE]
+> Los datos de ejemplo son ficticios. Las validaciones del navegador sirven para
+> la práctica; no representan seguridad ni integridad garantizada por un
+> servidor. No se gestionan cobros ni facturación fiscal.
 
 ## Contenido
 
@@ -52,13 +61,33 @@ base de datos, API ni inicio de sesión**.
 
 ## Cómo abrir el proyecto
 
-1. Descomprimir o copiar la carpeta del proyecto.
-2. Abrir `index.html` con un navegador (doble clic sobre el archivo).
+Requisitos: Node 20.19 o superior (o 22.12 o superior), exigencia de Vite 7, y
+npm.
+
+```bash
+npm install        # una sola vez: instala las dependencias de desarrollo
+npm run dev        # servidor de desarrollo en http://localhost:5173
+npm run build      # comprueba los tipos y genera la compilación en dist/
+npm run preview    # sirve dist/ localmente
+npm test           # corre la suite de Vitest una sola vez
+```
+
+1. Ejecutar `npm install` y luego `npm run dev`.
+2. Abrir la dirección que informa el servidor (por defecto `http://localhost:5173`):
+   la página de entrada lleva al Catálogo.
 3. Navegar entre las vistas con la barra superior.
 
-No requiere npm, instalación de dependencias, servidor ni conexión a Internet.
-El proyecto se abre directamente desde `file://`, con scripts clásicos (sin
-`type="module"`), estilos y recursos locales.
+El proyecto ya no se abre con doble clic desde `file://`: los módulos de
+TypeScript necesitan un servidor. Los estilos, imágenes y scripts siguen siendo
+locales, sin librerías de ejecución ni CDNs.
+
+**Cambio de origen**: lo guardado en el navegador cuando se abría desde
+`file://` no se ve en `http://localhost:5173`, porque `localStorage` es propio de
+cada origen. Es esperado: en el origen nuevo se vuelven a cargar los ejemplos.
+
+**API de producción**: el navegador usa la base `/api` del mismo origen
+(`VITE_API_BASE`); `npm run dev` y `npm run preview` la reenvían a
+`https://api.ismaelsuarez.me` (variable `API_PROXY_TARGET`). Ver `.env.example`.
 
 ## Navegación entre vistas
 
@@ -67,11 +96,11 @@ actual.
 
 | Vista | Archivo | Qué se hace |
 |---|---|---|
-| Catálogo | `index.html` | Buscar por título y ver los libros en tarjetas, con su ficha de lectura |
-| Libros | `libros.html` | Registrar un libro y consultar la tabla de libros |
-| Clientes | `clientes.html` | Registrar un cliente, consultar la tabla y editar sus datos de contacto |
-| Ventas | `ventas.html` | Elegir cliente, armar los renglones, confirmar y ver el comprobante |
-| Historial | `historial.html` | Consultar las ventas confirmadas y el detalle de cada una |
+| Catálogo | `src/pages/client/catalogo/catalogo.html` (`index.html` redirige aquí) | Buscar por título y ver los libros en tarjetas, con su ficha de lectura |
+| Libros | `src/pages/admin/libros/libros.html` | Registrar un libro y consultar la tabla de libros |
+| Clientes | `src/pages/admin/clientes/clientes.html` | Registrar un cliente, consultar la tabla y editar sus datos de contacto |
+| Ventas | `src/pages/admin/ventas/ventas.html` | Elegir cliente, armar los renglones, confirmar y ver el comprobante |
+| Historial | `src/pages/admin/historial/historial.html` | Consultar las ventas confirmadas y el detalle de cada una |
 
 ## Funcionalidades implementadas
 
@@ -166,16 +195,20 @@ los clientes.
 
 ### Datos iniciales
 
-Viven en `js/datos/datos-iniciales.js`: 6 libros, 2 editoriales, 2 géneros,
+Viven en `src/datos/local/datos-iniciales.ts`: 6 libros, 2 editoriales, 2 géneros,
 3 autores y 3 clientes ficticios, con identificadores estables (`lib-01`,
 `edi-01`, `gen-01`, `aut-01`, `cli-01`…). Editoriales, géneros y autores
-**no se guardan** en `localStorage`: se leen siempre de ese archivo.
+**no se guardan** en `localStorage`: se leen siempre de ese archivo. Las
+vistas no lo importan: piden los datos a los repositorios
+(`src/datos/repositorios.ts`), que hoy implementa un adaptador sobre
+`localStorage` y que `cliente-http-y-catalogo` y `operaciones-contra-api`
+reemplazarán por la API de producción sin tocar las vistas.
 
 ### Cómo funciona `localStorage`
 
-- Solo `js/almacen.js` accede a `localStorage`.
-- En el **primer inicio**, cada vista carga los ejemplos en las claves que
-  faltan. Al volver a abrir, se recuperan los registros guardados **sin
+- Solo `src/datos/local/almacen-local.ts` accede a `localStorage`.
+- En el **primer inicio**, la raíz de composición (`src/datos/proveedor.ts`)
+  carga los ejemplos en las claves que faltan. Al volver a abrir, se recuperan los registros guardados **sin
   duplicar** los datos iniciales.
 - Identificadores nuevos: `lib-07`, `cli-04`, `ven-01`, etc.
 
@@ -203,7 +236,7 @@ con el próximo alta de ese tipo (ejemplos + registro nuevo).
 ### Ubicación y estructura del catálogo guardado
 
 Herramientas de desarrollo → **Application** (o *Almacenamiento*) →
-**Local Storage** → origen `file://` → clave `libreria.libros`. Un libro
+**Local Storage** → origen `http://localhost:5173` (o el de la compilación servida) → clave `libreria.libros`. Un libro
 guardado tiene esta forma:
 
 ```json
@@ -227,26 +260,37 @@ confirmados.
 
 ## Casos manuales: resultado observado
 
-**Ejecución del 2026-10-19**: recorrido automatizado en Google Chrome 155
-(modo headless, mediante el protocolo de herramientas de desarrollo), sobre
-una copia del proyecto abierta con `file://` y un perfil nuevo. No reemplaza
-una pasada visual en el navegador habitual de cada integrante ni una
+**Ejecución del 2026-11-09** (migración a Vite y TypeScript, change
+`migracion-vite-typescript`): recorrido automatizado en Google Chrome 157
+(modo headless, mediante el protocolo de herramientas de desarrollo) contra
+`npm run dev` (`http://localhost:5173`) y contra la copia del commit anterior a
+la migración abierta con `file://`, ambas con un perfil nuevo y el mismo guion.
+En los ocho casos los resultados de la versión nueva coinciden con los de la
+versión anterior; las únicas diferencias son la hora de las ventas, el orden de
+las claves del JSON guardado y que la versión anterior registraba en la consola
+un error 404 por imágenes de maqueta inexistentes, que ya no existe. No
+reemplaza una pasada visual en el navegador habitual de cada integrante ni una
 auditoría con lector de pantalla.
 
 | Caso | Resultado esperado | Resultado observado | Estado |
 |---|---|---|---|
-| **CM-1** Búsqueda en mayúsculas, vacía e inexistente | Coincidencias sin distinguir mayúsculas; catálogo completo; mensaje sin resultados | `FARO` → 1 tarjeta; `   faro   ` → 1; vacía → 6; `zzzz` → 0 con «No se encontraron libros…» | ✅ Aprobado |
-| **CM-2** Alta de libro con ISBN existente y luego nuevo | El duplicado se rechaza; el válido aparece en catálogo y en la venta | `978 987 000 001 1` rechazado con «Ese ISBN ya está registrado.»; el libro nuevo aparece en la tabla (7 filas), en el Catálogo (7) y en el selector de Ventas | ✅ Aprobado |
-| **CM-3** Alta de cliente con email inválido, existente en mayúsculas y nuevo | Se rechazan los dos primeros; el nuevo aparece en listado y selección | `ana@` rechazado con «El email no tiene un formato válido.»; `  LAURA.MENDOZA@CORREO.TEST ` rechazado con «Ese email ya está registrado.»; el cliente nuevo (nombre, email y teléfono) se registra sin recargar (4 filas) y aparece en el selector de Ventas | ✅ Aprobado |
-| **CM-4** Venta sin cliente, cantidad 0, negativa o decimal; libro repetido | No se confirma; el duplicado no crea otro renglón | Sin cliente: «Seleccione un cliente existente.»; `0`, `-2` y `1.5` rechazadas; un renglón editado a `0` bloquea la confirmación; el libro repetido suma en la misma fila (1 + 1 → 2) | ✅ Aprobado |
-| **CM-5** Dos unidades a 1500 y una a 2000 | Subtotales 3000 y 2000; total 5000; detalle en el historial | $ 3000,00 y $ 2000,00; total $ 5000,00; venta `ven-01` guardada con el mismo detalle en Historial | ✅ Aprobado |
-| **CM-6** Cambio exclusivo del precio en el catálogo guardado | El historial conserva los importes confirmados | Precio de `lib-01` cambiado a 9999 y página recargada: el detalle conserva $ 1500,00 / $ 2000,00, $ 3000,00 / $ 2000,00 y $ 5000,00; el Catálogo muestra $ 9999,00 | ✅ Aprobado |
-| **CM-7** Recarga después de altas y venta | Se recuperan los datos sin duplicar | Tras recargar las cinco vistas: 7 libros, 4 clientes y 1 venta, sin duplicar ejemplos ni ventas | ✅ Aprobado |
-| **CM-8** Teclado y anchos de 320 px y 1280 px | Foco visible, controles utilizables y tablas con desplazamiento propio | Sin desplazamiento horizontal de la página en las cinco vistas ni con los diálogos abiertos (ficha, edición de cliente y comprobante); foco visible en todas las paradas de Tab; a 320 px las tablas se desplazan dentro de su contenedor | ✅ Aprobado |
+| **CM-1** Búsqueda en mayúsculas, vacía e inexistente | Coincidencias sin distinguir mayúsculas; catálogo completo; mensaje sin resultados | `FARO` → 1 tarjeta; `   faro   ` → 1; vacía → 6; `zzzz` → 0 con «No se encontraron libros cuyo título coincida con la búsqueda.»; «Sin clasificar» solo en «La casa del río»; un título con `<i>&</i>` se muestra como texto; la ficha de lectura abre con su portada | ✅ Aprobado |
+| **CM-2** Alta de libro con ISBN existente y luego nuevo | El duplicado se rechaza; el válido aparece en catálogo y en la venta | `978 987 000 001 1` rechazado con «Ese ISBN ya está registrado.»; el libro nuevo aparece en la tabla (7 filas), en el Catálogo (7) y en el selector de Ventas (7 libros) | ✅ Aprobado |
+| **CM-3** Alta de cliente con email inválido, existente en mayúsculas y nuevo | Se rechazan los dos primeros; el nuevo aparece en listado y selección | `ana@` rechazado con «El email no tiene un formato válido.»; `  LAURA.MENDOZA@CORREO.TEST ` rechazado con «Ese email ya está registrado.»; el cliente nuevo se registra sin recargar (4 filas) y aparece en el selector de Ventas; editar conservando el email propio se acepta y usar el de otro cliente se rechaza | ✅ Aprobado |
+| **CM-4** Venta sin cliente, cantidad 0, negativa o decimal; libro repetido | No se confirma; el duplicado no crea otro renglón | Sin cliente: «Seleccione un cliente existente.»; `0`, `-2`, `1.5` y vacía rechazadas con «La cantidad debe ser un entero positivo seguro.»; un renglón editado a `0` bloquea la confirmación; el libro repetido suma en la misma fila (1 + 1 → 2); el borrador se conserva ante cada error | ✅ Aprobado |
+| **CM-5** Dos unidades a 1500 y una a 2000 | Subtotales 3000 y 2000; total 5000; detalle en el historial | $ 3000,00 y $ 2000,00; total $ 5000,00; comprobante `ven-01` y venta guardada con el mismo detalle en Historial | ✅ Aprobado |
+| **CM-6** Cambio exclusivo del precio en el catálogo guardado | El historial conserva los importes confirmados | Precio de `lib-01` cambiado a 9999 y página recargada: el detalle conserva $ 1500,00 / $ 2000,00, $ 3000,00 / $ 2000,00 y $ 5000,00; el Catálogo muestra $ 9999,00; con `libreria.ventas` ilegible el Historial informa el error y no modifica lo guardado | ✅ Aprobado |
+| **CM-7** Recarga después de altas y venta | Se recuperan los datos sin duplicar | Tras dos recargas de las cinco vistas: 7 libros, 4 clientes y 1 venta, sin duplicar ejemplos ni ventas | ✅ Aprobado |
+| **CM-8** Teclado y anchos de 320 px y 1280 px | Foco visible, controles utilizables y tablas con desplazamiento propio | Sin desplazamiento horizontal de la página en las cinco vistas ni con los diálogos abiertos (ficha, edición de cliente, comprobante y detalle de venta); foco visible en todas las paradas de Tab y foco contenido dentro de los diálogos | ✅ Aprobado |
 
-También se comprobaron los mensajes de lista vacía de las cinco vistas y que
-la aplicación no realiza ninguna petición de red: todas las solicitudes
-observadas fueron a archivos locales (`file://`).
+También se comprobó la compilación servida: `npm run build` genera `dist/`; copiada
+a una subruta (`/libreria/`) de un servidor estático, `index.html` redirige al
+Catálogo, las cinco vistas cargan sin respuestas 404 ni errores de consola y el
+recorrido por la navegación llega a cada vista; `dist/` no contiene la dirección
+`https://api.ismaelsuarez.me`. Con `npm run preview`, `GET /api/health/live`
+responde 200 por el reenvío. En las cinco vistas todas las solicitudes
+observadas fueron `GET` al mismo origen de la aplicación; no se escribe en la
+API de producción.
 
 ---
 
@@ -254,8 +298,8 @@ observadas fueron a archivos locales (`file://`).
 
 | Recurso | Uso | Procedencia |
 |---|---|---|
-| `img/estanteria.webp` | Fondo decorativo (CSS) | Imagen descargada de la red; se conserva como recurso local |
-| `img/Portadas/*.png` (6 archivos) | Portadas de los libros de ejemplo en el Catálogo y en la ficha | Imágenes ajenas, tomadas de otros proyectos y cargadas por el equipo como recursos locales |
+| `src/assets/estanteria.webp` | Fondo decorativo (CSS) | Imagen descargada de la red; se conserva como recurso local |
+| `src/assets/portadas/*.png` (6 archivos) | Portadas de los libros de ejemplo en el Catálogo y en la ficha | Imágenes ajenas, tomadas de otros proyectos y cargadas por el equipo como recursos locales |
 
 Las tipografías son las del sistema operativo (`system-ui`, `Georgia`); no se
 descarga ninguna fuente. Si una portada no carga, la tarjeta muestra una
@@ -264,24 +308,30 @@ cubierta de respaldo con el título.
 ## Estructura de carpetas
 
 ```text
-index.html, libros.html, clientes.html, ventas.html, historial.html
-css/        estilos: base, disposición, componentes y uno por función (ficha, clientes, comprobante, vista)
-js/
-├── datos/      datos iniciales
-├── logica/     funciones puras (texto, catálogo, libros, clientes, ventas)
-├── paginas/    un script por vista, más la ficha de lectura y el comprobante
-├── almacen.js  único acceso a localStorage
-└── interfaz.js utilidades de mensajes e importes
-img/        estanteria.webp y Portadas/
-recursos/   carpeta para recursos locales
-README.md
+index.html                  redirige al Catálogo (ruta relativa)
+package.json, tsconfig.json, vite.config.ts, .env.example
+src/
+├── main.ts                 entrada común, importada primero por cada vista
+├── pages/                  una carpeta por zona y vista: <vista>.html + <vista>.ts
+│   ├── auth/               reservada (login y registro, changes siguientes)
+│   ├── client/catalogo/    Catálogo y ficha de lectura
+│   └── admin/              libros, clientes, ventas (con comprobante) e historial
+├── logica/                 funciones puras sin DOM: texto, dinero, fecha, catálogo, libros, clientes, ventas
+├── datos/                  repositorios, raíz de composición (proveedor), base /api y adaptador local
+│   └── local/              almacén local (único acceso a localStorage), datos iniciales y repositorios locales
+├── types/                  tipos de dominio alineados con la API de producción
+├── utils/dom.ts            utilidades de DOM (mensajes, búsqueda tipada)
+├── styles/                 estilos: base, disposición, componentes y uno por función
+└── assets/                 estanteria.webp y portadas/
+tests/                      pruebas de Vitest (lógica, almacén, repositorios, fixtures de la API)
 ```
 
 ## Entrega
 
-La entrega incluye únicamente `index.html`, los demás `*.html`, `css/`, `js/`,
-`img/`, `recursos/` y `README.md`. No incluye dependencias instaladas ni
-herramientas de compilación.
+Se entrega el código fuente del proyecto: `index.html`, `src/`, `package.json`,
+`package-lock.json`, `tsconfig.json`, `vite.config.ts`, `.env.example` y
+`README.md`; la compilación (`npm run build`) genera `dist/`, que se sirve desde
+cualquier subruta. No incluye `node_modules/` ni `dist/`.
 
 Quedan fuera: `tests/`, `docs/`, `discovery/`, `knowledge-base/`, `openspec/`,
 `.atl/`, `.claude/`, `.engram/`, `.githooks/`, `.git/`, `.gitignore`,
@@ -296,14 +346,13 @@ Quedan fuera: `tests/`, `docs/`, `discovery/`, `knowledge-base/`, `openspec/`,
 
 ### Pruebas de la lógica
 
-Sin instalar dependencias:
-
 ```bash
-node --test tests/*.test.js
+npm test         # Vitest, una sola corrida (tests/**/*.test.ts)
+npx tsc          # comprobación de tipos de src/ y tests/
 ```
 
-Usar el patrón `tests/*.test.js`: `node --test tests/` no funciona en Windows
-ni en Node 24. Estas pruebas no sustituyen los recorridos en el navegador.
+Las pruebas no necesitan navegador y no sustituyen los recorridos manuales
+(CM-1 a CM-8).
 
 ### Memoria compartida (Engram)
 

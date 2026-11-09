@@ -1,118 +1,143 @@
 # Arquitectura Propuesta
 
-> Esta arquitectura es una **propuesta** derivada de la consigna y de las
-> decisiones del equipo. Los nombres de archivos y carpetas pueden ajustarse
-> en cada change de OpenSpec, siempre que se respeten las restricciones.
+> Esta arquitectura corresponde a la serie TypeScript (change
+> `migracion-vite-typescript`, decisiones DD-16 a DD-20 de
+> `09_decisiones_y_supuestos.md`). Reemplaza a la de la serie JavaScript
+> (scripts clásicos, `js/`, `node --test`), que se conserva como historial en
+> `CHANGES.md`. Los nombres de archivos y carpetas pueden ajustarse en cada
+> change de OpenSpec, siempre que se respeten las restricciones.
 
 ## Patrones aplicados
 
 | Patrón | Dónde se usa | Por qué |
 |---|---|---|
-| Separación estructura / estilos / comportamiento | HTML, `css/`, `js/` | Lo valora expresamente la consigna |
-| Lógica pura separada del DOM | `js/logica/` | Permite probar validaciones, filtro y cálculos con `node --test` y reutilizarlos entre páginas |
-| Almacén de datos (repositorio) | `js/almacen.js` | Un único punto de lectura y escritura; aísla `localStorage` del resto del código |
-| Script por página | `js/paginas/` | Cada vista conecta su DOM y sus eventos sin mezclar responsabilidades |
-| Generación de interfaz desde datos | Scripts de página | Catálogo, listados y selectores salen de los arrays, no del HTML escrito a mano |
+| Separación estructura / estilos / comportamiento | HTML en `src/pages/`, CSS en `src/styles/`, TypeScript | Lo valora expresamente la consigna |
+| Lógica pura separada del DOM | `src/logica/` | Permite probar validaciones, filtro y cálculos con Vitest y reutilizarlos entre páginas |
+| Repositorio (frontera de datos) | `src/datos/repositorios.ts` | Las vistas dependen solo de interfaces asíncronas con la forma de la API de producción; el origen de los datos se cambia sin tocar las vistas |
+| Raíz de composición | `src/datos/proveedor.ts` | Único lugar donde se eligen las implementaciones; siembra el almacén local una sola vez |
+| Adaptador | `src/datos/local/` | Implementa los repositorios sobre `localStorage` traduciendo entre la forma local y la de la API |
+| Módulo por vista | `src/pages/<zona>/<vista>/<vista>.ts` | Cada vista conecta su DOM y sus eventos sin mezclar responsabilidades |
+| Generación de interfaz desde datos | Módulos de vista | Catálogo, listados y selectores salen de los repositorios, no del HTML escrito a mano |
 | Instantánea histórica (snapshot) | Construcción de la venta | Los renglones copian precio y datos descriptivos en lugar de referenciar el catálogo |
-| Exportación dual | Archivos de `js/logica/` y `js/datos/` | Scripts clásicos utilizables en el navegador y cargables desde Node |
+| Tipos de dominio | `src/types/` | Una forma con nombre por agregado, igual a los DTO de la API, comprobada por `tsc` con fixtures reales |
 
 ## Estructura de directorios
 
 ```
 proyecto/
-├── index.html              # Entrada: vista Catálogo
-├── libros.html
-├── clientes.html
-├── ventas.html
-├── historial.html
-├── css/
-│   ├── base.css            # Variables, tipografía, reinicio mínimo, foco
-│   ├── disposicion.css     # Encabezado, navegación, grillas
-│   └── componentes.css     # Tarjetas, formularios, botones, tablas, mensajes
-├── js/
+├── index.html                  # Entrada: redirige al Catálogo (ruta relativa)
+├── package.json, tsconfig.json, vite.config.ts, .env.example
+├── src/
+│   ├── main.ts                 # Entrada común: todas las vistas la importan primero
+│   ├── vite-env.d.ts           # Tipos de Vite y variables de entorno (VITE_API_BASE)
+│   ├── pages/
+│   │   ├── auth/               # Reservada: login y registro (change registro-login-y-sesion)
+│   │   ├── client/catalogo/    # catalogo.html, catalogo.ts, ficha-libro.ts, portadas.ts
+│   │   └── admin/
+│   │       ├── libros/         # libros.html, libros.ts
+│   │       ├── clientes/       # clientes.html, clientes.ts
+│   │       ├── ventas/         # ventas.html, ventas.ts, ticket-venta.ts
+│   │       └── historial/      # historial.html, historial.ts
+│   ├── logica/                 # Funciones puras, sin DOM
+│   │   ├── texto.ts, dinero.ts, fecha.ts
+│   │   ├── catalogo.ts, libros.ts, clientes.ts, ventas.ts
 │   ├── datos/
-│   │   └── datos-iniciales.js   # Editoriales, géneros, autores, libros y clientes de ejemplo
-│   ├── logica/                  # Funciones puras, sin DOM
-│   │   ├── texto.js             # Normalización de texto, ISBN y email
-│   │   ├── catalogo.js          # Filtro por título, resolución de relaciones
-│   │   ├── libros.js            # Validación de alta de libro
-│   │   ├── clientes.js          # Validación de alta de cliente
-│   │   └── ventas.js            # Renglones, subtotales, total, construcción de la venta
-│   ├── almacen.js               # Carga inicial, lectura y escritura
-│   ├── interfaz.js              # Utilidades comunes de DOM (mensajes, formato de importes)
-│   └── paginas/
-│       ├── catalogo.js
-│       ├── libros.js
-│       ├── clientes.js
-│       ├── ventas.js
-│       └── historial.js
-├── recursos/
-│   ├── fuentes/                 # Tipografías locales, si se usan
-│   └── imagenes/
+│   │   ├── repositorios.ts     # Interfaces de repositorio (marcan las operaciones sin endpoint)
+│   │   ├── proveedor.ts        # Raíz de composición
+│   │   ├── errores.ts          # ErrorDeRepositorio
+│   │   ├── api/base.ts         # obtenerBaseApi: base `/api` del mismo origen
+│   │   └── local/              # Adaptador local: almacen-local.ts (único que nombra localStorage),
+│   │                           # datos-iniciales.ts, repositorios-locales.ts, tipos-locales.ts
+│   ├── types/                  # Id, Dinero, Libro, LibroDetalle, Cliente, Venta, ErrorApi, IUser, Rol…
+│   ├── utils/dom.ts            # Mensajes, vaciado de nodos, búsqueda tipada de elementos
+│   ├── styles/                 # base, disposición, componentes y una hoja por función
+│   └── assets/                 # estanteria.webp, portadas/, LEEME.txt
 ├── README.md
 │
 │   # Fuera de la entrega (solo desarrollo)
-├── tests/                       # Pruebas con node --test
-├── docs/                        # Consigna
-├── discovery/
-├── knowledge-base/
-└── openspec/
+├── tests/                      # Pruebas con Vitest (tests/**/*.test.ts) y fixtures de la API
+├── node_modules/, dist/
+├── docs/, discovery/, knowledge-base/, openspec/
 ```
 
-## Carga de scripts
+## Carga de módulos
 
-- Los scripts se incluyen con `<script src="...">` clásico, en orden de
-  dependencia: datos, lógica, almacén, interfaz y script de página.
-- No se usa `type="module"`: los navegadores bloquean la carga de módulos
-  desde `file://`, y la consigna exige abrir `index.html` sin servidor.
-- Para que las funciones puras sean accesibles desde Node, cada archivo de
-  lógica expone sus funciones en un espacio de nombres global y, si existe
-  `module`, también las exporta. Ejemplo ilustrativo:
+- Cada HTML carga un único `<script type="module" src="./<vista>.ts">`; Vite
+  lo compila y sirve. La aplicación ya no se abre desde `file://`.
+- Cada módulo de vista importa **primero** `../../../main` (entrada común) y
+  luego sus dependencias con `import`/`export` (los tipos con `import type`).
+  Es el punto donde el change `proteccion-de-rutas-y-roles` intercepta la carga
+  de cada página, también al recargar.
+- Cada módulo de vista define `async function iniciar()` que espera los
+  repositorios, pinta y conecta eventos; si falla, `arrancar` muestra un
+  mensaje de error en texto en la región de mensajes de la vista.
+- Los módulos de apoyo de interfaz (`ficha-libro.ts`, `ticket-venta.ts`) no
+  llaman a los repositorios: reciben los datos ya cargados.
+- Los recursos (hojas e imágenes) se enlazan con rutas relativas o por
+  importación, de modo que la compilación funcione servida desde cualquier
+  subruta (`base: "./"`).
 
-```js
-(function (raiz) {
-  function normalizarIsbn(isbn) {
-    return String(isbn).replace(/[\s-]/g, "");
-  }
+## Datos: repositorios y API
 
-  const api = { normalizarIsbn: normalizarIsbn };
-
-  raiz.Libreria = raiz.Libreria || {};
-  raiz.Libreria.texto = api;
-
-  if (typeof module !== "undefined" && module.exports) {
-    module.exports = api;
-  }
-})(typeof window !== "undefined" ? window : globalThis);
-```
+- Las vistas importan solo `src/datos/proveedor.ts` y los tipos. Los
+  repositorios (`libros`, `editoriales`, `generos`, `autores`, `clientes`,
+  `ventas`) son asíncronos y devuelven la forma de la API de producción:
+  identificadores enteros, importes como texto decimal (`"1500.00"`), fechas
+  ISO en UTC y relaciones anidadas.
+- Operaciones **sin endpoint** en la API (listado de clientes y de autores,
+  edición del teléfono) están marcadas en las interfaces; las resuelve el change
+  `operaciones-contra-api`.
+- Hoy los implementa el adaptador local sobre `localStorage` (claves
+  `libreria.libros`, `libreria.clientes`, `libreria.ventas`, mismo formato que
+  antes). `cliente-http-y-catalogo` y `operaciones-contra-api` los reemplazan
+  por adaptadores HTTP.
+- **Base `/api`**: el navegador solo llama a la base relativa `/api`
+  (`VITE_API_BASE`). `npm run dev` y `npm run preview` la reenvían a
+  `API_PROXY_TARGET` (por defecto `https://api.ismaelsuarez.me`) quitando el
+  prefijo; en producción lo hace el contenedor del frontend (change
+  `despliegue-frontend`). La API no envía cabeceras CORS, por eso nunca se la
+  llama desde otro origen.
 
 ## Estrategia de verificación
 
 | Nivel | Qué cubre | Herramienta |
 |---|---|---|
-| Pruebas automatizadas | Funciones puras: normalización, filtro, validaciones, cálculos, construcción de la venta | `node --test` |
-| Casos manuales | Comportamiento observable en el navegador, incluidos DOM, `localStorage`, teclado y anchos | Navegador, registrados en el README (CM-1 a CM-8) |
+| Tipos | Todo `src/` y `tests/` en modo estricto, sin `any`; los fixtures de la API se declaran con `satisfies` | `npx tsc` (parte de `npm run build`) |
+| Pruebas automatizadas | Funciones puras, almacén local con almacenamiento simulado inyectado y adaptador de repositorios | Vitest (`npm test`) |
+| Casos manuales | Comportamiento observable en el navegador, incluidos DOM, teclado y anchos | Navegador, registrados en el README (CM-1 a CM-8) |
 
 - Las pruebas automatizadas no reemplazan los casos manuales.
-- El DOM y `localStorage` no se prueban con Node; se cubren con los casos manuales.
-- La carpeta `tests/` no forma parte de la entrega.
+- El DOM no se prueba con un runner automático; se cubre con los casos
+  manuales.
+- `tests/`, `node_modules/` y `dist/` no forman parte de la entrega.
 
 ## Seguridad
 
-- **Autenticación**: no hay. Excluida por la consigna.
-- **Autorización**: no hay. Un único perfil de uso.
+- **Autenticación y autorización**: la API de producción no ofrece ninguna;
+  se resolverán solo en el cliente (`registro-login-y-sesion` y
+  `proteccion-de-rutas-y-roles`). **Limitación conocida**: la API queda
+  abierta; la protección de rutas por rol es una guía de uso, no una medida de
+  seguridad real (DD-19).
 - **Validación de entrada**: en el cliente, mediante funciones puras, antes de
-  agregar cualquier registro. Sirve para la práctica; no representa
-  integridad garantizada por un servidor.
+  agregar cualquier registro. No representa integridad garantizada por un
+  servidor.
 - **Inserción en el DOM**: los datos escritos por usuarios se insertan como
   texto (`textContent`, creación de nodos). No se construye HTML con datos de
   usuario.
-- **Secretos**: no existen.
+- **Origen de las solicitudes**: solo el mismo origen (`/api`); ninguna
+  dirección de la API de producción llega al código del navegador.
+- **Secretos**: no existen en el código; `API_PROXY_TARGET` es una variable de
+  servidor y no se incluye en la compilación.
 - **Datos**: todos ficticios.
 
 ## Variables de entorno
 
-No aplica. El proyecto no tiene configuración ni proceso de compilación.
+| Variable | Quién la lee | Valor por defecto | Uso |
+|---|---|---|---|
+| `VITE_API_BASE` | El código del navegador (`obtenerBaseApi`) | `/api` | Base relativa de la API |
+| `API_PROXY_TARGET` | Solo el servidor de Vite (`vite.config.ts`) | `https://api.ismaelsuarez.me` | Destino del reenvío de `/api` en `npm run dev` y `npm run preview` |
+
+Se documentan en `.env.example`.
 
 ## Adaptación y accesibilidad
 

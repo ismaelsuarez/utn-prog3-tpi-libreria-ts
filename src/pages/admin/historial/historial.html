@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Historial · Librería El Faro</title>
+<link rel="icon" href="data:,"/>
+<link href="../../../styles/base.css" rel="stylesheet"/>
+<link href="../../../styles/disposicion.css" rel="stylesheet"/>
+<link href="../../../styles/componentes.css" rel="stylesheet"/>
+<link href="../../../styles/vista-inmersiva.css" rel="stylesheet"/>
+<script type="module" src="./historial.ts"></script>
+</head>
+<body>
+<header class="encabezado">
+<div class="encabezado__interior">
+<div class="encabezado__marca">
+<span aria-hidden="true" class="encabezado__simbolo">✦</span>
+<p class="encabezado__nombre">Librería El Faro</p>
+</div>
+<nav aria-label="Principal" class="navegacion">
+<ul class="navegacion__lista">
+<li><a class="navegacion__enlace" href="../../client/catalogo/catalogo.html">Catálogo</a></li>
+<li><a class="navegacion__enlace" href="../libros/libros.html">Libros</a></li>
+<li><a class="navegacion__enlace" href="../clientes/clientes.html">Clientes</a></li>
+<li><a class="navegacion__enlace" href="../ventas/ventas.html">Ventas</a></li>
+<li><a class="navegacion__enlace" href="historial.html" aria-current="page">Historial</a></li>
+</ul>
+</nav>
+</div>
+</header>
+<main class="contenido">
+<div class="contenido__introduccion">
+<p class="contenido__ruta">Inicio / Historial</p>
+<h1>Historial de ventas</h1>
+<p class="contenido__descripcion">Consulta las ventas registradas y revisa los libros incluidos en cada operación.</p>
+</div>
+<section aria-labelledby="titulo-listado-ventas" class="seccion seccion--listado"><div class="seccion__cabecera"><p class="seccion__eyebrow">01 · MOVIMIENTOS</p><h2 id="titulo-listado-ventas">Ventas confirmadas</h2><p class="seccion__descripcion">Listado de operaciones con fecha, cliente e importe.</p></div>
+
+<p class="mensaje mensaje--error" hidden id="mensaje-error" role="alert"></p>
+<p class="mensaje mensaje--vacio" hidden="" id="ventas-vacio" role="status">No hay ventas confirmadas.</p>
+<div class="tabla-contenedor" role="region" aria-label="Tabla de ventas confirmadas" tabindex="0" hidden>
+<table class="tabla tabla--profesional tabla--ancha" id="tabla-ventas" hidden>
+<caption>Ventas confirmadas</caption>
+<thead>
+<tr>
+<th scope="col">Identificador</th>
+<th scope="col">Fecha</th>
+<th scope="col">Cliente</th>
+<th scope="col">Total</th>
+<th scope="col">Detalle</th>
+</tr>
+</thead>
+<tbody id="filas-ventas">
+</tbody>
+</table>
+</div>
+</section>
+<section aria-labelledby="detalle-venta-titulo" class="seccion seccion--panel" id="detalle-venta" hidden><div class="seccion__cabecera"><p class="seccion__eyebrow">02 · DETALLE</p><h2 id="detalle-venta-titulo" tabindex="-1">Detalle de la venta</h2><p class="seccion__descripcion">Renglones correspondientes a la venta seleccionada.</p></div>
+
+<div class="tabla-contenedor" role="region" aria-label="Renglones de la venta seleccionada" tabindex="0">
+<table class="tabla tabla--profesional tabla--ancha">
+<caption>Renglones de la venta</caption>
+<thead>
+<tr>
+<th scope="col">Libro</th>
+<th scope="col">Cantidad</th>
+<th scope="col">Precio unitario</th>
+<th scope="col">Subtotal</th>
+</tr>
+</thead>
+<tbody id="filas-detalle">
+</tbody>
+</table>
+</div>
+<p class="detalle-total">Total: <output id="detalle-total">$ 0,00</output></p>
+</section>
+<template id="plantilla-fila-venta">
+<tr>
+<th data-campo="identificador" scope="row"></th>
+<td data-campo="fecha"></td>
+<td data-campo="cliente"></td>
+<td data-campo="total"></td>
+<td><button class="boton boton--secundario" data-accion="ver-detalle" type="button">Ver detalle de la venta</button></td>
+</tr>
+</template>
+<template id="plantilla-fila-detalle">
+<tr>
+<th data-campo="libro" scope="row"></th>
+<td data-campo="cantidad"></td>
+<td data-campo="precio-unitario"></td>
+<td data-campo="subtotal"></td>
+</tr>
+</template>
+</main>
+<footer class="pie">
+<p>Trabajo Práctico Integrador · Programación III · UTN</p>
+<p>Avalos Pablo, Blangetti Sofia, Suarez Ismael. Los datos son ficticios.</p>
+</footer>
+</body>
+</html>

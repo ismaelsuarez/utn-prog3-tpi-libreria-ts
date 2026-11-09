@@ -1,0 +1,32 @@
+// Raíz de composición: las vistas importan solo este módulo para obtener los
+// repositorios. Hoy todos son los locales, sobre el almacenamiento del
+// navegador; los changes siguientes cambian aquí (y en los adaptadores) el
+// origen de los datos sin tocar las vistas.
+import { obtenerAlmacenamientoDelNavegador, crearAlmacenLocal } from "./local/almacen-local";
+import type { AlmacenamientoInyectable } from "./local/almacen-local";
+import { crearRepositoriosLocales } from "./local/repositorios-locales";
+import type { OpcionesRepositoriosLocales } from "./local/repositorios-locales";
+import type { Repositorios } from "./repositorios";
+
+/**
+ * Crea los repositorios locales sobre el almacenamiento indicado e invoca una
+ * sola vez la siembra de las claves ausentes (las presentes se respetan), de modo
+ * que las vistas no llaman a `inicializar()`.
+ */
+export function crearProveedor(
+  almacenamiento: AlmacenamientoInyectable | null,
+  opciones?: OpcionesRepositoriosLocales,
+): Repositorios {
+  const almacen = crearAlmacenLocal(almacenamiento);
+  almacen.inicializar();
+  return crearRepositoriosLocales(almacen, opciones);
+}
+
+const repositorios = crearProveedor(obtenerAlmacenamientoDelNavegador());
+
+export const repositorioLibros = repositorios.libros;
+export const repositorioEditoriales = repositorios.editoriales;
+export const repositorioGeneros = repositorios.generos;
+export const repositorioAutores = repositorios.autores;
+export const repositorioClientes = repositorios.clientes;
+export const repositorioVentas = repositorios.ventas;
