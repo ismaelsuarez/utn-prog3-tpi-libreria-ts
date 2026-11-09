@@ -43,25 +43,6 @@ Los datos iniciales SHALL incluir al menos 6 libros, 2 editoriales, 2 géneros, 
 - **WHEN** se revisa el conjunto inicial
 - **THEN** incluye al menos un libro sin género, al menos un libro con más de un autor y libros con precios 1500 y 2000
 
-### Requirement: Lectura centralizada en el Almacén
-
-El almacén local SHALL ser la implementación vigente y transitoria de los repositorios de acceso a datos (capacidad `acceso-a-datos`): expone lectura de libros, clientes, ventas, editoriales, géneros y autores y las altas existentes, siempre a través de esos repositorios. Ningún script de página SHALL usar el almacén ni los datos iniciales en forma directa. Los changes `cliente-http-y-catalogo` y `operaciones-contra-api` lo reemplazarán por la API sin cambiar las vistas.
-
-#### Scenario: El Catálogo lee a través del almacén
-
-- **WHEN** la vista Catálogo necesita el listado de libros
-- **THEN** lo obtiene del repositorio de libros, que hoy lo lee del almacén local, sin acceder a los datos iniciales en forma directa
-
-#### Scenario: La interfaz de lectura es estable
-
-- **WHEN** se consulta al repositorio por libros, clientes, ventas, editoriales, géneros o autores
-- **THEN** cada operación devuelve el conjunto correspondiente listo para usar, con la misma forma de datos en todas las páginas y la forma de la API de producción
-
-#### Scenario: Formato guardado sin cambios
-
-- **WHEN** un navegador ya tiene guardadas las claves `libreria.libros`, `libreria.clientes` y `libreria.ventas` escritas por la versión anterior, en el mismo origen
-- **THEN** la aplicación las lee sin migrarlas ni reescribirlas, y las altas posteriores mantienen el mismo formato
-
 ### Requirement: Normalización compartida
 
 El proyecto SHALL proveer reglas compartidas de normalización: el texto de búsqueda se recorta y se compara sin distinguir mayúsculas de minúsculas, el ISBN se compara sin espacios ni guiones, y el email se recorta y se pasa a minúsculas.
@@ -213,3 +194,27 @@ Las operaciones de ventas SHALL conservar el modo en memoria cuando Node no ofre
 #### Scenario: Contratos existentes conservados
 - **WHEN** se registran o consultan libros y clientes después de incorporar ventas
 - **THEN** se conservan sus firmas, claves, normalización, datos, identificadores y comportamiento previo
+
+### Requirement: Almacén local para las vistas de gestión
+
+El almacén local SHALL ser la implementación transitoria de los repositorios que usan las vistas de gestión (Libros, Clientes, Ventas e Historial): lectura de libros, clientes, ventas, editoriales, géneros y autores y las altas existentes, siempre por esos repositorios. El Catálogo SHALL leer los libros de la API, no del almacén. Ninguna página SHALL usar el almacén ni los datos iniciales en forma directa.
+
+#### Scenario: Las vistas de gestión leen a través del almacén
+
+- **WHEN** la vista Libros o la vista Ventas necesita el listado de libros
+- **THEN** lo obtiene del repositorio de libros, que hoy lo lee del almacén local, sin acceder a los datos iniciales en forma directa
+
+#### Scenario: El Catálogo no lee el almacén local
+
+- **WHEN** la vista Catálogo necesita el listado de libros
+- **THEN** lo obtiene del repositorio de lectura de libros sobre la API, y lo guardado en `libreria.libros` no aparece en el Catálogo
+
+#### Scenario: La interfaz de lectura es estable
+
+- **WHEN** se consulta al repositorio por libros, clientes, ventas, editoriales, géneros o autores
+- **THEN** cada operación devuelve el conjunto correspondiente listo para usar, con la misma forma de datos en todas las páginas y la forma de la API de producción
+
+#### Scenario: Formato guardado sin cambios
+
+- **WHEN** un navegador ya tiene guardadas las claves `libreria.libros`, `libreria.clientes` y `libreria.ventas` escritas por la versión anterior, en el mismo origen
+- **THEN** la aplicación las lee sin migrarlas ni reescribirlas, y las altas posteriores mantienen el mismo formato
