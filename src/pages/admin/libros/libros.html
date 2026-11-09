@@ -61,6 +61,12 @@
 <p class="campo__error" id="error-libro-precio"></p>
 </div>
 <div class="campo">
+<label class="campo__etiqueta" for="libro-stock">Stock</label>
+<input aria-describedby="ayuda-libro-stock error-libro-stock" class="campo__control" id="libro-stock" inputmode="numeric" min="0" name="stock" step="1" type="number"/>
+<small class="campo__ayuda" id="ayuda-libro-stock">Entero desde 0. Se registra en el servidor; la aplicación no lo muestra ni lo descuenta.</small>
+<p class="campo__error" id="error-libro-stock"></p>
+</div>
+<div class="campo">
 <label class="campo__etiqueta" for="libro-editorial">Editorial</label>
 <select aria-describedby="error-libro-editorial" class="campo__control" id="libro-editorial" name="editorial">
 <option value="">Elegir una editorial</option>
@@ -78,7 +84,7 @@
 <legend>Autores</legend>
 </fieldset>
 <p class="campo__error" id="error-libro-autores"></p>
-<button class="boton boton--primario" type="submit">Registrar libro</button>
+<button class="boton boton--primario" disabled="" id="boton-registrar-libro" type="submit">Registrar libro</button>
 </form>
 </section>
 <section aria-labelledby="titulo-listado-libros" class="seccion seccion--listado"><div class="seccion__cabecera"><p class="seccion__eyebrow">02 · INVENTARIO</p><h2 id="titulo-listado-libros">Libros registrados</h2><p class="seccion__descripcion">Listado de títulos con sus datos bibliográficos y precios.</p></div>
@@ -103,7 +109,16 @@
 </div>
 </section>
 <template id="plantilla-opcion-autor">
+<div class="grupo-opciones__autor">
 <label class="grupo-opciones__opcion"><input name="autores" type="checkbox" value=""/> <span data-campo="nombre"></span></label>
+<label class="grupo-opciones__rol">Rol
+<select class="campo__control" data-campo="rol" disabled="" name="rol">
+<option value="autor">Autor</option>
+<option value="coautor">Coautor</option>
+<option value="traductor">Traductor</option>
+<option value="ilustrador">Ilustrador</option>
+</select></label>
+</div>
 </template>
 <template id="plantilla-fila-libro">
 <tr>

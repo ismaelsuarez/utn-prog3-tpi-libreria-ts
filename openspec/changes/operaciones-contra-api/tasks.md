@@ -60,10 +60,10 @@ Gobernanza ALTO: ninguna tarea de los grupos 1 a 10 empieza antes de cerrar el g
 
 ## 6. Vista Libros
 
-- [ ] 6.1 `libros.html`: campo stock (numérico, con etiqueta, ayuda y lugar de error) y, por cada autor, un selector de rol asociado a su casilla; verificar en el navegador a 320 px y 1280 px, con teclado y foco visible
-- [ ] 6.2 `libros.ts`: lee libros, editoriales, géneros y autores una vez al abrir; valida contra esas listas; envía `stock`, roles y orden; tras el 201 relee el listado; muestra 409 y 422 con `erroresDeFormulario`; resultado incierto relee el listado; envío único (botón deshabilitado durante la espera); verificar con `npm run build` y los casos del grupo 10
-- [ ] 6.3 README, sección Libros: campos nuevos y que el stock no se muestra ni se descuenta; verificar que coincide con la spec `libros`
-- [ ] 6.4 Commit `feat(libros): register books with stock and author roles in the API`
+- [x] 6.1 `libros.html`: campo stock (numérico, con etiqueta, ayuda y lugar de error) y, por cada autor, un selector de rol asociado a su casilla; verificar en el navegador a 320 px y 1280 px, con teclado y foco visible
+- [x] 6.2 `libros.ts`: lee libros, editoriales, géneros y autores una vez al abrir; valida contra esas listas; envía `stock`, roles y orden; tras el 201 relee el listado; muestra 409 y 422 con `erroresDeFormulario`; resultado incierto relee el listado; envío único (botón deshabilitado durante la espera); verificar con `npm run build` y los casos del grupo 10
+- [x] 6.3 README, sección Libros: campos nuevos y que el stock no se muestra ni se descuenta; verificar que coincide con la spec `libros`
+- [x] 6.4 Commit `feat(libros): register books with stock and author roles in the API`
 
 ## 7. Vista Clientes
 

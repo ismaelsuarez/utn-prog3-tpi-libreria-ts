@@ -63,3 +63,37 @@ export function erroresDeFormulario(
   }
   return { porCampo: [], deLaOperacion: error.message };
 }
+
+/** Rechazo de una escritura con su ubicación y si el servidor pudo haberla registrado. */
+export interface FalloDeOperacion extends ErroresDeFormulario {
+  /** Verdadero si la escritura no obtuvo respuesta: no se sabe si el servidor la registró. */
+  resultadoIncierto: boolean;
+}
+
+function esErrorDeOperacion(valor: unknown): valor is ErrorDeOperacion & { resultadoIncierto?: boolean } {
+  if (typeof valor !== "object" || valor === null) return false;
+  const candidato = valor as { message?: unknown; errores?: unknown };
+  return typeof candidato.message === "string" && Array.isArray(candidato.errores);
+}
+
+/**
+ * Como `erroresDeFormulario`, pero acepta cualquier valor lanzado: un error de
+ * repositorio se ubica según su forma y se informa si su resultado es incierto;
+ * un `Error` común es un error de la operación y todo lo demás recibe el mensaje
+ * genérico.
+ */
+export function describirFallo(
+  error: unknown,
+  mapaDeCampos: MapaDeCampos,
+  campoDelConflicto?: string,
+): FalloDeOperacion {
+  if (esErrorDeOperacion(error)) {
+    return {
+      ...erroresDeFormulario(error, mapaDeCampos, campoDelConflicto),
+      resultadoIncierto: error.resultadoIncierto === true,
+    };
+  }
+  const mensaje =
+    error instanceof Error && error.message !== "" ? error.message : "Ocurrió un error inesperado.";
+  return { porCampo: [], deLaOperacion: mensaje, resultadoIncierto: false };
+}

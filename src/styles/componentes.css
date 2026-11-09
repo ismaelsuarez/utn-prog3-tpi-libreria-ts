@@ -300,6 +300,26 @@ output {
   font-weight: 600;
 }
 
+/* Autor del alta de libro: casilla y, al lado, su rol. */
+.grupo-opciones__autor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2) var(--espacio-3);
+}
+
+.grupo-opciones__rol {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  font-size: var(--tamano-texto-pequeno);
+}
+
+.grupo-opciones__rol .campo__control {
+  width: auto;
+  min-width: 8rem;
+}
+
 .grupo-opciones__opcion {
   display: inline-flex;
   align-items: center;

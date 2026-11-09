@@ -157,22 +157,36 @@ repite al recargar y al volver atrás con el historial. La sesión solo vale si
 
 ### Libros
 
-- Editorial y género se eligen con selectores, y los autores con casillas;
-  todas las opciones salen de los datos locales. El género incluye
-  «Sin clasificar».
-- Validaciones:
+- Editorial y género se eligen con selectores, y los autores con casillas; cada
+  autor marcado tiene su **rol** (autor, coautor, traductor o ilustrador; «autor»
+  por defecto). El orden de autoría es el de las casillas marcadas, desde 1.
+  Todas las opciones salen de la API y se leen una sola vez al abrir la
+  página; el género incluye «Sin clasificar». Si esa lectura falla, se muestra
+  el error y no se puede registrar.
+- El alta envía el libro a la API (`POST /libros/`). **Stock**: es obligatorio
+  porque la API lo exige, pero la aplicación no lo muestra ni lo descuenta
+  (la venta no lo modifica y el alcance excluye la gestión de stock).
+- Validaciones, todas junto al campo y antes de enviar nada:
 
   | Campo | Regla |
   |---|---|
-  | Título | Obligatorio |
-  | ISBN | Obligatorio y sin repetir; se compara sin espacios ni guiones (sin dígito de control) |
-  | Precio | Numérico y mayor que cero |
-  | Editorial | Obligatoria y existente en los datos |
-  | Autores | Al menos uno; todos existentes en los datos |
-  | Género | Opcional; si se elige, debe existir en los datos |
+  | Título | Obligatorio, hasta 200 caracteres |
+  | ISBN | Obligatorio, hasta 20 caracteres (se cuenta el texto escrito, sin espacios exteriores) y sin repetir; se compara sin espacios ni guiones (sin dígito de control) |
+  | Precio | Numérico, mayor que cero y hasta 99 999 999,99; se envía redondeado al centavo (`1500,125` se envía como `1500.13`) |
+  | Stock | Obligatorio, entero de 0 a 2 147 483 647 |
+  | Editorial | Obligatoria y existente en la API |
+  | Autores | Al menos uno, todos existentes en la API y con uno de los cuatro roles |
+  | Género | Opcional; si se elige, debe existir en la API |
 
-- Los errores se muestran junto a cada campo. El alta correcta actualiza la
-  tabla sin recargar la página.
+  Los límites de longitud, de precio y de stock son los de la base del servidor,
+  que la API no valida y que, excedidos, producirían un error 500.
+- Un rechazo de la API (`409` o `422`) se muestra en texto, junto al campo cuando
+  la API lo identifica, y el formulario conserva lo escrito. El alta correcta
+  vuelve a leer el listado y limpia el formulario sin recargar la página. Si la
+  API no responde, no se anuncia éxito: se avisa que no se pudo confirmar si se
+  guardó y se vuelve a leer el listado para que se compruebe antes de
+  reintentar. Nunca se reenvía solo, y el botón queda deshabilitado mientras
+  la operación está en curso (un doble clic envía una sola vez).
 
 ### Clientes
 

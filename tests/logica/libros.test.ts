@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { esRolDeAutoria, validarLibro, type BorradorLibro } from "../../src/logica/libros";
+import { esRolDeAutoria, libroNuevoDesdeBorrador, validarLibro, type BorradorLibro } from "../../src/logica/libros";
 import type { Libro } from "../../src/types/libro";
 import {
   autoresDeEjemplo,
@@ -291,5 +291,55 @@ describe("validarLibro: rol de autoría", () => {
     expect(esRolDeAutoria("traductor")).toBe(true);
     expect(esRolDeAutoria("Autor")).toBe(false);
     expect(esRolDeAutoria("")).toBe(false);
+  });
+});
+
+describe("libroNuevoDesdeBorrador: cuerpo del alta", () => {
+  test("arma el libro con stock numérico, textos recortados y autores con rol y orden", () => {
+    const libro = libroNuevoDesdeBorrador({
+      titulo: "  El taller  ",
+      isbn: " 978-987-000-099-9 ",
+      precio: "1490",
+      stock: " 12 ",
+      editorial_id: 2,
+      genero_id: 3,
+      autores: [
+        { autor_id: 2, rol: "autor", orden: 1 },
+        { autor_id: 3, rol: "traductor", orden: 2 },
+      ],
+    });
+    expect(libro).toEqual({
+      titulo: "El taller",
+      isbn: "978-987-000-099-9",
+      precio: 1490,
+      stock: 12,
+      editorial_id: 2,
+      genero_id: 3,
+      autores: [
+        { autor_id: 2, rol: "autor", orden: 1 },
+        { autor_id: 3, rol: "traductor", orden: 2 },
+      ],
+    });
+  });
+
+  test("el stock cero es válido y se envía como 0", () => {
+    expect(libroNuevoDesdeBorrador({ ...datosValidos(), stock: "0" })?.stock).toBe(0);
+  });
+
+  test("sin género asignado envía null", () => {
+    expect(libroNuevoDesdeBorrador({ ...datosValidos(), genero_id: null })?.genero_id).toBeNull();
+    const { genero_id: _omitido, ...sinGenero } = datosValidos();
+    expect(libroNuevoDesdeBorrador(sinGenero)?.genero_id).toBeNull();
+  });
+
+  test("el precio con más de dos decimales conserva el valor escrito: el redondeo al centavo es del adaptador", () => {
+    expect(libroNuevoDesdeBorrador({ ...datosValidos(), precio: "1500.125" })?.precio).toBe(1500.125);
+  });
+
+  test("sin editorial o con un rol que la API no admite no hay libro que enviar", () => {
+    expect(libroNuevoDesdeBorrador({ ...datosValidos(), editorial_id: null })).toBeNull();
+    expect(
+      libroNuevoDesdeBorrador({ ...datosValidos(), autores: [{ autor_id: 1, rol: "editor", orden: 1 }] }),
+    ).toBeNull();
   });
 });

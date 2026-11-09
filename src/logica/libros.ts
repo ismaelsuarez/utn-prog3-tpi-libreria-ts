@@ -1,11 +1,11 @@
 // Lógica pura del alta de libros (RN-LI-01 a RN-LI-11). No toca el DOM ni el
 // almacenamiento: recibe los catálogos como datos para no acoplarse a los
 // repositorios ni a la vista.
-import type { Autor, RolAutoria } from "../types/autor";
+import type { Autor, Autoria, RolAutoria } from "../types/autor";
 import type { Editorial } from "../types/editorial";
 import type { ErrorDeCampo } from "../types/formulario";
 import type { Genero } from "../types/genero";
-import type { Libro } from "../types/libro";
+import type { Libro, LibroNuevo } from "../types/libro";
 import type { Id } from "../types/primitivos";
 import { aCentavos } from "./dinero";
 import {
@@ -134,4 +134,29 @@ export function validarLibro(
   }
 
   return errores;
+}
+
+/**
+ * Arma el cuerpo del alta a partir de un borrador ya validado: textos recortados,
+ * stock y precio numéricos (el redondeo del precio al centavo es del adaptador de
+ * la API) y autores con rol y orden. Devuelve `null` si falta la editorial o hay
+ * un rol que la API no admite, casos que `validarLibro` ya rechaza.
+ */
+export function libroNuevoDesdeBorrador(datos: BorradorLibro): LibroNuevo | null {
+  const editorialId = datos.editorial_id;
+  if (editorialId === null || editorialId === undefined) return null;
+  const autores: Autoria[] = [];
+  for (const { autor_id, rol, orden } of datos.autores ?? []) {
+    if (!esRolDeAutoria(rol)) return null;
+    autores.push({ autor_id, rol, orden });
+  }
+  return {
+    titulo: datos.titulo.trim(),
+    isbn: datos.isbn.trim(),
+    precio: Number(String(datos.precio).trim()),
+    stock: Number(String(datos.stock).trim()),
+    editorial_id: editorialId,
+    genero_id: datos.genero_id ?? null,
+    autores,
+  };
 }

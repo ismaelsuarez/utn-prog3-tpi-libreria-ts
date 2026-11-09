@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   CAMPOS_DE_LIBRO,
   CAMPOS_DE_VENTA,
+  describirFallo,
   erroresDeFormulario,
 } from "../../src/logica/errores-de-formulario";
 
@@ -123,5 +124,59 @@ describe("erroresDeFormulario: otros errores", () => {
       porCampo: [],
       deLaOperacion: "El precio no es un importe válido.",
     });
+  });
+});
+
+describe("describirFallo", () => {
+  const MENSAJE_INCIERTO =
+    "No se pudo confirmar si el servidor registró la operación. Revisá los datos antes de reintentar.";
+
+  test("un rechazo 422 queda junto a sus campos, igual que erroresDeFormulario", () => {
+    const resultado = describirFallo(
+      { message: "Field required", estado: 422, errores: [{ campo: "stock", mensaje: "Field required" }] },
+      CAMPOS_DE_LIBRO,
+    );
+    expect(resultado).toEqual({
+      porCampo: [{ campo: "stock", mensaje: "Field required" }],
+      deLaOperacion: null,
+      resultadoIncierto: false,
+    });
+  });
+
+  test("un 409 con campo de conflicto queda junto a ese campo", () => {
+    const resultado = describirFallo(
+      { message: "Ya existe un cliente con ese email", estado: 409, errores: [] },
+      sinCampos,
+      "email",
+    );
+    expect(resultado.porCampo).toEqual([{ campo: "email", mensaje: "Ya existe un cliente con ese email" }]);
+    expect(resultado.resultadoIncierto).toBe(false);
+  });
+
+  test("un resultado incierto lo declara y conserva el mensaje de la operación", () => {
+    const resultado = describirFallo(
+      { message: MENSAJE_INCIERTO, estado: null, errores: [], resultadoIncierto: true },
+      CAMPOS_DE_LIBRO,
+      "email",
+    );
+    expect(resultado).toEqual({ porCampo: [], deLaOperacion: MENSAJE_INCIERTO, resultadoIncierto: true });
+  });
+
+  test("un Error común es un error de la operación con su mensaje", () => {
+    expect(describirFallo(new Error("El precio no es un importe válido."), sinCampos)).toEqual({
+      porCampo: [],
+      deLaOperacion: "El precio no es un importe válido.",
+      resultadoIncierto: false,
+    });
+  });
+
+  test("un valor que no es un error produce el mensaje genérico", () => {
+    for (const valor of ["texto", 42, null, undefined, {}]) {
+      expect(describirFallo(valor, sinCampos)).toEqual({
+        porCampo: [],
+        deLaOperacion: "Ocurrió un error inesperado.",
+        resultadoIncierto: false,
+      });
+    }
   });
 });
