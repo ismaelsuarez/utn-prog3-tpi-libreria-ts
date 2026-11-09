@@ -221,35 +221,55 @@ repite al recargar y al volver atrás con el historial. La sesión solo vale si
 
 ### Ventas
 
+- Los clientes y los libros se leen de la API **una sola vez, al abrir la
+  página**; componer la venta no hace solicitudes. Si esa lectura falla, se
+  muestra el error y no se puede confirmar. Un cliente o libro dado de alta
+  después aparece al volver a abrir Ventas.
 - Se elige un cliente existente y se agregan renglones con un libro y una
-  cantidad entera mayor que cero.
+  cantidad entera mayor que cero (hasta 2 147 483 647).
 - Agregar otra vez el mismo libro suma la cantidad al renglón existente, sin
   duplicar filas. Antes de confirmar se pueden cambiar cantidades y quitar
   renglones.
-- Cada renglón muestra libro, cantidad, precio unitario y subtotal, con dos
-  decimales. El total es la suma de los subtotales.
+- Cada renglón muestra libro, cantidad, precio unitario y subtotal **estimados**,
+  con dos decimales, y el total estimado es la suma de los subtotales.
 - No se confirma una venta sin cliente, sin renglones o con cantidades
   inválidas.
-- Al confirmar, el formulario se limpia, se muestra un mensaje y se abre un
-  **comprobante interno no fiscal** animado, que se puede imprimir o guardar
-  como PDF desde el navegador. Con «reducir movimiento» activado, el
-  comprobante aparece sin animación.
+- **La venta no controla ni descuenta el stock**: se puede vender más unidades
+  que el stock del libro y el stock no cambia al vender, porque la API no lo
+  descuenta y el alcance excluye la gestión de stock.
+- Al confirmar se envía a la API (`POST /ventas/`) solo el cliente y, por
+  renglón, el libro y la cantidad. **Los importes definitivos los calcula el
+  servidor**: copia el precio vigente en ese momento, calcula los subtotales y el
+  total, y el **comprobante interno no fiscal** (que se puede imprimir o guardar
+  como PDF desde el navegador, con animación o sin ella si el navegador tiene
+  «reducir movimiento») muestra la venta que devolvió la API; si el precio
+  cambió desde que se abrió la página, puede diferir del borrador.
+- Si la API rechaza la venta, se muestra su mensaje y el borrador se conserva.
+  Si no responde, **no se anuncia éxito**: se avisa que no se pudo confirmar si
+  la venta se registró y que conviene revisar el Historial antes de reintentar;
+  el borrador se conserva y no se reenvía solo. El botón queda deshabilitado
+  mientras la confirmación está en curso (un doble clic o Enter envía una sola
+  venta).
 
-**Importes**: el precio unitario se redondea al centavo antes de multiplicar,
-con las mitades hacia arriba. Por ejemplo, `1500,125` pasa a `1500,13` y dos
-unidades cuestan `3000,26`. Los cálculos usan centavos enteros.
+**Importes estimados**: el precio unitario se redondea al centavo antes de
+multiplicar, con las mitades hacia arriba. Por ejemplo, `1500,125` pasa a
+`1500,13` y dos unidades cuestan `3000,26`. Los cálculos usan centavos enteros.
 
 ### Historial
 
 - Tabla con identificador, fecha (`dd/mm/aaaa HH:mm`, hora local), cliente y
-  total, y un botón para ver el detalle de cada venta.
-- El historial lee la **copia guardada en la venta**, no el catálogo actual:
-  si después cambia el precio de un libro, la venta conserva sus importes.
+  total, y un botón para ver el detalle de cada venta. Se leen **todas las
+  páginas** de ventas de la API (de 100 en 100), en el orden que entrega.
+- El detalle usa solo los datos de la venta: el **precio unitario, los subtotales
+  y el total son los registrados al confirmar** y no cambian si después cambia el
+  precio de un libro; el **título del libro y el cliente son los actuales** (la
+  API los informa al consultar) y no se muestra el ISBN porque la API no lo
+  entrega. El Historial no consulta el catálogo.
 - Las ventas confirmadas no se editan ni se eliminan desde la interfaz.
 
 > [!NOTE]
 > «Sin recargar» significa dentro de la misma página donde ocurre el alta.
-> Al navegar a otra vista, esa vista vuelve a leer el almacenamiento.
+> Al navegar a otra vista, esa vista vuelve a leer la API.
 
 ## Funcionalidades pendientes
 
@@ -257,8 +277,7 @@ No hay funcionalidades pendientes: las cinco vistas y todas las operaciones
 de la consigna están implementadas.
 
 Además del alcance pedido, el proyecto incluye la ficha de lectura del
-Catálogo, el comprobante de venta y la edición de los datos de contacto de
-los clientes.
+Catálogo y el comprobante de venta.
 
 ---
 

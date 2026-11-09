@@ -1,22 +1,33 @@
 // Vista Ventas: borrador de la venta con la lógica pura, confirmación por el
-// repositorio de ventas y comprobante con la venta devuelta. El borrador se
-// conserva ante cualquier error.
+// repositorio de ventas y comprobante con la venta devuelta por la API (con los
+// importes que calculó el servidor). Clientes y libros se leen una sola vez al
+// abrir; componer el borrador no hace solicitudes. El borrador se conserva ante
+// cualquier error.
 import "../../../main";
-import { ErrorDeRepositorio } from "../../../datos/errores";
 import { repositorioClientes, repositorioLibros, repositorioVentas } from "../../../datos/proveedor";
 import { formatearImporte } from "../../../logica/dinero";
+import { crearEnvioUnico } from "../../../logica/envio-unico";
+import {
+  CAMPOS_DE_VENTA,
+  describirFallo,
+  type FalloDeOperacion,
+} from "../../../logica/errores-de-formulario";
 import {
   agregarRenglon,
   cambiarCantidad,
   calcularVenta,
   codigoDeVenta,
+  mensajeDeVentaFallida,
   quitarRenglon,
   validarVenta,
+  ventaNuevaDesdeBorrador,
+  type LibroVendible,
   type RenglonBorrador,
   type RenglonCalculado,
   type ResultadoCalculo,
 } from "../../../logica/ventas";
 import type { ErrorDeCampo } from "../../../types/formulario";
+import type { Cliente } from "../../../types/cliente";
 import type { Id } from "../../../types/primitivos";
 import type { Venta } from "../../../types/venta";
 import {
@@ -49,8 +60,13 @@ async function iniciar(): Promise<void> {
   const comprobante = iniciarComprobante();
   let renglones: RenglonCalculado[] = [];
   let numeroFila = 0;
-  let confirmando = false;
   let ultimaVentaConfirmada: Venta | null = null;
+  // Lo que leyó la API al abrir; no se vuelve a pedir mientras se compone la venta.
+  let clientes: Cliente[] = [];
+  let libros: LibroVendible[] = [];
+  const confirmarUnaVez = crearEnvioUnico((enCurso) => {
+    confirmar.disabled = enCurso;
+  });
 
   function limpiarMensajes(): void {
     ocultarMensaje(estado);
@@ -78,10 +94,14 @@ async function iniciar(): Promise<void> {
 
   function informarFallo(): void {
     ocultarMensaje(estado);
-    mostrarMensaje(
-      errorGeneral,
-      "No se pudo acceder al almacenamiento. La venta no se confirmó; el borrador se conserva. Intente nuevamente.",
-    );
+    mostrarMensaje(errorGeneral, "No se pudo completar la acción. El borrador se conserva. Intentá nuevamente.");
+  }
+
+  /** Rechazo o falta de respuesta de la API: no se anuncia éxito y el borrador permanece. */
+  function mostrarFalloDeVenta(fallo: FalloDeOperacion): void {
+    ocultarMensaje(estado);
+    if (fallo.porCampo.length > 0) mostrarErrores(fallo.porCampo);
+    mostrarMensaje(errorGeneral, mensajeDeVentaFallida(fallo));
   }
 
   function filaDe(libroId: Id): HTMLElement | undefined {
@@ -135,35 +155,10 @@ async function iniciar(): Promise<void> {
     return true;
   }
 
-  // Cuando se crea o edita un cliente en otra pestaña, se actualiza la lista sin
-  // perder la selección actual. Las ventas siempre validan por identificador.
-  async function actualizarSelectorClientes(): Promise<void> {
-    const seleccionado = cliente.value;
-    const actuales = await repositorioClientes.listar();
-    llenarSelect(cliente, "Elegir un cliente", actuales);
-    if (actuales.some((registro) => String(registro.id) === seleccionado)) {
-      cliente.value = seleccionado;
-    }
-  }
-
-  function refrescarClientes(): void {
-    actualizarSelectorClientes().catch(informarFallo);
-  }
-
-  cliente.addEventListener("focus", refrescarClientes);
-  window.addEventListener("pageshow", refrescarClientes);
-  // El evento `storage` avisa de cambios hechos en otra pestaña; se refresca ante cualquiera.
-  window.addEventListener("storage", refrescarClientes);
-
-  async function agregarAlBorrador(): Promise<void> {
+  function agregarAlBorrador(): void {
     limpiarMensajes();
     if (hayEdicionInvalida()) return;
-    const resultado = agregarRenglon(
-      renglones,
-      idDeValor(libro.value) ?? 0,
-      cantidad.value,
-      await repositorioLibros.listar(),
-    );
+    const resultado = agregarRenglon(renglones, idDeValor(libro.value) ?? 0, cantidad.value, libros);
     if (!resultado.ok) {
       mostrarErrores(resultado.errores);
       return;
@@ -175,18 +170,17 @@ async function iniciar(): Promise<void> {
   }
 
   agregar.addEventListener("click", () => {
-    agregarAlBorrador().catch(informarFallo);
+    try {
+      agregarAlBorrador();
+    } catch {
+      informarFallo();
+    }
   });
 
-  async function cambiarCantidadDeFila(control: HTMLInputElement, fila: HTMLElement): Promise<void> {
+  function cambiarCantidadDeFila(control: HTMLInputElement, fila: HTMLElement): void {
     const aviso = buscar(fila, '[data-campo="error-cantidad"]', HTMLElement);
     try {
-      const resultado = cambiarCantidad(
-        renglones,
-        Number(fila.dataset["libroId"]),
-        control.value,
-        await repositorioLibros.listar(),
-      );
+      const resultado = cambiarCantidad(renglones, Number(fila.dataset["libroId"]), control.value, libros);
       if (!resultado.ok) {
         control.setAttribute("aria-invalid", "true");
         mostrarMensaje(aviso, resultado.errores.map((error) => error.mensaje).join(" "));
@@ -212,12 +206,12 @@ async function iniciar(): Promise<void> {
     limpiarMensajes();
     const fila = control.closest("tr");
     if (!fila) return;
-    void cambiarCantidadDeFila(control, fila);
+    cambiarCantidadDeFila(control, fila);
   });
 
-  async function quitarDeFila(fila: HTMLElement): Promise<void> {
+  function quitarDeFila(fila: HTMLElement): void {
     const siguiente = fila.nextElementSibling ?? fila.previousElementSibling;
-    const resultado = quitarRenglon(renglones, Number(fila.dataset["libroId"]), await repositorioLibros.listar());
+    const resultado = quitarRenglon(renglones, Number(fila.dataset["libroId"]), libros);
     if (!resultado.ok) {
       mostrarErrores(resultado.errores);
       return;
@@ -235,12 +229,14 @@ async function iniciar(): Promise<void> {
     limpiarMensajes();
     const fila = boton.closest("tr");
     if (!fila) return;
-    quitarDeFila(fila).catch(informarFallo);
+    try {
+      quitarDeFila(fila);
+    } catch {
+      informarFallo();
+    }
   });
 
   async function confirmarVenta(): Promise<void> {
-    if (confirmando) return;
-
     // Al finalizar una venta se limpia el borrador. Un segundo envío (doble clic
     // o Enter) NO puede convertir el éxito anterior en «cliente inexistente».
     if (ultimaVentaConfirmada && renglones.length === 0 && cliente.value === "") {
@@ -256,45 +252,34 @@ async function iniciar(): Promise<void> {
     limpiarMensajes();
     if (hayEdicionInvalida()) return;
 
-    let guardada: Venta;
-    confirmando = true;
-    confirmar.disabled = true;
-    try {
-      const [libros, clientes] = await Promise.all([repositorioLibros.listar(), repositorioClientes.listar()]);
-      const clienteId = idDeValor(cliente.value);
-      const entradas: RenglonBorrador[] = renglones.map((renglon) => {
-        const fila = filaDe(renglon.libro_id);
-        if (!fila) throw new Error(`Falta la fila del libro ${renglon.libro_id}.`);
-        return {
-          libro_id: renglon.libro_id,
-          cantidad: buscar(fila, '[data-campo="cantidad"]', HTMLInputElement).value,
-        };
-      });
-      const errores = validarVenta(clienteId, entradas, clientes, libros);
-      if (errores.length > 0) {
-        mostrarErrores(errores);
-        return;
-      }
-      const calculada = calcularVenta(entradas, libros);
-      if (!calculada.ok || clienteId === null) {
-        mostrarErrores(calculada.errores);
-        return;
-      }
-      renderizar(calculada);
-      guardada = await repositorioVentas.crear({
-        cliente_id: clienteId,
-        renglones: renglones.map((renglon) => ({
-          libro_id: renglon.libro_id,
-          cantidad: renglon.cantidad,
-        })),
-      });
-    } catch (error) {
-      if (error instanceof ErrorDeRepositorio && error.errores.length > 0) mostrarErrores(error.errores);
-      else informarFallo();
+    const clienteId = idDeValor(cliente.value);
+    const entradas: RenglonBorrador[] = renglones.map((renglon) => {
+      const fila = filaDe(renglon.libro_id);
+      if (!fila) throw new Error(`Falta la fila del libro ${renglon.libro_id}.`);
+      return {
+        libro_id: renglon.libro_id,
+        cantidad: buscar(fila, '[data-campo="cantidad"]', HTMLInputElement).value,
+      };
+    });
+    const errores = validarVenta(clienteId, entradas, clientes, libros);
+    if (errores.length > 0) {
+      mostrarErrores(errores);
       return;
-    } finally {
-      confirmando = false;
-      confirmar.disabled = false;
+    }
+    const calculada = calcularVenta(entradas, libros);
+    if (!calculada.ok || clienteId === null) {
+      mostrarErrores(calculada.errores);
+      return;
+    }
+    renderizar(calculada);
+
+    let guardada: Venta;
+    try {
+      guardada = await repositorioVentas.crear(ventaNuevaDesdeBorrador(clienteId, renglones));
+    } catch (error) {
+      // Rechazo o falta de respuesta: el borrador queda y no se reenvía solo.
+      mostrarFalloDeVenta(describirFallo(error, CAMPOS_DE_VENTA));
+      return;
     }
 
     // Desde este punto la venta YA está guardada. Nada visual puede anularla.
@@ -320,15 +305,22 @@ async function iniciar(): Promise<void> {
 
   formulario.addEventListener("submit", (evento) => {
     evento.preventDefault();
-    confirmarVenta().catch(informarFallo);
+    confirmarUnaVez(confirmarVenta).catch(informarFallo);
   });
 
-  await actualizarSelectorClientes();
+  // Una sola lectura al abrir. Si falla, el error lo muestra `arrancar` y los
+  // botones quedan deshabilitados: sin las listas no se puede confirmar una venta.
+  agregar.disabled = true;
+  confirmar.disabled = true;
+  [clientes, libros] = await Promise.all([repositorioClientes.listar(), repositorioLibros.listar()]);
+  llenarSelect(cliente, "Elegir un cliente", clientes);
   llenarSelect(
     libro,
     "Elegir un libro",
-    (await repositorioLibros.listar()).map((registro) => ({ id: registro.id, nombre: registro.titulo })),
+    libros.map((registro) => ({ id: registro.id, nombre: registro.titulo })),
   );
+  agregar.disabled = false;
+  confirmar.disabled = false;
 }
 
 arrancar(iniciar, () => document.getElementById("mensaje-error"));

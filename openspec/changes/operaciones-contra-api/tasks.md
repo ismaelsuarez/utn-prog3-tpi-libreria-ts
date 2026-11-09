@@ -74,10 +74,10 @@ Gobernanza ALTO: ninguna tarea de los grupos 1 a 10 empieza antes de cerrar el g
 
 ## 8. Ventas e Historial
 
-- [ ] 8.1 `ventas.ts`: lee clientes y libros una vez al abrir; el borrador no vuelve a pedir datos; confirma con el cuerpo de la spec; el comprobante usa la venta devuelta; rechazo y resultado incierto conservan el borrador con su mensaje; envío único; verificar con `npm run build` y los casos del grupo 10
-- [ ] 8.2 `historial.ts`: ventas de todas las páginas; detalle solo con los datos de la venta, sin ISBN; verificar con `npm run build` y los casos del grupo 10
-- [ ] 8.3 README, secciones Ventas e Historial: importes del servidor, venta sin control de stock, qué datos del detalle son históricos; verificar que coincide con las specs `ventas` e `historial`
-- [ ] 8.4 Commit `feat(ventas): confirm sales and read history from the API`
+- [x] 8.1 `ventas.ts`: lee clientes y libros una vez al abrir; el borrador no vuelve a pedir datos; confirma con el cuerpo de la spec; el comprobante usa la venta devuelta; rechazo y resultado incierto conservan el borrador con su mensaje; envío único; verificar con `npm run build` y los casos del grupo 10
+- [x] 8.2 `historial.ts`: ventas de todas las páginas; detalle solo con los datos de la venta, sin ISBN; verificar con `npm run build` y los casos del grupo 10
+- [x] 8.3 README, secciones Ventas e Historial: importes del servidor, venta sin control de stock, qué datos del detalle son históricos; verificar que coincide con las specs `ventas` e `historial`
+- [x] 8.4 Commit `feat(ventas): confirm sales and read history from the API`
 
 ## 9. Comprobaciones automáticas de integración
 

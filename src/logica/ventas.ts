@@ -14,9 +14,11 @@
 // operación modifica las entradas ni comparte objetos de renglón.
 import type { ErrorDeCampo } from "../types/formulario";
 import type { Dinero, Id } from "../types/primitivos";
-import type { Renglon } from "../types/venta";
+import type { Renglon, VentaNueva } from "../types/venta";
 import { aCentavos, centavosADinero } from "./dinero";
+import type { FalloDeOperacion } from "./errores-de-formulario";
 import { ENTERO_MAXIMO_DE_LA_API, ENTERO_MAXIMO_DE_LA_API_TEXTO } from "./limites";
+import { conPuntoFinal } from "./texto";
 
 /** Renglón de un borrador de venta, tal como lo arma el formulario. */
 export interface RenglonBorrador {
@@ -214,4 +216,40 @@ export function validarVenta(
 /** Código con el que se muestra una venta (`1` → `ven-01`), como en la versión anterior. */
 export function codigoDeVenta(id: Id): string {
   return `ven-${String(id).padStart(2, "0")}`;
+}
+
+/**
+ * Cuerpo de `POST /ventas/`: solo el identificador del cliente y, por renglón, el
+ * del libro y la cantidad. El precio, los subtotales y el total los calcula el
+ * servidor con el precio vigente al confirmar.
+ */
+export function ventaNuevaDesdeBorrador(
+  clienteId: Id,
+  renglones: readonly RenglonBorrador[],
+): VentaNueva {
+  return {
+    cliente_id: clienteId,
+    renglones: renglones.map((renglon) => ({
+      libro_id: renglon.libro_id,
+      cantidad: Number(renglon.cantidad),
+    })),
+  };
+}
+
+/**
+ * Mensaje de una confirmación que no se registró. Ante una falta de respuesta
+ * no se sabe si la venta quedó: se pide revisar el Historial y no se reenvía.
+ */
+export function mensajeDeVentaFallida(fallo: FalloDeOperacion): string {
+  if (fallo.resultadoIncierto) {
+    return (
+      "No se pudo confirmar si la venta se registró. Revisá el Historial antes de reintentar: " +
+      "el borrador se conserva y no se vuelve a enviar solo."
+    );
+  }
+  const motivos = [
+    ...(fallo.deLaOperacion === null ? [] : [fallo.deLaOperacion]),
+    ...fallo.porCampo.map((error) => error.mensaje),
+  ];
+  return `${motivos.map(conPuntoFinal).join(" ")} El borrador se conserva.`.trim();
 }

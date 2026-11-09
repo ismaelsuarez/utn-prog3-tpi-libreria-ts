@@ -4,8 +4,10 @@ import {
   calcularVenta,
   cambiarCantidad,
   codigoDeVenta,
+  mensajeDeVentaFallida,
   quitarRenglon,
   validarVenta,
+  ventaNuevaDesdeBorrador,
   type LibroVendible,
   type RenglonBorrador,
   type RenglonCalculado,
@@ -335,5 +337,77 @@ describe("codigoDeVenta", () => {
 
   test("no recorta los identificadores de más de dos dígitos", () => {
     expect(codigoDeVenta(123)).toBe("ven-123");
+  });
+});
+
+describe("ventaNuevaDesdeBorrador: cuerpo de POST /ventas/", () => {
+  test("lleva solo el cliente y, por renglón, el libro y la cantidad", () => {
+    const cuerpo = ventaNuevaDesdeBorrador(2, [
+      { libro_id: 1, cantidad: 2 },
+      { libro_id: 4, cantidad: 1 },
+    ]);
+    expect(JSON.stringify(cuerpo)).toBe(
+      '{"cliente_id":2,"renglones":[{"libro_id":1,"cantidad":2},{"libro_id":4,"cantidad":1}]}',
+    );
+  });
+
+  test("descarta cualquier otro dato del renglón calculado (título, ISBN, importes) y pasa las cantidades a número", () => {
+    const calculado = renglonesDe(calcularVenta([{ libro_id: 1, cantidad: "3" }], [libro(10)]));
+    expect(ventaNuevaDesdeBorrador(5, calculado)).toEqual({
+      cliente_id: 5,
+      renglones: [{ libro_id: 1, cantidad: 3 }],
+    });
+    expect(ventaNuevaDesdeBorrador(5, [{ libro_id: 1, cantidad: "3" }]).renglones[0]?.cantidad).toBe(3);
+  });
+});
+
+describe("venta sin control de stock", () => {
+  test("una cantidad mayor que el stock del libro se acepta en el borrador", () => {
+    const conStock = { ...libro(100), stock: 10 };
+    const resultado = agregarRenglon([], 1, 12, [conStock]);
+    expect(resultado.ok).toBe(true);
+    expect(renglonesDe(resultado)[0]?.cantidad).toBe(12);
+    expect(conStock.stock).toBe(10);
+  });
+});
+
+describe("mensajeDeVentaFallida", () => {
+  const sinCampos: [] = [];
+
+  test("un rechazo de la API se muestra con su mensaje y avisa que el borrador se conserva", () => {
+    const mensaje = mensajeDeVentaFallida({
+      porCampo: sinCampos,
+      deLaOperacion: "No se pudo registrar la venta: cliente o libros invalidos",
+      resultadoIncierto: false,
+      estado: 409,
+    });
+    expect(mensaje).toBe("No se pudo registrar la venta: cliente o libros invalidos. El borrador se conserva.");
+  });
+
+  test("un 422 junta los mensajes de cada campo", () => {
+    expect(
+      mensajeDeVentaFallida({
+        porCampo: [
+          { campo: "cliente", mensaje: "Input should be a valid integer" },
+          { campo: "renglones", mensaje: "Libro repetido" },
+        ],
+        deLaOperacion: null,
+        resultadoIncierto: false,
+        estado: 422,
+      }),
+    ).toBe("Input should be a valid integer. Libro repetido. El borrador se conserva.");
+  });
+
+  test("una falta de respuesta dice que no se sabe si se registró y manda al Historial, sin reenvío automático", () => {
+    const mensaje = mensajeDeVentaFallida({
+      porCampo: sinCampos,
+      deLaOperacion: "No se pudo confirmar si el servidor registró la operación. Revisá los datos antes de reintentar.",
+      resultadoIncierto: true,
+      estado: null,
+    });
+    expect(mensaje).toBe(
+      "No se pudo confirmar si la venta se registró. Revisá el Historial antes de reintentar: " +
+        "el borrador se conserva y no se vuelve a enviar solo.",
+    );
   });
 });
