@@ -304,7 +304,7 @@ describe("RepositorioVentas", () => {
         total: "4701.00",
         cliente: { id: 2, nombre: "Ricardo Soria", email: "ricardo.soria@correo.test" },
         renglones: [
-          { libro_id: 3, titulo: "Mapas para perderse", cantidad: 2, precio_unitario: "2350.50", subtotal: "4701.00" },
+          { libro_id: 3, titulo: "Mapas para perderse", isbn: "978-987-000-003-5", cantidad: 2, precio_unitario: "2350.50", subtotal: "4701.00" },
         ],
       },
     ]);
@@ -326,8 +326,8 @@ describe("RepositorioVentas", () => {
       total: "5000.00",
       cliente: { id: 1, nombre: "Laura Mendoza", email: "laura.mendoza@correo.test" },
       renglones: [
-        { libro_id: 1, titulo: "El faro de los vientos", cantidad: 2, precio_unitario: "1500.00", subtotal: "3000.00" },
-        { libro_id: 2, titulo: "Cartas desde el sur", cantidad: 1, precio_unitario: "2000.00", subtotal: "2000.00" },
+        { libro_id: 1, titulo: "El faro de los vientos", isbn: "978-987-000-001-1", cantidad: 2, precio_unitario: "1500.00", subtotal: "3000.00" },
+        { libro_id: 2, titulo: "Cartas desde el sur", isbn: "978-987-000-002-8", cantidad: 1, precio_unitario: "2000.00", subtotal: "2000.00" },
       ],
     });
     // Formato guardado idéntico al de la versión anterior (con ISBN y números).

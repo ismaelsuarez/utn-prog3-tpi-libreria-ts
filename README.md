@@ -91,7 +91,7 @@ actual.
 | Libros | `src/pages/admin/libros/libros.html` | Registrar un libro y consultar la tabla de libros |
 | Clientes | `src/pages/admin/clientes/clientes.html` | Registrar un cliente, consultar la tabla y editar sus datos de contacto |
 | Ventas | `src/pages/admin/ventas/ventas.html` | Elegir cliente, armar los renglones, confirmar y ver el comprobante |
-| Historial | `historial.html` | Consultar las ventas confirmadas y el detalle de cada una |
+| Historial | `src/pages/admin/historial/historial.html` | Consultar las ventas confirmadas y el detalle de cada una |
 
 ## Funcionalidades implementadas
 

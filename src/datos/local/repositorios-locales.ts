@@ -87,6 +87,7 @@ function ventaDe(local: VentaLocal): Venta {
     renglones: local.renglones.map((renglon) => ({
       libro_id: contador(renglon.libroId),
       titulo: renglon.titulo,
+      isbn: renglon.isbn,
       cantidad: renglon.cantidad,
       precio_unitario: importe(renglon.precioUnitario),
       subtotal: importe(renglon.subtotal),
