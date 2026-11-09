@@ -6,6 +6,7 @@ import type { DecisionDeAcceso, DestinoDeRuta, Zona } from "../types/acceso";
 import type { IUser } from "../types/IUser";
 import type { Rol } from "../types/Rol";
 import type { UsuarioRegistrado } from "../types/usuario";
+import { normalizarEmail } from "./texto";
 import { buscarPorEmail } from "./usuarios";
 
 export type { DestinoDeRuta };
@@ -117,6 +118,12 @@ export function decidirAcceso(zona: Zona | null, sesion: IUser | null): Decision
   if (zona === "client") return { tipo: "permitir" };
   if (zona === "admin") return sesion.role === "admin" ? { tipo: "permitir" } : aSuDestino;
   return aSuDestino;
+}
+
+/** True si ambas son la misma sesión (mismo email normalizado y rol) o ambas faltan. */
+export function mismaSesion(a: IUser | null, b: IUser | null): boolean {
+  if (a === null || b === null) return a === b;
+  return normalizarEmail(a.email) === normalizarEmail(b.email) && a.role === b.role;
 }
 
 export function destinoPorRol(rol: Rol): "libros" | "catalogo" {

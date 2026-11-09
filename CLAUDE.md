@@ -21,7 +21,7 @@ Integrantes: Avalos Pablo, Blangetti Sofia, Suarez Ismael.
 | Comportamiento | TypeScript estricto, módulos ES (`<script type="module">`) | Sin librerías de ejecución; Vite 7 compila y sirve |
 | Datos | Repositorios asíncronos (`src/datos/repositorios.ts`) con forma de la API de producción | El Catálogo lee los libros de la API `https://api.ismaelsuarez.me` (solo `GET`) por la base `/api` del mismo origen (`VITE_API_BASE`), con reenvío en `npm run dev` y `npm run preview`; las vistas de gestión (Libros, Clientes, Ventas e Historial) siguen sobre un adaptador de `localStorage` hasta `operaciones-contra-api` |
 | Verificación de desarrollo | Vitest (`npm test`) y `tsc` | Las pruebas viven en `tests/`, fuera de la entrega |
-| Verificación de entrega | Casos manuales en el navegador | Doce casos (CM-1 a CM-12) registrados en el README |
+| Verificación de entrega | Casos manuales en el navegador | Dieciséis casos (CM-1 a CM-16) registrados en el README |
 
 Requiere Node 20.19+ o 22.12+ (exigencia de Vite 7) y npm. La aplicación ya no se
 abre desde `file://`: se ejecuta con `npm run dev` o con la compilación servida.
@@ -57,7 +57,7 @@ La fuente de verdad del dominio vive en `knowledge-base/`. **Leer el archivo rel
 | [06_funcionalidades.md](knowledge-base/06_funcionalidades.md) | Historias de usuario por épica y casos manuales CM-1 a CM-8 |
 | [07_flujos_principales.md](knowledge-base/07_flujos_principales.md) | Flujos extremo a extremo, incluido el precio histórico |
 | [08_arquitectura_propuesta.md](knowledge-base/08_arquitectura_propuesta.md) | Estructura de `src/`, zonas, carga de módulos, repositorios, `/api`, verificación |
-| [09_decisiones_y_supuestos.md](knowledge-base/09_decisiones_y_supuestos.md) | Decisiones DD-01 a DD-20 y supuestos a validar |
+| [09_decisiones_y_supuestos.md](knowledge-base/09_decisiones_y_supuestos.md) | Decisiones DD-01 a DD-25 y supuestos a validar |
 | [10_preguntas_abiertas.md](knowledge-base/10_preguntas_abiertas.md) | Inconsistencias y preguntas abiertas a resolver ANTES de codificar |
 
 Pendiente de prioridad **Alta** en `10_preguntas_abiertas.md`:

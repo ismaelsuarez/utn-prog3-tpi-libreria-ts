@@ -7,6 +7,7 @@ import {
   esCuentaCreada,
   esSesion,
   esUsuarioRegistrado,
+  mismaSesion,
   rutaDe,
   sesionVigente,
   zonaDeRuta,
@@ -274,5 +275,26 @@ describe("decidirAcceso", () => {
         destino: destinoPorRol(sesion.role),
       });
     }
+  });
+});
+
+describe("mismaSesion", () => {
+  const cliente: IUser = { email: "laura@correo.test", loggedIn: true, role: "client" };
+  const admin: IUser = { email: "admin@libreria.test", loggedIn: true, role: "admin" };
+
+  test("dos veces la misma sesión, o dos ausencias, son la misma", () => {
+    expect(mismaSesion(cliente, { ...cliente })).toBe(true);
+    expect(mismaSesion(null, null)).toBe(true);
+  });
+
+  test("otro usuario, otro rol o la sesión que aparece o desaparece son distintas", () => {
+    expect(mismaSesion(cliente, admin)).toBe(false);
+    expect(mismaSesion(cliente, { ...cliente, role: "admin" })).toBe(false);
+    expect(mismaSesion(cliente, null)).toBe(false);
+    expect(mismaSesion(null, admin)).toBe(false);
+  });
+
+  test("el email se compara normalizado", () => {
+    expect(mismaSesion(cliente, { ...cliente, email: " LAURA@correo.test " })).toBe(true);
   });
 });

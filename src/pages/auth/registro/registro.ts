@@ -1,10 +1,9 @@
 // Página de registro: arma el borrador, lo envía al servicio de autenticación y
-// muestra los errores junto a cada campo. Si ya hay una sesión válida redirige
-// según el rol sin mostrar el formulario. Los mensajes se insertan como texto.
+// muestra los errores junto a cada campo. La redirección con sesión iniciada la
+// decide `src/main.ts` antes de este código. Los mensajes se insertan como texto.
 import "../../../main";
 import { autenticacion } from "../../../datos/proveedor";
 import { rutaDe } from "../../../logica/sesion";
-import { irAlDestinoDelRol, obtenerSesion } from "../../../utils/auth";
 import {
   elementoPorId,
   limpiarErroresDeCampos,
@@ -18,11 +17,6 @@ const PREFIJO = "registro";
 const CAMPOS = ["email", "contrasena", "repeticion"] as const;
 
 function iniciar(): void {
-  const sesion = obtenerSesion();
-  if (sesion !== null) {
-    irAlDestinoDelRol(sesion);
-    return;
-  }
   elementoPorId("contenido-acceso", HTMLElement).hidden = false;
 
   const formulario = elementoPorId("form-registro", HTMLFormElement);

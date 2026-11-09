@@ -98,7 +98,7 @@ T-02 y T-03 son independientes entre sí y pueden avanzar en paralelo una vez ar
 - **Dependencias**: `T-03`
 - **Governance**: CRÍTICO (control de acceso, aunque solo en el cliente)
 - **Leer antes**:
-  - `openspec/changes/migracion-vite-typescript/design.md` (D3 y D4)
+  - `openspec/changes/archive/2026-11-09-migracion-vite-typescript/design.md` (D3 y D4)
   - `knowledge-base/03_actores_y_roles.md`
 
 ### [T-05] `operaciones-contra-api`
