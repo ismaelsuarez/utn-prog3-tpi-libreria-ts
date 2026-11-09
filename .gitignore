@@ -13,3 +13,4 @@ Thumbs.db
 # Dependencias y compilación
 node_modules/
 dist/
+*.zip
