@@ -17,6 +17,7 @@
 **Trade-offs aceptados**: mayor planificación inicial.
 
 ### DD-03 — Scripts clásicos en lugar de módulos ES
+**Estado**: reemplazada por DD-16 (migración a Vite y TypeScript estricto); se conserva como historial de la serie JavaScript.
 **Decisión**: los scripts se cargan con `<script src>` clásico y comparten un espacio de nombres global.
 **Contexto**: la consigna exige abrir `index.html` sin npm ni servidor, es decir desde `file://`, donde los navegadores bloquean `<script type="module">`.
 **Alternativas consideradas**: módulos ES servidos por un servidor local.
@@ -24,6 +25,7 @@
 **Trade-offs aceptados**: el orden de carga de los scripts se mantiene a mano; se requiere un patrón de exportación dual para las pruebas con Node.
 
 ### DD-04 — Pruebas automatizadas con `node --test`
+**Estado**: reemplazada por DD-16 (las pruebas pasan a Vitest); se conserva como historial de la serie JavaScript.
 **Decisión**: la lógica pura se prueba con el runner integrado de Node, sin dependencias.
 **Contexto**: el equipo trabaja con desarrollo guiado por pruebas, pero la consigna prohíbe dependencias y herramientas de compilación en la entrega.
 **Alternativas consideradas**: verificar solo con los casos manuales.
@@ -113,6 +115,46 @@
 **Trade-offs aceptados**: no hay modo oscuro; los navegadores muy viejos muestran una tipografía del sistema distinta aunque siempre legible.
 **Origen**: change `presentacion-css-y-uso-adaptable`, decisiones D1, D2 y D3.
 
+### DD-16 — Migración a Vite y TypeScript estricto
+**Decisión**: el frontend se construye con Vite 7 y TypeScript estricto (`strict`, `noUnusedLocals`, `noUnusedParameters`, `erasableSyntaxOnly`), módulos ES, la estructura de carpetas del repositorio base `chiro45/proteger_rutas` (`src/pages/{auth,admin,client}/`, `src/main.ts`, `src/types/`, `src/utils/`) y pruebas con Vitest. Reemplaza a DD-03 y DD-04.
+**Contexto**: el TPI de TypeScript exige Vite, tipos específicos en todo el proyecto y la estructura del repositorio base; la serie JavaScript usaba scripts clásicos abiertos desde `file://` y `node --test`.
+**Alternativas consideradas**: mantener JavaScript clásico (incumple la consigna); pnpm como gestor (otro instalador sin beneficio para el TPI); TypeScript 5.9 o superior (el repositorio base fija `~5.8.3`); `node --test` con la eliminación de tipos nativa de Node (no resuelve `import.meta.env` ni las importaciones sin extensión del modo *bundler*).
+**Justificación**: cumple la consigna y el compilador estricto detecta en la compilación los desajustes entre las vistas y la forma de los datos.
+**Trade-offs aceptados**: el proyecto requiere Node (20.19+ o 22.12+) y npm; deja de abrirse con doble clic desde `file://`; lo guardado en `localStorage` desde `file://` no se ve desde `http://localhost` (otro origen).
+**Origen**: change `migracion-vite-typescript`, decisiones D1, D2, D4 y D9.
+
+### DD-17 — La API de producción es intocable y es la fuente de los datos de negocio
+**Decisión**: los datos de negocio (libros, clientes, ventas, editoriales, géneros) provienen de la API desplegada en `https://api.ismaelsuarez.me`, que no se modifica ni se redespliega; todo ajuste se hace en el frontend.
+**Contexto**: el backend está en producción y el equipo no puede tocarlo; la consigna pide consumirlo.
+**Alternativas consideradas**: ajustar la API a las necesidades del frontend (descartada: no es posible).
+**Justificación**: la forma de los datos del frontend se alinea con los DTO de la API (identificadores enteros, importes como texto decimal, fechas ISO, relaciones anidadas) para que el cliente HTTP tipe el JSON sin capa de traducción.
+**Trade-offs aceptados**: la API no ofrece `GET /clientes/`, `GET /autores/` ni actualización del perfil, y `LibroRead` no incluye autores; los changes `cliente-http-y-catalogo` y `operaciones-contra-api` deben resolverlo en el cliente. Hasta entonces el almacén local implementa los repositorios.
+**Origen**: change `migracion-vite-typescript`, propuesta y decisiones D5 y D6.
+
+### DD-18 — Base `/api` del mismo origen con reenvío
+**Decisión**: el navegador solo llama a la base relativa `/api` (`VITE_API_BASE`, por defecto `/api`); en desarrollo y en la vista previa, Vite reenvía `/api` a `API_PROXY_TARGET` (por defecto `https://api.ismaelsuarez.me`) quitando el prefijo; en producción lo hace el contenedor del frontend (change `despliegue-frontend`).
+**Contexto**: la API no envía cabeceras CORS y no se puede tocar.
+**Alternativas consideradas**: llamar a la API desde otro origen (bloqueado por el navegador); dejar el destino en una variable `VITE_*` (llegaría al código del navegador).
+**Justificación**: una convención única para todos los entornos; `API_PROXY_TARGET` es solo de servidor y no queda en la compilación.
+**Trade-offs aceptados**: sin el reenvío (por ejemplo, abriendo `dist/` con un servidor estático simple) las llamadas a la API fallan.
+**Origen**: change `migracion-vite-typescript`, decisión D10.
+
+### DD-19 — Autenticación y roles solo en el cliente (limitación conocida)
+**Decisión**: la API de producción no ofrece autenticación; los usuarios, la sesión y los roles (`client`, `admin`) viven en el `localStorage` del navegador y la protección de rutas se decide por la zona de la dirección (`/admin/`, `/client/`).
+**Contexto**: la consigna pide login, registro y protección de rutas por rol en el frontend; el backend no se puede modificar.
+**Alternativas consideradas**: autenticación en el servidor (no es posible).
+**Justificación**: cumple la consigna con lo que el frontend puede hacer.
+**Trade-offs aceptados**: la API queda abierta; quien conozca su dirección puede llamarla sin sesión. Se documenta como limitación conocida y no es una medida de seguridad real.
+**Origen**: change `migracion-vite-typescript`, decisiones D3 y D13; se implementa en `registro-login-y-sesion` y `proteccion-de-rutas-y-roles`.
+
+### DD-20 — Frontera de repositorios con la forma de la API
+**Decisión**: las vistas acceden a los datos solo por interfaces de repositorio asíncronas (`src/datos/repositorios.ts`) tipadas con los tipos de dominio alineados con la API; `src/datos/proveedor.ts` es la raíz de composición. Hoy los implementa un adaptador sobre el almacén local (mismas claves y formato de `localStorage`) que traduce entre la forma local y la de la API.
+**Contexto**: los changes siguientes reemplazan el origen de los datos por la API; las vistas no deben reescribirse en cada reemplazo.
+**Alternativas consideradas**: vistas tipadas con la forma local (`lib-01`, `nombreCompleto`, precio numérico) y reformadas después (obliga a reescribir cada vista dos veces).
+**Justificación**: un solo modelo de datos en las vistas durante toda la serie; el reemplazo se limita a `proveedor.ts` y a los adaptadores.
+**Trade-offs aceptados**: el adaptador local fija datos de transición (`stock: 0`, `rol: "autor"`, `pais` y `nacionalidad` ficticios) que no se muestran ni se persisten; las operaciones sin endpoint en la API (listado de clientes y de autores, edición del teléfono) se marcan en la interfaz.
+**Origen**: change `migracion-vite-typescript`, decisiones D6 y D7.
+
 ## Supuestos inferidos
 
 ### SU-01 — Cada consigna equivale a un change autocontenido
@@ -159,6 +201,6 @@
 
 ### SU-08 — Node disponible en las máquinas del equipo
 **Supuesto**: los tres integrantes pueden ejecutar `node --test`.
-**Origen**: decisión DD-04.
+**Origen**: decisión DD-04. A partir de DD-16 Node 20.19+ o 22.12+ es requisito para ejecutar el proyecto (no solo las pruebas).
 **Riesgo si es falso**: quien no tenga Node no puede correr las pruebas automatizadas, aunque sí usar el proyecto.
 **Cómo validar**: comprobar la versión de Node de cada integrante.

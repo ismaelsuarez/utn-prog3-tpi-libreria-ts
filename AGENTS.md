@@ -56,8 +56,8 @@ La fuente de verdad del dominio vive en `knowledge-base/`. **Leer el archivo rel
 | [05_reglas_de_negocio.md](knowledge-base/05_reglas_de_negocio.md) | Reglas codificadas (RN-XX-NN) |
 | [06_funcionalidades.md](knowledge-base/06_funcionalidades.md) | Historias de usuario por épica y casos manuales CM-1 a CM-8 |
 | [07_flujos_principales.md](knowledge-base/07_flujos_principales.md) | Flujos extremo a extremo, incluido el precio histórico |
-| [08_arquitectura_propuesta.md](knowledge-base/08_arquitectura_propuesta.md) | Estructura de directorios, carga de scripts, exportación dual, verificación |
-| [09_decisiones_y_supuestos.md](knowledge-base/09_decisiones_y_supuestos.md) | Decisiones DD-01 a DD-09 y supuestos a validar |
+| [08_arquitectura_propuesta.md](knowledge-base/08_arquitectura_propuesta.md) | Estructura de `src/`, zonas, carga de módulos, repositorios, `/api`, verificación |
+| [09_decisiones_y_supuestos.md](knowledge-base/09_decisiones_y_supuestos.md) | Decisiones DD-01 a DD-20 y supuestos a validar |
 | [10_preguntas_abiertas.md](knowledge-base/10_preguntas_abiertas.md) | Inconsistencias y preguntas abiertas a resolver ANTES de codificar |
 
 Pendiente de prioridad **Alta** en `10_preguntas_abiertas.md`:
@@ -93,21 +93,18 @@ Cargar la skill correspondiente al contexto ANTES de escribir código.
 
 El plan de implementación completo está en [CHANGES.md](CHANGES.md). Resumen:
 
-- **Total**: 6 changes en 3 fases, uno por ejercicio de la consigna (100 puntos).
-- **Camino crítico** (5): `C-01 → C-03 → C-04 → C-05 → C-06`. C-02 avanza en paralelo y se une en C-06.
-- **Hito 1 (Etapa 1, maqueta)**: C-01 + C-02.
-- **Primer change**: `C-01` (`estructura-y-pantallas-html`).
+- **Serie vigente (TypeScript)**: 6 changes, `T-01` a `T-06`. Camino crítico: `T-01 → T-03 → T-04 → T-05 → T-06`; `T-02` avanza en paralelo con `T-03` y se une en `T-05`.
+- **Serie JavaScript** (`C-01` a `C-06`, uno por ejercicio de la consigna original): archivada; se conserva en `CHANGES.md` como historial.
+- **Primer change de la serie vigente**: `T-01` (`migracion-vite-typescript`).
 
-| Change | Nombre | Depende de | Ejercicio |
+| Change | Nombre | Depende de | Alcance |
 |---|---|---|---|
-| C-01 | `estructura-y-pantallas-html` | ninguna | 1 (20 puntos) |
-| C-02 | `presentacion-css-y-uso-adaptable` | C-01 | 2 (20 puntos) |
-| C-03 | `datos-locales-catalogo-y-filtro` | C-01 | 3 (15 puntos) |
-| C-04 | `alta-de-libros-y-clientes` | C-03 | 4 (15 puntos) |
-| C-05 | `venta-simulada-e-historial` | C-04 | 5 (20 puntos) |
-| C-06 | `persistencia-verificacion-y-documentacion` | C-05, C-02 | 6 (10 puntos) |
-
-No se crean changes adicionales: lo transversal se incluye en alguno de los seis.
+| T-01 | `migracion-vite-typescript` | ninguna | Vite + TypeScript estricto, estructura por zonas, tipos, repositorios y `/api` |
+| T-02 | `cliente-http-y-catalogo` | T-01 | Cliente HTTP tipado y Catálogo desde la API |
+| T-03 | `registro-login-y-sesion` | T-01 | Registro, login y sesión (solo cliente) |
+| T-04 | `proteccion-de-rutas-y-roles` | T-03 | Intercepción en `src/main.ts` y roles `client` y `admin` |
+| T-05 | `operaciones-contra-api` | T-02, T-04 | Altas, ventas e historial contra la API |
+| T-06 | `despliegue-frontend` | T-05 | Contenedor con proxy `/api` en Easypanel, README final y entrega |
 
 **Antes de cualquier `/opsx:propose`**: leer [CHANGES.md](CHANGES.md), identificar las dependencias del change y los archivos de «Leer antes».
 
