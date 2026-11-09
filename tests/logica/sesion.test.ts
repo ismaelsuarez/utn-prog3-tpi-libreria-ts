@@ -1,0 +1,139 @@
+import { describe, expect, test } from "vitest";
+import {
+  aSesion,
+  destinoPorRol,
+  esRol,
+  esSesion,
+  esUsuarioRegistrado,
+  rutaDe,
+} from "../../src/logica/sesion";
+import type { UsuarioRegistrado } from "../../src/types/usuario";
+
+function usuarioValido(): UsuarioRegistrado {
+  return {
+    email: "laura@correo.test",
+    role: "client",
+    contrasena: {
+      algoritmo: "PBKDF2-SHA-256",
+      iteraciones: 100000,
+      sal: "00112233445566778899aabbccddeeff",
+      huella: "ab".repeat(32),
+    },
+    creadoEn: "2026-11-09T17:00:00.000Z",
+  };
+}
+
+describe("esRol", () => {
+  test.each(["client", "admin"])("acepta %s", (rol) => {
+    expect(esRol(rol)).toBe(true);
+  });
+
+  test.each(["superusuario", "", "Admin", null, undefined, 1, {}])("rechaza %j", (valor) => {
+    expect(esRol(valor)).toBe(false);
+  });
+});
+
+describe("esSesion", () => {
+  test("acepta una sesión válida de cada rol", () => {
+    expect(esSesion({ email: "a@b.test", loggedIn: true, role: "client" })).toBe(true);
+    expect(esSesion({ email: "a@b.test", loggedIn: true, role: "admin" })).toBe(true);
+  });
+
+  test("rechaza loggedIn distinto de true", () => {
+    expect(esSesion({ email: "a@b.test", loggedIn: false, role: "client" })).toBe(false);
+    expect(esSesion({ email: "a@b.test", loggedIn: "true", role: "client" })).toBe(false);
+    expect(esSesion({ email: "a@b.test", role: "client" })).toBe(false);
+  });
+
+  test("rechaza un rol desconocido", () => {
+    expect(esSesion({ email: "a@b.test", loggedIn: true, role: "superusuario" })).toBe(false);
+    expect(esSesion({ email: "a@b.test", loggedIn: true })).toBe(false);
+  });
+
+  test("rechaza un email vacío, de espacios o que no es texto", () => {
+    expect(esSesion({ email: "", loggedIn: true, role: "admin" })).toBe(false);
+    expect(esSesion({ email: "   ", loggedIn: true, role: "admin" })).toBe(false);
+    expect(esSesion({ email: 7, loggedIn: true, role: "admin" })).toBe(false);
+  });
+
+  test.each([null, undefined, [], ["a@b.test"], "texto", 42, true])("rechaza %j", (valor) => {
+    expect(esSesion(valor)).toBe(false);
+  });
+});
+
+describe("esUsuarioRegistrado", () => {
+  test("acepta un usuario completo", () => {
+    expect(esUsuarioRegistrado(usuarioValido())).toBe(true);
+    expect(esUsuarioRegistrado({ ...usuarioValido(), role: "admin" })).toBe(true);
+  });
+
+  test.each([
+    ["email vacío", { email: "" }],
+    ["rol desconocido", { role: "superusuario" }],
+    ["sin fecha de alta", { creadoEn: undefined }],
+    ["contraseña como texto", { contrasena: "Faro-2026" }],
+    ["contraseña nula", { contrasena: null }],
+    ["algoritmo distinto", { contrasena: { ...usuarioValido().contrasena, algoritmo: "MD5" } }],
+    ["iteraciones en cero", { contrasena: { ...usuarioValido().contrasena, iteraciones: 0 } }],
+    ["iteraciones decimales", { contrasena: { ...usuarioValido().contrasena, iteraciones: 1.5 } }],
+    ["sal vacía", { contrasena: { ...usuarioValido().contrasena, sal: "" } }],
+    ["sal no hexadecimal", { contrasena: { ...usuarioValido().contrasena, sal: "zz" } }],
+    ["huella vacía", { contrasena: { ...usuarioValido().contrasena, huella: "" } }],
+    ["huella que no es texto", { contrasena: { ...usuarioValido().contrasena, huella: 5 } }],
+  ])("rechaza %s", (_nombre, cambios) => {
+    expect(esUsuarioRegistrado({ ...usuarioValido(), ...cambios })).toBe(false);
+  });
+
+  test.each([null, undefined, [], "texto", 3])("rechaza %j", (valor) => {
+    expect(esUsuarioRegistrado(valor)).toBe(false);
+  });
+});
+
+describe("aSesion", () => {
+  test("el resultado tiene exactamente email, loggedIn y role", () => {
+    const sesion = aSesion(usuarioValido());
+    expect(sesion).toEqual({ email: "laura@correo.test", loggedIn: true, role: "client" });
+    expect(Object.keys(sesion).sort()).toEqual(["email", "loggedIn", "role"]);
+  });
+
+  test("no lleva la contraseña ni su huella", () => {
+    const texto = JSON.stringify(aSesion(usuarioValido()));
+    expect(texto).not.toContain("huella");
+    expect(texto).not.toContain("contrasena");
+    expect(texto).not.toContain("sal");
+  });
+
+  test("una sesión armada así es una sesión válida", () => {
+    expect(esSesion(aSesion({ ...usuarioValido(), role: "admin" }))).toBe(true);
+  });
+});
+
+describe("destinoPorRol", () => {
+  test("el administrador va a Libros y el cliente al Catálogo", () => {
+    expect(destinoPorRol("admin")).toBe("libros");
+    expect(destinoPorRol("client")).toBe("catalogo");
+  });
+});
+
+describe("rutaDe", () => {
+  test("rutas relativas a una página de src/pages/<zona>/<vista>/", () => {
+    expect(rutaDe("login")).toBe("../../auth/login/login.html");
+    expect(rutaDe("registro")).toBe("../../auth/registro/registro.html");
+    expect(rutaDe("libros")).toBe("../../admin/libros/libros.html");
+    expect(rutaDe("catalogo")).toBe("../../client/catalogo/catalogo.html");
+    expect(rutaDe("clientes")).toBe("../../admin/clientes/clientes.html");
+    expect(rutaDe("ventas")).toBe("../../admin/ventas/ventas.html");
+    expect(rutaDe("historial")).toBe("../../admin/historial/historial.html");
+  });
+
+  test("login con cuenta creada agrega la marca en la dirección", () => {
+    expect(rutaDe("login", { cuentaCreada: true })).toBe(
+      "../../auth/login/login.html?cuenta=creada",
+    );
+  });
+
+  test("sin la opción, o con ella en falso, la dirección no lleva marca", () => {
+    expect(rutaDe("login", {})).toBe("../../auth/login/login.html");
+    expect(rutaDe("login", { cuentaCreada: false })).toBe("../../auth/login/login.html");
+  });
+});

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  FORMATO_EMAIL,
   normalizarEmail,
   normalizarIsbn,
   normalizarTexto,
@@ -41,4 +42,20 @@ describe("normalizarEmail", () => {
       "nina.podesta@correo.test",
     );
   });
+});
+
+describe("FORMATO_EMAIL", () => {
+  test.each(["ana@correo.test", "a@b.c", "nombre.apellido@dominio.com.ar"])(
+    "acepta %s",
+    (email) => {
+      expect(FORMATO_EMAIL.test(email)).toBe(true);
+    },
+  );
+
+  test.each(["", "ana", "ana@", "@correo.test", "ana@correo", "ana @correo.test", "a@@b.c"])(
+    "rechaza %j",
+    (email) => {
+      expect(FORMATO_EMAIL.test(email)).toBe(false);
+    },
+  );
 });
