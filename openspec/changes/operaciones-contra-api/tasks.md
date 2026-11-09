@@ -15,8 +15,8 @@ Gobernanza ALTO: ninguna tarea de los grupos 1 a 10 empieza antes de cerrar el g
 
 ## 0. Aprobación del plan
 
-- [ ] 0.1 Presentar al usuario las decisiones D5, D6, D7, D9 y D11 (y la pregunta D12) de `design.md`, obtener su aprobación explícita o la alternativa elegida, y registrarla en la sección «Open Questions» de `design.md`; verificar que, si se eligió otra alternativa, la spec y las tareas afectadas quedaron ajustadas y `openspec validate operaciones-contra-api --strict` pasa
-- [ ] 0.2 Registrar la línea base de la rama: `npm test`, `npm run build` y la cantidad de pruebas; verificar que todo pasa antes de tocar código
+- [x] 0.1 Presentar al usuario las decisiones D5, D6, D7, D9 y D11 (y la pregunta D12) de `design.md`, obtener su aprobación explícita o la alternativa elegida, y registrarla en la sección «Open Questions» de `design.md`; verificar que, si se eligió otra alternativa, la spec y las tareas afectadas quedaron ajustadas y `openspec validate operaciones-contra-api --strict` pasa
+- [x] 0.2 Registrar la línea base de la rama: `npm test`, `npm run build` y la cantidad de pruebas; verificar que todo pasa antes de tocar código (línea base observada el 2026-11-09: 22 archivos, 509/509 pruebas, `tsc` y `npm run build` en verde)
 
 ## 1. Guarda de escrituras y backend local [alto riesgo: entorno de desarrollo]
 

@@ -158,4 +158,6 @@ La consigna pide al menos 6 libros, 2 editoriales, 2 géneros, 3 autores y 3 cli
 
 ## Open Questions
 
-Las decisiones marcadas «requiere aprobación» (D5, D6, D7, D9, D11) y D12 se presentan al usuario en la propuesta; la gobernanza ALTO impide escribir código antes de su aprobación. Si se elige una alternativa en D7, cambian la spec `clientes` y las tareas del grupo de Clientes.
+Aprobación del usuario (2026-11-09): aprobó **D5, D6, D7, D9 y D11** exactamente como se recomiendan en este diseño (sondeo acotado de clientes y autores; perfil de una sola vez con «Completar perfil»; retiro del diálogo de edición de clientes, sin `PATCH`; guarda de escrituras en el reenvío de desarrollo con backend local en Docker; retiro de los datos de negocio de `localStorage` sin borrar ni migrar las claves). No se eligió ninguna alternativa, así que la spec y las tareas no cambian.
+
+Sigue abierta, como pregunta del equipo y no del change: **D12** (los mínimos de la consigna frente a producción: 5 libros en lugar de 6). Este change no escribe en producción para completarlos; se registra en `knowledge-base/10_preguntas_abiertas.md`.
