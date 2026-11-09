@@ -5,7 +5,7 @@
 | Actor | Descripción | Cómo interactúa |
 |---|---|---|
 | Operador de la librería | Única persona que usa la aplicación | Navega las cinco vistas, completa formularios, arma ventas y consulta el historial desde el navegador |
-| Docente evaluador | Revisa la entrega | Abre `index.html`, reproduce los casos manuales y los contrasta con el README. En la comprobación del precio histórico modifica `localStorage` con las herramientas del navegador |
+| Docente evaluador | Revisa la entrega | Abre `index.html`, reproduce los casos manuales y los contrasta con el README. En la comprobación del precio histórico cambia el precio de un libro en el backend local de Docker |
 | Equipo de desarrollo | Avalos Pablo, Blangetti Sofia, Suarez Ismael | Construye el proyecto y registra en el README el resultado observado de cada caso |
 
 El docente evaluador y el equipo no son roles dentro de la aplicación: la

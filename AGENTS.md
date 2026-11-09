@@ -21,7 +21,7 @@ Integrantes: Avalos Pablo, Blangetti Sofia, Suarez Ismael.
 | Comportamiento | TypeScript estricto, módulos ES (`<script type="module">`) | Sin librerías de ejecución; Vite 7 compila y sirve |
 | Datos | Repositorios asíncronos (`src/datos/repositorios.ts`) con forma de la API de producción | Todos los datos de negocio (libros, editoriales, géneros, autores, clientes y ventas) salen de la API `https://api.ismaelsuarez.me` por la base `/api` del mismo origen (`VITE_API_BASE`), con el cliente HTTP de `src/datos/api/` (solo `GET` y `POST`, sin reintentos). `npm run dev` y `npm run preview` reenvían `/api` pero **rechazan con `403` toda escritura hacia producción**; las escrituras se prueban con un backend local en Docker (`API_PROXY_TARGET`, ver README). Usuarios y sesión (`users`, `userData`) siguen en `localStorage` |
 | Verificación de desarrollo | Vitest (`npm test`) y `tsc` | Las pruebas viven en `tests/`, fuera de la entrega |
-| Verificación de entrega | Casos manuales en el navegador | Dieciséis casos (CM-1 a CM-16) registrados en el README |
+| Verificación de entrega | Casos manuales en el navegador | Veinticuatro casos (CM-1 a CM-24) registrados en el README |
 
 Requiere Node 20.19+ o 22.12+ (exigencia de Vite 7) y npm. La aplicación ya no se
 abre desde `file://`: se ejecuta con `npm run dev` o con la compilación servida.

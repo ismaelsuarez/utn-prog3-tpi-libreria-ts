@@ -59,6 +59,7 @@
 **Alternativas consideradas**: guardar solo identificadores y resolver contra el catálogo.
 **Justificación**: resolver contra el catálogo rompe el caso manual CM-6.
 **Trade-offs aceptados**: datos duplicados dentro de cada venta.
+**Vigencia (desde `operaciones-contra-api`)**: la instantánea la guarda el servidor, y solo en parte: ver DD-31.
 
 ### DD-09 — Escritura en `localStorage` adelantada al ejercicio 4
 **Decisión**: el change del ejercicio 3 crea el Almacén de datos con una interfaz estable; el change del ejercicio 4 ya escribe libros y clientes en `localStorage`, y el del ejercicio 5 escribe las ventas. El change del ejercicio 6 se ocupa de la carga inicial sin duplicados, la documentación y los casos manuales.
@@ -232,6 +233,14 @@
 **Alternativas consideradas**: columna «Stock» en Libros (sugiere un inventario que nadie actualiza); impedir vender más que el stock (bloquearía ventas de forma arbitraria).
 **Trade-offs aceptados**: se puede vender más que el stock cargado; regla dura 9 y RN-VE-16.
 **Origen**: change `operaciones-contra-api`, decisión D8.
+
+### DD-31 — Qué es histórico en una venta de la API y cómo se leen las listas
+**Decisión**: el precio unitario, los subtotales y el total de una venta son los que el servidor copió al confirmar y no cambian si después cambia el precio del libro; el título del libro y el cliente son los actuales, porque la API los resuelve por relación al consultar, y no hay ISBN. La vista Ventas lee clientes y libros una sola vez al abrir y compone el borrador sin más solicitudes; Libros y Clientes releen solo su listado después de una escritura o de un resultado incierto. Cada formulario envía una sola vez mientras espera la respuesta.
+**Contexto**: la regla dura 8 exige no leer el precio del catálogo para una venta confirmada; la API cumple eso con el precio copiado, pero no copia el título ni los datos del cliente (`ventas/service.py`).
+**Alternativas consideradas**: reconstruir título y cliente de una instantánea local (vuelve a guardar datos de negocio en el navegador, descartado en DD-29); volver a pedir libros y clientes en cada cambio del borrador (1 + n solicitudes por acción).
+**Justificación**: es lo que la API garantiza; el README y las specs `ventas` e `historial` lo declaran.
+**Trade-offs aceptados**: un cliente o libro dado de alta en otra pestaña aparece al reabrir Ventas; un título renombrado se ve con su nombre nuevo en ventas antiguas.
+**Origen**: change `operaciones-contra-api`, decisiones D10 y D13.
 
 ## Supuestos inferidos
 

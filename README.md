@@ -387,35 +387,44 @@ El navegador guarda únicamente dos claves, ambas de acceso y sesión (ver
 
 ## Casos manuales: resultado observado
 
-> [!NOTE]
-> Los resultados de CM-1 a CM-8 siguientes se observaron antes de
-> `operaciones-contra-api`, cuando Libros, Clientes, Ventas e Historial
-> guardaban en `localStorage`. Esas vistas ya usan la API: los casos se vuelven a
-> ejecutar contra el backend local y se registran de nuevo (la fila de cada caso
-> se reemplaza solo con lo realmente observado).
-
-**Ejecución del 2026-11-09** (migración a Vite y TypeScript, change
-`migracion-vite-typescript`): recorrido automatizado en Google Chrome 157
-(modo headless, mediante el protocolo de herramientas de desarrollo) contra
-`npm run dev` (`http://localhost:5173`) y contra la copia del commit anterior a
-la migración abierta con `file://`, ambas con un perfil nuevo y el mismo guion.
-En los ocho casos los resultados de la versión nueva coinciden con los de la
-versión anterior; las únicas diferencias son la hora de las ventas, el orden de
-las claves del JSON guardado y que la versión anterior registraba en la consola
-un error 404 por imágenes de maqueta inexistentes, que ya no existe. No
-reemplaza una pasada visual en el navegador habitual de cada integrante ni una
-auditoría con lector de pantalla.
+**Ejecución del 2026-11-09** (change `operaciones-contra-api`): recorrido
+automatizado en Google Chrome 157 (modo headless, mediante el protocolo de
+herramientas de desarrollo), con un perfil nuevo por pasada, **contra el backend
+local de Docker** (sección «Backend local para verificar escrituras»: clon del
+backend en `469b8db`, PostgreSQL 17, imagen construida desde `despliegue/` y
+sembrada con `seed.py` dentro del contenedor local) y `API_PROXY_TARGET=http://127.0.0.1:8000`
+con el servidor de desarrollo de Vite (`npx vite`, equivalente a `npm run dev`).
+Antes de la primera escritura, `GET /api/health/ready` por el reenvío respondió
+`{"estado":"ok","base":"disponible"}` y el registro del contenedor local mostró
+esa solicitud. Ninguna escritura se envió a producción: la única corrida con el
+destino por defecto fue CM-17, con el servidor de desarrollo detrás de un
+bloqueo adicional que impide cualquier solicitud que no sea de lectura hacia un
+destino remoto. Las condiciones de red (fallo, retención hasta el tiempo
+agotado y latencia) se provocaron con la interceptación de solicitudes del
+protocolo de herramientas de desarrollo, equivalente a bloquearlas desde la
+pestaña de red. Los anchos de 320 px y 1280 px se comprobaron con el
+desplazamiento horizontal de la página sin barras de desplazamiento clásicas
+(como en un móvil). No reemplaza una pasada visual en el navegador habitual de
+cada integrante ni una auditoría con lector de pantalla (**no ejecutadas**).
 
 | Caso | Resultado esperado | Resultado observado | Estado |
 |---|---|---|---|
-| **CM-1** Búsqueda en mayúsculas, vacía e inexistente | Coincidencias sin distinguir mayúsculas; catálogo completo; mensaje sin resultados | Reejecutado el 2026-11-09 con los libros de producción (`cliente-http-y-catalogo`; 5 libros ese día): `RAYUELA` → 1 tarjeta; `   rayuela   ` → 1; vacía → 5; `ISIDRO` → 1; `zzzz` → 0 con «No se encontraron libros cuyo título coincida con la búsqueda.»; «Sin clasificar» solo en «La invención de Morel»; la ficha de «Rayuela» abre con su cubierta textual y la sinopsis «Este libro todavía no tiene una sinopsis cargada.». No ejecutado con datos de producción: un título con `<i>&</i>` (ningún libro lo trae; el código usa `textContent`, verificado en la ejecución anterior con los datos locales) | ✅ Aprobado |
-| **CM-2** Alta de libro con ISBN existente y luego nuevo | El duplicado se rechaza; el válido aparece en la tabla de Libros y en la venta; su aparición en el Catálogo queda **pendiente hasta `operaciones-contra-api`** | Parte de gestión reejecutada el 2026-11-09: `978 987 000 001 1` rechazado con «Ese ISBN ya está registrado.»; el libro nuevo aparece en la tabla (7 filas) y en el selector de Ventas (7 libros); repetirlo sin recargar se rechaza. Parte del Catálogo: el libro **no aparece** (el Catálogo lee la API de producción: 5 tarjetas) | ✅ Aprobado (gestión) · ⏳ Pendiente (Catálogo) |
-| **CM-3** Alta de cliente con email inválido, existente en mayúsculas y nuevo | Se rechazan los dos primeros; el nuevo aparece en listado y selección | `ana@` rechazado con «El email no tiene un formato válido.»; `  LAURA.MENDOZA@CORREO.TEST ` rechazado con «Ese email ya está registrado.»; el cliente nuevo se registra sin recargar (4 filas) y aparece en el selector de Ventas; editar conservando el email propio se acepta y usar el de otro cliente se rechaza | ✅ Aprobado |
-| **CM-4** Venta sin cliente, cantidad 0, negativa o decimal; libro repetido | No se confirma; el duplicado no crea otro renglón | Sin cliente: «Seleccione un cliente existente.»; `0`, `-2`, `1.5` y vacía rechazadas con «La cantidad debe ser un entero positivo seguro.»; un renglón editado a `0` bloquea la confirmación; el libro repetido suma en la misma fila (1 + 1 → 2); el borrador se conserva ante cada error | ✅ Aprobado |
-| **CM-5** Dos unidades a 1500 y una a 2000 | Subtotales 3000 y 2000; total 5000; detalle en el historial | $ 3000,00 y $ 2000,00; total $ 5000,00; comprobante `ven-01` y venta guardada con el mismo detalle en Historial | ✅ Aprobado |
-| **CM-6** Cambio exclusivo del precio en el catálogo guardado | El historial conserva los importes confirmados; que el Catálogo muestre el precio nuevo queda **pendiente hasta `operaciones-contra-api`** | Parte de gestión reejecutada el 2026-11-09: precio del primer libro guardado cambiado a 9999 y página recargada: el detalle de la venta conserva $ 1500,00 / $ 4500,00, $ 2000,00 / $ 2000,00 y total $ 6500,00; Libros muestra $ 9999,00; con `libreria.ventas` ilegible el Historial informa «No se pudo consultar el historial. Los datos guardados no se modificaron…» y la clave queda intacta. Parte del Catálogo: no refleja el cambio porque lee los precios de la API (no el almacén local) | ✅ Aprobado (gestión) · ⏳ Pendiente (Catálogo) |
-| **CM-7** Recarga después de altas y venta | Se recuperan los datos sin duplicar | Tras dos recargas de las cinco vistas: 7 libros, 4 clientes y 1 venta, sin duplicar ejemplos ni ventas | ✅ Aprobado |
-| **CM-8** Teclado y anchos de 320 px y 1280 px | Foco visible, controles utilizables y tablas con desplazamiento propio | Sin desplazamiento horizontal de la página en las cinco vistas ni con los diálogos abiertos (ficha, edición de cliente, comprobante y detalle de venta); foco visible en todas las paradas de Tab y foco contenido dentro de los diálogos | ✅ Aprobado |
+| **CM-1** Búsqueda en mayúsculas, vacía e inexistente | Coincidencias sin distinguir mayúsculas; catálogo completo; mensaje sin resultados | Con los 5 libros sembrados: `RAYUELA` → 1 tarjeta; `   rayuela   ` → 1; vacía → 5; `ISIDRO` → 1; `zzzz` → 0 con «No se encontraron libros cuyo título coincida con la búsqueda.»; «Sin clasificar» solo en «La invención de Morel»; la ficha de «Rayuela» abre con la sinopsis «Este libro todavía no tiene una sinopsis cargada.». No ejecutado: un título con `<i>&</i>` (ningún libro de la base lo trae; el código usa `textContent`) | ✅ Aprobado |
+| **CM-2** Alta de libro con ISBN existente y luego nuevo | El duplicado se rechaza; el válido aparece en Libros, en la venta y en el Catálogo | `978 950 00 0001 1` (con separadores distintos) rechazado con «Ese ISBN ya está registrado.» y sin solicitud; «El Aleph» (ISBN `978-950-00-0006-6`) se registra y la tabla pasa de 5 a 6 filas; el Catálogo lo muestra (8 tarjetas al final de la pasada) y el selector de Ventas lo ofrece; repetirlo sin recargar se rechaza como ISBN existente | ✅ Aprobado |
+| **CM-3** Alta de cliente con email inválido, existente en mayúsculas y nuevo | Se rechazan los dos primeros; el nuevo aparece en listado y selección | `ana@` rechazado con «El email no tiene un formato válido.»; `  ANA@EXAMPLE.COM ` rechazado con «Ese email ya está registrado.»; ninguno envió solicitud; «María Nueva» se registra con su perfil (4 filas) y, tras la pasada, el selector de Ventas ofrece todos los clientes de la base (7 de 7) | ✅ Aprobado |
+| **CM-4** Venta sin cliente, cantidad 0, negativa o decimal; libro repetido | No se confirma; el duplicado no crea otro renglón | Sin cliente ni renglones: «Seleccione un cliente existente.» y «Agregue al menos un libro a la venta.»; `0`, `-2`, `1.5` y vacía rechazadas con «La cantidad debe ser un entero positivo seguro.»; un renglón editado a `0` bloquea la confirmación («Corrija la cantidad marcada o quite ese renglón antes de continuar.»); el libro repetido suma en la misma fila (1 + 1 → 2); sin cliente se conserva el borrador. Ninguno envió `POST` | ✅ Aprobado |
+| **CM-5** Dos unidades a 1500 y una a 2000 | Subtotales 3000 y 2000; total 5000; detalle en el historial | Con dos libros de 1500 y 2000 creados en el backend local: borrador $ 5000,00; `POST /ventas/` con `{"cliente_id":1,"renglones":[{"libro_id":10,"cantidad":2},{"libro_id":11,"cantidad":1}]}` → 201; comprobante `ven-03` con $ 3.000,00, $ 2.000,00 y total $ 5.000,00 (los importes son los del servidor); el Historial muestra la venta con el mismo detalle | ✅ Aprobado |
+| **CM-6** Cambio exclusivo del precio del libro | El historial conserva los importes confirmados; el Catálogo muestra el precio nuevo | `PATCH /libros/10` a 9999 en el backend local y recarga del Historial: el detalle de `ven-03` conserva $ 1.500,00 × 2 = $ 3000,00, $ 2000,00 y total $ 5000,00; Libros y el Catálogo muestran $ 9999,00. El título del otro libro, renombrado también en la base, aparece con su nombre actual (así lo informa la API, ver «Historial») | ✅ Aprobado |
+| **CM-7** Recarga después de altas y venta | Se recuperan los datos sin duplicar | Tras tres cargas de cada vista, con la base en 10 libros, 7 clientes y 7 ventas: Libros 10, Clientes 7, Historial 7, Catálogo 10 y Ventas con 7 clientes y 10 libros, en las tres cargas | ✅ Aprobado |
+| **CM-8** Teclado y anchos de 320 px y 1280 px | Foco visible, controles utilizables y tablas con desplazamiento propio | Sin desplazamiento horizontal de la página en las cinco vistas a 1280 px y a 320 px ni con los cuatro diálogos abiertos (ficha del Catálogo, «Completar perfil», detalle de venta y comprobante); con Tab se recorrieron 17 (Catálogo), 18 (Libros), 14 (Clientes), 12 (Ventas) y 15 (Historial) paradas, todas con indicador de foco visible; al abrirse cada diálogo el foco queda dentro (en el detalle de venta, en su título). No ejecutado: recorrido completo con Tab dentro de cada diálogo ni lector de pantalla | ✅ Aprobado (alcance indicado) |
+| **CM-17** Escritura hacia producción desde desarrollo | La guarda responde `403` y nada llega a producción | Con el destino por defecto, «Registrar cliente» muestra «No se registró el cliente. El servidor de desarrollo no reenvía escrituras a la API de producción. Usá un backend local con API_PROXY_TARGET.»; la pestaña de red muestra un solo `POST /api/clientes/` → 403 y un `POST /api/clientes/` directo por el reenvío también da 403 con ese `detail`; el bloqueo adicional registró 0 escrituras hacia producción | ✅ Aprobado |
+| **CM-18** Alta de libro con stock y autores con rol | El libro se registra con stock, roles y orden; el precio se redondea al centavo | Título «El Aleph», precio `1500,125`, stock 3, dos autores (el primero «autor», el segundo «traductor») y doble clic en «Registrar libro»: un solo `POST /libros/` con `"precio":"1500.13","stock":3` y `"autores":[{"autor_id":2,"rol":"autor","orden":1},{"autor_id":3,"rol":"traductor","orden":2}]` → 201; la base muestra precio 1500.13, stock 3 y esos roles y orden; la tabla sube a 6 filas | ✅ Aprobado |
+| **CM-19** Libros: validaciones y rechazos | Los límites se rechazan junto al campo sin enviar; los rechazos y la falta de respuesta se informan | Stock vacío, `-1`, `2,5` y `abc`: error junto al stock y 0 solicitudes (el navegador entrega vacío para `abc` y se informa «El stock es obligatorio.»); título de 201 caracteres, ISBN de 21 y precio `100000000` rechazados junto a su campo; stock `0` registrado; un ISBN creado en el backend local después de abrir la página produce el `409` mostrado como «No se registró el libro. No se pudo crear el libro: editorial, genero, autor o isbn invalidos.» con el formulario conservado; con el `POST` cortado, no se anuncia éxito y se informa que no se pudo confirmar si se guardó y que se volvió a leer el listado | ✅ Aprobado |
+| **CM-20** Clientes: alta con perfil y rechazos | El alta envía cliente y perfil; los límites se rechazan; un email repetido se muestra junto al email | Nombre vacío, de 101 caracteres, teléfono de 3 y de 31 dígitos, dirección de 256 y email de 256 caracteres: error junto al campo y 0 solicitudes; «María Nueva» con teléfono `+54 9 261 123 4567` y dirección «Calle 1 100» y doble clic: `POST /clientes/` → 201 y `POST /clientes/4/perfil` → 201 (una sola vez cada uno), y la base guarda el perfil; un email creado en el backend local después de abrir la página produce el `409` mostrado junto al email, sin enviar el perfil y con lo escrito conservado; el cliente sembrado con perfil no ofrece ningún control de edición | ✅ Aprobado |
+| **CM-21** Clientes: perfil fallido y «Completar perfil» | El cliente queda registrado sin perfil y se puede completar una sola vez | Con `POST /clientes/{id}/perfil` cortado: el cliente se registra (201), se informa «El cliente se registró, pero no se pudo guardar su teléfono y dirección: No se pudo confirmar si el servidor registró la operación… Podés completarlos con «Completar perfil».» y la fila muestra «—»; sin el corte, «Completar perfil» valida el teléfono (`12` rechazado), guarda con 201 y la fila muestra teléfono y dirección sin botón; si el perfil se crea por fuera antes, el `409` se muestra («El cliente ya tiene un perfil.») y se vuelve a leer el listado | ✅ Aprobado |
+| **CM-22** Venta: importes del servidor y sin control de stock | El servidor calcula los importes; no se controla ni descuenta el stock | Componer (agregar, cambiar, quitar) no hizo ninguna solicitud; 12 unidades de un libro con stock 10 se aceptan, la venta se confirma y el stock sigue en 10; con el precio de un libro cambiado a 2500 en la base después de armar un borrador de $ 4000,00, el comprobante muestra $ 2.500,00 × 2 = $ 5.000,00 (los del servidor) | ✅ Aprobado |
+| **CM-23** Venta: falta de respuesta y envío único | No se anuncia éxito, el borrador se conserva y no se reenvía solo; un doble envío es una venta | Con el `POST /ventas/` cortado: «No se pudo confirmar si la venta se registró. Revisá el Historial antes de reintentar…», borrador intacto y una sola solicitud (la base no registró la venta); con el `POST` retenido el mensaje apareció a los 10,1 s, con una sola solicitud y Enter durante la espera sin efecto; el reintento manual posterior se registró; con 2,5 s de latencia, un clic y dos Enter enviaron un solo `POST /ventas/`, el botón estuvo deshabilitado durante la espera y se registró una venta | ✅ Aprobado |
+| **CM-24** Lectura inicial fallida | Se informa el error y no se puede registrar ni confirmar | Con las solicitudes a `/api/clientes/*` cortadas, Ventas y Clientes muestran «No se pudieron cargar los datos. No se pudo conectar con el servidor.» y sus botones quedan deshabilitados; con `/api/editoriales/*` cortadas, Libros hace lo mismo; con `/api/ventas/*` cortadas, el Historial informa el error y no una lista vacía | ✅ Aprobado |
 
 ### Casos manuales del acceso y la sesión (`registro-login-y-sesion`)
 
@@ -441,7 +450,9 @@ Ventas; en el login, Tab recorre el enlace de la otra página de acceso, Email,
 Contraseña, «Ingresar» y el enlace al registro, todos con contorno visible de 3 px,
 y Enter en la contraseña envía el formulario; en el registro no se recorrió Tab. No se repitió la pasada con lector de pantalla.
 
-**Regresión de CM-1 a CM-8 con sesión de administrador** (sesión iniciada por el
+**Regresión de CM-1 a CM-8 con sesión de administrador** (resultados de aquel change,
+cuando Libros, Clientes y Ventas aún usaban `localStorage`; los vigentes están en la
+tabla de arriba) (sesión iniciada por el
 login, perfil nuevo): CM-1 a CM-5 y CM-7 se repitieron y dieron el mismo resultado
 que el registro anterior (búsquedas 1, 1, 6 y 0 tarjetas; ISBN existente
 rechazado y libro nuevo en tabla, Catálogo y Ventas con 7; email `ana@` y
@@ -666,7 +677,7 @@ npx tsc          # comprobación de tipos de src/ y tests/
 ```
 
 Las pruebas no necesitan navegador y no sustituyen los recorridos manuales
-(CM-1 a CM-16).
+(CM-1 a CM-24).
 
 ### Memoria compartida (Engram)
 

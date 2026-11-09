@@ -49,7 +49,7 @@ datos, servidor ni inicio de sesión real.
 - Alta de libros y de clientes con validación.
 - Venta simulada con renglones, subtotales y total.
 - Historial de ventas con detalle e importes históricos.
-- Persistencia de libros, clientes y ventas en `localStorage`.
+- Persistencia de libros, clientes y ventas en la API de producción (desde `operaciones-contra-api`; antes, en `localStorage`).
 - README con instrucciones, límites y resultados de los casos manuales.
 
 ### Etapas de trabajo

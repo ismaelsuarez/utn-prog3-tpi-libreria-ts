@@ -7,7 +7,7 @@
 | Estructura | HTML5 semántico | Varias páginas, una por vista; `index.html` es la entrada |
 | Presentación | CSS propio en archivos externos | Flexbox o Grid; sin frameworks ni CDNs; tipografías e imágenes locales |
 | Comportamiento | JavaScript nativo (scripts clásicos) | Sin librerías; sin `type="module"` (ver DD-03 en `09`) |
-| Persistencia | `localStorage` del navegador | Libros, clientes y ventas |
+| Persistencia | API de producción por `/api`; `localStorage` solo para usuarios y sesión | Libros, editoriales, géneros, autores, clientes y ventas viven en la API |
 | Verificación de desarrollo | `node --test` (runner integrado de Node) | Solo durante el desarrollo; se excluye de la entrega |
 | Verificación de entrega | Casos manuales en el navegador | Ocho casos registrados en el README |
 
@@ -32,17 +32,17 @@ y de lógica, y su propio script de página.
 │                 Lógica pura (validaciones, filtro, cálculos)          │
 │                           │                                           │
 │                           ▼                                           │
-│                 Almacén de datos ──► localStorage                     │
+│                 Repositorios ──► API (/api)                           │
 │                           ▲                                           │
-│                 Datos iniciales (semilla)                             │
+│                 (sin datos iniciales en el código)                    │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
 Decisiones de alto nivel:
 
 - **Sin memoria compartida entre páginas.** Cada navegación recarga el
-  documento. El único estado que sobrevive entre vistas es el guardado en
-  `localStorage`.
+  documento. El único estado que sobrevive entre vistas es el que guarda la API
+  (y, para usuarios y sesión, `localStorage`).
 - **Lógica pura separada del DOM.** Las validaciones, el filtro y los cálculos
   de venta son funciones sin efectos sobre el documento, de modo que se pueden
   probar con `node --test` y reutilizar entre páginas.
@@ -52,11 +52,12 @@ Decisiones de alto nivel:
 
 ## Integraciones externas
 
-Ninguna. No hay API, servicios de terceros, CDNs ni recursos remotos.
+Solo la API de producción `https://api.ismaelsuarez.me`, por la base `/api` del mismo origen. No hay servicios de terceros, CDNs ni recursos remotos.
 
 | Servicio | Propósito | Tipo |
 |---|---|---|
-| `localStorage` | Conservar libros, clientes y ventas entre aperturas | API del navegador |
+| API de producción | Libros, editoriales, géneros, autores, clientes y ventas | HTTP, solo `GET` y `POST` |
+| `localStorage` | Usuarios y sesión | API del navegador |
 
 ## API REST
 
@@ -75,9 +76,10 @@ No aplica. El proyecto no expone ni consume endpoints.
 ## Límites declarados
 
 - Los datos son ficticios.
-- Las validaciones y el almacenamiento del navegador sirven para la práctica;
-  no representan seguridad ni integridad garantizada por un servidor.
-- El almacenamiento depende del navegador, del perfil y de la ubicación de
-  apertura, y no comparte información entre usuarios.
+- Las validaciones del cliente y el registro de usuarios y sesión en el navegador
+  sirven para la práctica; no representan seguridad (la API de producción no
+  exige autenticación).
+- Usuarios y sesión dependen del navegador y del perfil y no se comparten entre
+  usuarios; los datos de negocio no se guardan en el navegador.
 - La venta calcula un total simulado: no gestiona stock, cobros ni
   facturación fiscal.

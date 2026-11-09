@@ -102,16 +102,17 @@ Página ← datos
    recalculan subtotales y total.
 7. El operador confirma.
 8. La Lógica comprueba que haya cliente, al menos un renglón y cantidades válidas.
-9. La Lógica construye la venta: identificador, fecha, copia de los datos del
-   cliente, renglones con copia de título, ISBN y precio unitario, y total.
-10. El Almacén agrega la venta.
-11. La Página limpia el formulario y muestra un mensaje de resultado.
+9. La Página envía a la API solo el cliente y, por renglón, el libro y la
+   cantidad (`POST /ventas/`). El servidor copia el precio vigente, calcula
+   subtotales y total y asigna identificador y fecha.
+10. La Página limpia el formulario y muestra el comprobante con la venta que
+    devolvió la API. Ante un rechazo conserva el borrador; si no hay respuesta,
+    informa que no sabe si la venta se registró y pide revisar el Historial.
 
 ```
-Operador → Página → Lógica (validar, calcular)
-                  → Lógica (construir venta con copias)
-                  → Almacén → localStorage
-         ← mensaje de resultado, formulario limpio
+Operador → Página → Lógica (validar, calcular importe estimado)
+                  → Repositorio → API (POST /ventas/)
+         ← comprobante con los importes del servidor, formulario limpio
 ```
 
 **Casos de error**:
@@ -127,11 +128,13 @@ Operador → Página → Lógica (validar, calcular)
 **Actor**: operador.
 
 **Pasos**:
-1. El Almacén recupera las ventas.
+1. El repositorio lee todas las páginas de ventas de la API.
 2. La Página lista identificador, fecha, cliente y total de cada venta.
 3. El operador pide el detalle de una venta.
 4. La Página muestra los renglones con libro, cantidad, precio unitario y
-   subtotal, leídos de la propia venta.
+   subtotal, leídos de la propia venta. El precio unitario, los subtotales y el
+   total son los registrados al confirmar; el título del libro y el cliente son
+   los actuales; la API no entrega el ISBN.
 
 **Casos de error**:
 - Sin ventas → mensaje de lista vacía.
@@ -139,20 +142,20 @@ Operador → Página → Lógica (validar, calcular)
 ## Flujo 7: Comprobación del precio histórico (CM-6)
 
 **Disparador**: comprobación guiada por el docente.
-**Actor**: docente evaluador, sobre una copia del proyecto con datos de prueba.
+**Actor**: docente evaluador, sobre el backend local de Docker (nunca contra
+producción, que no se puede restaurar).
 
 **Pasos**:
 1. Se confirma una venta y se anotan sus importes.
-2. Con las herramientas de almacenamiento del navegador se modifica
-   únicamente el precio del libro dentro del catálogo guardado en
-   `localStorage`, sin modificar ni borrar las ventas guardadas.
-3. Se recarga la página.
+2. Se cambia únicamente el precio del libro con `PATCH /libros/{id}` en el
+   backend local, sin tocar las ventas.
+3. Se recarga el Historial.
 4. Se consulta el detalle de la venta anterior.
 5. El precio unitario, los subtotales y el total conservan los valores
    confirmados.
 
-**Requisito derivado**: el README identifica la ubicación y la estructura del
-catálogo guardado para poder reproducir el paso 2.
+**Requisito derivado**: el README documenta cómo levantar el backend local para
+poder reproducir el paso 2.
 
 ## Flujo 8: Navegación entre vistas
 
@@ -162,7 +165,7 @@ catálogo guardado para poder reproducir el paso 2.
 **Pasos**:
 1. El navegador carga la página de destino.
 2. Se ejecuta el Flujo 1 en la nueva página.
-3. La página muestra los datos vigentes en `localStorage`.
+3. La página lee los datos vigentes de la API.
 
 **Consecuencia**: un registro creado en una página es visible en otra solo si
-fue guardado en `localStorage` (ver DD-01 y PA-01).
+se guardó en la API (ver DD-01 y DD-26).
