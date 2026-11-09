@@ -150,6 +150,29 @@ proyecto/
   (`despliegue-frontend`) no usa Vite y sí escribe en producción cuando la opera
   el bibliotecario.
 
+## Producción (contenedor nginx)
+
+`despliegue-frontend` publica la compilación en un contenedor (`Dockerfile`,
+`despliegue/nginx/`), no con `npm run preview`.
+
+- **Imagen**: etapa Node 22 Alpine (`npm ci`, `npm run build`) y etapa
+  `nginxinc/nginx-unprivileged` Alpine, ambas con etiqueta exacta; usuario `nginx`
+  (uid 101), puerto 8080, sin TLS ni secretos; solo `dist/` en
+  `/usr/share/nginx/html`. `HEALTHCHECK` sobre `/healthz`.
+- **Servicio estático**: páginas múltiples sin respaldo de SPA
+  (`try_files $uri =404`); `/` y `/index.html` redirigen con `302` a
+  `/src/pages/auth/login/login.html` porque el script en línea de `index.html` no
+  se ejecuta bajo `script-src 'self'`; `absolute_redirect off` mantiene las
+  redirecciones como rutas relativas detrás del proxy HTTPS.
+- **Caché y compresión**: `assets/` (nombres con huella) un año e `immutable`; el
+  HTML `no-cache`; gzip para texto.
+- **Cabeceras** (`despliegue/nginx/cabeceras-seguridad.conf`, con `always` e
+  incluidas en cada `location`): política de contenido
+  `default-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`,
+  `X-Content-Type-Options: nosniff` y `Referrer-Policy: no-referrer`; sin versión
+  de nginx y sin HSTS.
+- **Comprobación**: `despliegue/comprobar.sh <base>` (solo `GET` y `HEAD`).
+
 ## Estrategia de verificación
 
 | Nivel | Qué cubre | Herramienta |

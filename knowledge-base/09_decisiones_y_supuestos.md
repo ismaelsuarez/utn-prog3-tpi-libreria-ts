@@ -242,6 +242,14 @@
 **Trade-offs aceptados**: un cliente o libro dado de alta en otra pestaña aparece al reabrir Ventas; un título renombrado se ve con su nombre nuevo en ventas antiguas.
 **Origen**: change `operaciones-contra-api`, decisiones D10 y D13.
 
+### DD-32 — Contenedor nginx para producción
+**Decisión**: la aplicación se publica en una imagen de dos etapas (Node 22 compila, `nginx-unprivileged` sirve en el puerto 8080 como usuario no `root`) con etiquetas exactas, sin variables de entorno ni secretos incorporados, y con una comprobación de salud propia (`/healthz`). La entrada la redirige el servidor (`302` de `/` y `/index.html` al login), la política de contenido es estricta (`default-src 'self'`) y no hay respaldo de SPA: una ruta que no es un archivo es `404`.
+**Contexto**: la API de producción no envía cabeceras CORS, así que la aplicación solo funciona desde el mismo origen que reenvíe `/api`; `npm run preview` no está hecho para producción.
+**Alternativas consideradas**: `npm run preview` como servidor (su guarda bloquearía las escrituras legítimas); `nginx` oficial (proceso maestro como `root`, puerto 80); Caddy; el generador estático de Easypanel más un proxy aparte; versionar `dist/`; un hash en la política para el script en línea de `index.html` (se rompe con cualquier edición) o `'unsafe-inline'` (debilita todas las páginas).
+**Justificación**: reproducible desde el repositorio, mínimo privilegio y sin tocar `src/`.
+**Trade-offs aceptados**: las etiquetas fijas no reciben parches solas; sin HSTS (el TLS lo gestiona la plataforma).
+**Origen**: change `despliegue-frontend`, decisiones D1 y D3.
+
 ## Supuestos inferidos
 
 ### SU-01 — Cada consigna equivale a un change autocontenido

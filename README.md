@@ -58,6 +58,7 @@ TypeScript estricto y compilado con Vite.
 - [Casos manuales: resultado observado](#casos-manuales-resultado-observado)
 - [Imágenes y recursos](#imágenes-y-recursos)
 - [Estructura de carpetas](#estructura-de-carpetas)
+- [Despliegue](#despliegue)
 - [Entrega](#entrega)
 - [Backend local para verificar escrituras](#backend-local-para-verificar-escrituras)
 - [Para quienes desarrollan](#para-quienes-desarrollan)
@@ -573,6 +574,34 @@ src/
 └── assets/                 estanteria.webp y portadas/
 tests/                      pruebas de Vitest (lógica, almacén, repositorios, fixtures de la API)
 ```
+
+## Despliegue
+
+La aplicación se publica como un contenedor: una imagen de varias etapas
+(`Dockerfile` en la raíz) compila con Node 22 (`npm ci` y `npm run build`) y sirve
+`dist/` con nginx sin privilegios (usuario `nginx`, puerto interno **8080**, sin
+TLS: lo termina el proxy de la plataforma). La imagen se construye sin variables
+de entorno ni secretos y no contiene el código fuente ni `node_modules/`.
+
+Construir y probar en local (requiere Docker):
+
+```bash
+docker build -t tpi-libreria-web .
+docker run -d --name tpi-libreria-web -p 127.0.0.1:8080:8080 tpi-libreria-web
+sh despliegue/comprobar.sh http://127.0.0.1:8080   # una línea por caso; código distinto de 0 si alguno falla
+docker rm -f tpi-libreria-web
+```
+
+`despliegue/comprobar.sh <base>` solo envía `GET` y `HEAD`, de modo que sirve igual
+contra el contenedor local y contra el sitio publicado. Comprueba la salud
+(`/healthz`, respondida por nginx sin consultar la API), la entrada (`/` y
+`/index.html` redirigen al login con una ruta relativa al origen), las cabeceras
+de seguridad (política de contenido estricta, `nosniff`, `Referrer-Policy`), la
+caché (`no-cache` para el HTML, un año e `immutable` para `assets/`), gzip y el
+404 de toda ruta que no sea un archivo (la aplicación es multipágina, sin
+respaldo de SPA).
+
+---
 
 ## Entrega
 

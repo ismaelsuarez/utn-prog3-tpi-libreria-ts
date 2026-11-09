@@ -1,0 +1,19 @@
+# Contexto de compilación mínimo: solo lo que necesita `npm ci` y `npm run build`.
+# tests/ SÍ entra: `npm run build` comprueba los tipos de src/ y de tests/.
+node_modules
+dist
+.git
+.engram
+.githooks
+.claude
+.atl
+.codegraph
+openspec
+knowledge-base
+discovery
+docs
+*.zip
+*.md
+# Ningún .env local entra al contexto: Vite compila con los valores por defecto.
+.env
+.env.*
