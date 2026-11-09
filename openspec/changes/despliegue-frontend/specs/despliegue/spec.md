@@ -115,8 +115,8 @@ El servidor SHALL reenviar toda solicitud cuya ruta empieza con `/api/` al desti
 
 #### Scenario: Lectura reenviada
 
-- **WHEN** se pide `GET /api/health/ready` al servidor con el destino por defecto
-- **THEN** la respuesta es la de `GET /health/ready` de `https://api.ismaelsuarez.me`
+- **WHEN** se pide `GET /api/health/ready` al servidor con el destino por defecto (`http://libreria_api:8000`, alcanzable en la red del contenedor)
+- **THEN** la respuesta es la de `GET /health/ready` de ese destino
 
 #### Scenario: Consulta con parámetros
 
@@ -148,13 +148,13 @@ Cuando el destino responde una redirección, el servidor SHALL reescribir su cab
 
 #### Scenario: Colección sin barra final
 
-- **WHEN** se pide `GET /api/libros` y el destino responde 307 con `Location: https://api.ismaelsuarez.me/libros/`
+- **WHEN** se pide `GET /api/libros` y el destino responde 307 con `Location: http://libreria_api:8000/libros/`
 - **THEN** la respuesta al navegador es 307 con `Location: /api/libros/`
 
-#### Scenario: Destino local
+#### Scenario: Destino público
 
-- **WHEN** el destino es `http://tpi-libreria-api:8000` y responde 307 con `Location: http://tpi-libreria-api:8000/clientes/`
-- **THEN** la respuesta al navegador lleva `Location: /api/clientes/`
+- **WHEN** el destino es `https://api.ismaelsuarez.me` y responde 307 con `Location: https://api.ismaelsuarez.me/libros/`
+- **THEN** la respuesta al navegador lleva `Location: /api/libros/`
 
 ### Requirement: Límites del reenvío
 
@@ -172,19 +172,38 @@ El servidor SHALL NOT reintentar una solicitud reenviada ante un error o un tiem
 
 ### Requirement: Destino de la API configurable
 
-El destino del reenvío SHALL tomarse de la variable de entorno `API_UPSTREAM` al iniciar el contenedor, con `https://api.ismaelsuarez.me` como valor por defecto, sin reconstruir la imagen. La dirección del destino SHALL NOT llegar al código del navegador.
+El destino del reenvío SHALL tomarse de la variable de entorno `API_UPSTREAM` al iniciar el contenedor, con `http://libreria_api:8000` (la API en la red interna de Easypanel) como valor por defecto, sin reconstruir la imagen. Una barra final en el valor SHALL tolerarse. Cuando el destino es HTTPS, el servidor SHALL presentar el nombre del destino por SNI y verificar su certificado. La dirección del destino SHALL NOT llegar al código del navegador.
 
 #### Scenario: Destino por defecto
 
-- **WHEN** el contenedor arranca sin `API_UPSTREAM`
-- **THEN** `/api/` se reenvía a `https://api.ismaelsuarez.me`
-
-#### Scenario: Destino configurado
-
-- **WHEN** el contenedor arranca con `API_UPSTREAM=http://tpi-libreria-api:8000` en una red donde ese nombre existe
+- **WHEN** el contenedor arranca sin `API_UPSTREAM` en una red donde el nombre `libreria_api` resuelve a un backend en el puerto 8000
 - **THEN** `GET /api/health/ready` responde lo que responde ese backend y el backend registra la solicitud
+
+#### Scenario: Destino público como alternativa
+
+- **WHEN** el contenedor arranca con `API_UPSTREAM=https://api.ismaelsuarez.me`
+- **THEN** `GET /api/health/ready` responde lo que responde la API pública, con el certificado verificado
+
+#### Scenario: Destino con barra final
+
+- **WHEN** el contenedor arranca con `API_UPSTREAM=http://libreria_api:8000/`
+- **THEN** `GET /api/health/ready` llega al destino como `GET /health/ready`
 
 #### Scenario: Compilación sin la dirección del destino
 
 - **WHEN** se buscan `api.ismaelsuarez.me` y el mensaje de la guarda de desarrollo en los archivos servidos por la imagen
 - **THEN** no se encuentra ninguno
+
+### Requirement: Arranque independiente del destino
+
+El servidor SHALL iniciar y servir la compilación aunque el nombre del destino de `/api` no se resuelva, y SHALL resolver ese nombre en cada solicitud reenviada (con caché breve), de modo que un destino que aparece o cambia de dirección después del arranque se alcance sin reiniciar. Mientras el nombre no se resuelve, las solicitudes a `/api/` SHALL responder 502 sin demora apreciable.
+
+#### Scenario: Destino que no resuelve al arrancar
+
+- **WHEN** el contenedor arranca en una red donde el nombre del destino no existe
+- **THEN** el contenedor queda `healthy`, `GET /healthz` y las páginas responden como siempre y `GET /api/health/ready` responde 502 en menos de 10 segundos
+
+#### Scenario: Destino que aparece después
+
+- **WHEN** el nombre del destino empieza a resolver con el contenedor ya en marcha
+- **THEN** el siguiente `GET /api/health/ready` (pasada la caché de resolución) responde lo que responde el destino, sin reiniciar el contenedor

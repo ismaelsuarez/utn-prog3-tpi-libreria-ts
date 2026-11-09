@@ -14,7 +14,7 @@ El proyecto SHALL ofrecer `npm run entrega`, que genera en la raíz un archivo `
 #### Scenario: Contenido incluido
 
 - **WHEN** se lista el contenido del `.zip`
-- **THEN** contiene `index.html`, `src/`, `package.json`, `package-lock.json`, `tsconfig.json`, `vite.config.ts`, `.env.example`, `README.md`, `Dockerfile`, `.dockerignore` y `despliegue/`
+- **THEN** contiene `index.html`, `src/`, `tests/`, `package.json`, `package-lock.json`, `tsconfig.json`, `vite.config.ts`, `.env.example`, `README.md`, `Dockerfile`, `.dockerignore` y `despliegue/`
 
 #### Scenario: Contenido excluido
 
@@ -23,8 +23,8 @@ El proyecto SHALL ofrecer `npm run entrega`, que genera en la raíz un archivo `
 
 #### Scenario: Proyecto que ejecuta desde el paquete
 
-- **WHEN** se descomprime el `.zip` en una carpeta vacía y se ejecutan `npm ci` y `npm run build`
-- **THEN** ambos terminan con código 0 y `dist/` contiene la página de entrada y las vistas
+- **WHEN** se descomprime el `.zip` en una carpeta vacía y se ejecutan `npm ci`, `npm run build` y `npm test`
+- **THEN** los tres terminan con código 0 y `dist/` contiene la página de entrada y las vistas
 
 #### Scenario: Cambios sin commit
 

@@ -9,7 +9,7 @@ Gobernanza ALTO (entrega y entorno): ninguna tarea de los grupos 1 a 6 empieza a
 | Unidad | Grupos | Previsión | Riesgo | Commit sugerido |
 |---|---|---|---|---|
 | U1 | 1 | ≈ 300 | **alto, ítem 5** (entorno de despliegue) | `build(deploy): add nginx container serving the build` |
-| U2 | 2 | ≈ 150 | **alto, ítem 5** (reenvío a la API de producción) | `build(deploy): proxy /api to the configured upstream` |
+| U2 | 2 | ≈ 150 | **alto, ítem 5** (reenvío a la API; escrituras) | `build(deploy): proxy /api to the configured upstream` |
 | U3 | 3 | ≈ 80 | ítem 3 solo si cambia la lista de entrega de las reglas | `build(release): add npm run entrega packaging` |
 | U4 | 4–6 | ≈ 300 | ninguno (documentación y verificación) | `docs(deploy): add Easypanel checklist and container manual cases` |
 
@@ -18,7 +18,7 @@ U1 y U2 se revisan solos (riesgo alto). Entrega sugerida: un PR encadenado sobre
 **Superficies de edición del apply** (fuera de ellas no se escribe):
 
 - `Dockerfile`, `.dockerignore`, `despliegue/**`
-- `package.json` (solo el script `entrega`; ninguna dependencia nueva), `.gitignore` (solo `*.zip`)
+- `package.json` (solo el script `entrega`; ninguna dependencia nueva). `.gitignore` (`*.zip`) queda fuera de la superficie autorizada del apply: se informa al usuario para que lo agregue
 - `README.md`, `CHANGES.md`, `CLAUDE.md`, `AGENTS.md`, `knowledge-base/**`
 - `openspec/changes/despliegue-frontend/**`
 
@@ -26,8 +26,8 @@ Datos de prueba y carpetas temporales: siempre en `mktemp -d` fuera del reposito
 
 ## 0. Aprobación del plan
 
-- [ ] 0.1 Presentar al usuario las cuatro decisiones de «Open Questions» de `design.md` (destino de `/api`, rama de Easypanel, escritura de humo, contenido y nombre del `.zip`), obtener su aprobación o la alternativa elegida y registrarla en `design.md`; verificar que, si se eligió otra alternativa, la spec y las tareas afectadas quedaron ajustadas y `openspec validate despliegue-frontend --strict` pasa
-- [ ] 0.2 Registrar la línea base de la rama: `npm test` (cantidad de pruebas), `npm run build` y `grep -r api.ismaelsuarez dist` vacío; verificar que todo pasa antes de tocar archivos
+- [x] 0.1 Presentar al usuario las cuatro decisiones de «Open Questions» de `design.md` (destino de `/api`, rama de Easypanel, escritura de humo, contenido y nombre del `.zip`), obtener su aprobación o la alternativa elegida y registrarla en `design.md` (hecho el 2026-11-09: red interna `libreria_api:8000`, rama `main` tras los PR #1 a #6, sexto libro a cargo del usuario, `.zip` con `tests/`); verificar que, si se eligió otra alternativa, la spec y las tareas afectadas quedaron ajustadas y `openspec validate despliegue-frontend --strict` pasa
+- [x] 0.2 Registrar la línea base de la rama: `npm test` (cantidad de pruebas), `npm run build` y `grep -r api.ismaelsuarez dist` vacío; verificar que todo pasa antes de tocar archivos
 
 ## 1. Imagen y servicio estático [alto riesgo: entorno de despliegue]
 
@@ -42,29 +42,29 @@ Datos de prueba y carpetas temporales: siempre en `mktemp -d` fuera del reposito
 ## 2. Reenvío de `/api` [alto riesgo: escrituras a un sistema externo]
 
 - [ ] 2.1 RED: ampliar `despliegue/comprobar.sh` con los casos de lectura del reenvío: `/api` 404, `GET /apiclientes/` 404, `/api/health/ready` 200 con `"estado":"ok"`, `/api/libros` 307 con `Location: /api/libros/`, `/api/libros/?limit=1` 200 JSON, cabeceras de seguridad en la respuesta reenviada. Verificar que fallan contra la imagen de U1 (registrar la salida)
-- [ ] 2.2 GREEN: `location = /api` y `location /api/` en la plantilla (design D2: `proxy_pass ${API_UPSTREAM}/`, `Host $proxy_host`, `X-Forwarded-For`, SNI y verificación TLS, tiempos 5 s/30 s/30 s, `proxy_next_upstream off`, `client_max_body_size 64k`, `proxy_redirect` con expresión, cabeceras de seguridad). Si el almacén de certificados no existe en la imagen, instalar `ca-certificates` y volver a `USER 101`. Verificar con `sh despliegue/comprobar.sh http://127.0.0.1:8080` en verde contra la API de producción (solo lectura)
-- [ ] 2.3 Escrituras y límites contra el **backend local** (receta del README, red `tpi-libreria-red`): `docker run -d --name tpi-libreria-web-local --network tpi-libreria-red -e API_UPSTREAM=http://tpi-libreria-api:8000 -p 127.0.0.1:8081:8080 tpi-libreria-web`; **antes de escribir**, `curl -s http://127.0.0.1:8081/api/health/ready` responde y `docker logs tpi-libreria-api` muestra esa solicitud. Verificar: `sh despliegue/comprobar.sh http://127.0.0.1:8081` en verde; `POST /api/clientes/` con JSON → 201 del backend local; `POST /apiclientes/` → 404 sin línea nueva en el registro del backend; `GET /api/clientes` → 307 con `Location: /api/clientes/`; cuerpo de 65 KiB → 413 sin llegar al backend; con el backend detenido, `POST /api/ventas/` → 502 inmediato
-- [ ] 2.4 Destino configurable: el mismo contenedor sin `API_UPSTREAM` reenvía a producción y con la variable al backend local, sin reconstruir; verificar con `/api/health/ready` en ambos y el registro del backend local
-- [ ] 2.5 Documentar en `README.md` (sección «Despliegue») `API_UPSTREAM`, la opción de red interna y la regla de verificación sin escrituras a producción; en `knowledge-base/08` la tabla de variables con `API_UPSTREAM` y el reenvío de producción; completar DD-32. Verificar ejecutando los comandos documentados
+- [ ] 2.2 GREEN: `map` del destino, `resolver` y `location = /api` / `location /api/` en la plantilla (design D2: `rewrite` + `proxy_pass $api_destino`, `Host $proxy_host`, `X-Forwarded-For`, SNI y verificación TLS para destinos HTTPS, tiempos 5 s/30 s/30 s, `proxy_next_upstream off`, `client_max_body_size 64k`, `proxy_redirect` con expresión, cabeceras de seguridad). Si el almacén de certificados no existe en la imagen, instalar `ca-certificates` y volver a `USER 101`. Verificar con `sh despliegue/comprobar.sh http://127.0.0.1:8080` en verde contra un contenedor con `API_UPSTREAM=https://api.ismaelsuarez.me` (alternativa pública, solo lectura) y contra el destino por defecto resuelto por un alias de red
+- [ ] 2.3 Escrituras y límites contra el **backend local** (receta del README, red `tpi-libreria-red`, con el contenedor de la API publicado también bajo el alias `libreria_api`): `docker run -d --name tpi-libreria-web-local --network tpi-libreria-red -p 127.0.0.1:8081:8080 tpi-libreria-web` (destino por defecto, sin `API_UPSTREAM`); **antes de escribir**, `curl -s http://127.0.0.1:8081/api/health/ready` responde y `docker logs tpi-libreria-api` muestra esa solicitud. Verificar: `sh despliegue/comprobar.sh http://127.0.0.1:8081` en verde; `POST /api/clientes/` con JSON → 201 del backend local; `POST /apiclientes/` → 404 sin línea nueva en el registro del backend; `GET /api/clientes` → 307 con `Location: /api/clientes/`; cuerpo de 65 KiB → 413 sin llegar al backend; con el backend detenido, `POST /api/ventas/` → 502 inmediato
+- [ ] 2.4 Destino configurable y arranque independiente: el mismo contenedor sin `API_UPSTREAM` reenvía al alias `libreria_api` y con `API_UPSTREAM=https://api.ismaelsuarez.me` a producción (solo `GET`), con una barra final en la variable también funciona, sin reconstruir; con el nombre sin resolver arranca, queda `healthy`, `/healthz` responde 200 y `/api/health/ready` responde 502 enseguida, y al conectar el alias funciona sin reiniciar. Verificar con `/api/health/ready` en cada caso y el registro del backend local
+- [ ] 2.5 Documentar en `README.md` (sección «Despliegue») `API_UPSTREAM` (por defecto la red interna, alternativa pública), la resolución en tiempo de ejecución y la regla de verificación sin escrituras a producción; en `knowledge-base/08` la tabla de variables con `API_UPSTREAM` y el reenvío de producción; completar DD-32. Verificar ejecutando los comandos documentados
 - [ ] 2.6 Commit U2 (`build(deploy): proxy /api to the configured upstream`); eliminar contenedores, imagen y recursos del backend local según el paso 7 de su receta
 
 ## 3. Paquete de entrega
 
 - [ ] 3.1 RED: en `mktemp -d`, comprobar que `npm run entrega` no existe (falla) y escribir la lista esperada de incluidos y excluidos (spec «Paquete de entrega»)
-- [ ] 3.2 GREEN: script `entrega` en `package.json` con `git archive` (design D7, o la variante aprobada en 0.1) y `*.zip` en `.gitignore`. Verificar: `npm run entrega` termina con 0; `unzip -l` muestra una única carpeta raíz, todos los incluidos y ninguno de los excluidos; un cambio sin commit no aparece en el `.zip`; `git status` no muestra el `.zip`
-- [ ] 3.3 Proyecto que ejecuta desde el paquete: descomprimir en `mktemp -d`, `npm ci` y `npm run build` con código 0 y `dist/` con la entrada y las siete vistas; `docker build` desde esa carpeta también termina sin errores. Verificar registrando las salidas
+- [ ] 3.2 GREEN: script `entrega` en `package.json` con `git archive` (design D7, con `tests/`). Verificar: `npm run entrega` termina con 0; `unzip -l` muestra una única carpeta raíz, todos los incluidos (`tests/` entre ellos) y ninguno de los excluidos; un cambio sin commit no aparece en el `.zip`. `*.zip` en `.gitignore` queda como aviso al usuario (fuera de la superficie autorizada)
+- [ ] 3.3 Proyecto que ejecuta desde el paquete: descomprimir en `mktemp -d`, `npm ci`, `npm run build` y `npm test` con código 0 y `dist/` con la entrada y las siete vistas; `docker build` desde esa carpeta también termina sin errores. Verificar registrando las salidas
 - [ ] 3.4 Documentar la sección «Entrega» del `README.md` (comando, contenido, exclusiones y cómo se comprueba), la lista de entrega de `CLAUDE.md` y `AGENTS.md` (copias idénticas), DD-33 en `knowledge-base/09` y PA-14 como resuelta en `knowledge-base/10`. Verificar con `diff CLAUDE.md AGENTS.md` vacío y el comando del README ejecutado tal como está escrito
 - [ ] 3.5 Commit U3 (`build(release): add npm run entrega packaging`)
 
 ## 4. Pasos de Easypanel para el usuario
 
-- [ ] 4.1 Escribir `despliegue/DESPLIEGUE.md` con los pasos de design D5 (DNS, App en el proyecto `libreria`, fuente Git y rama aprobada, compilación Dockerfile, entorno, dominio con HTTPS al puerto 8080, Implementar y `healthy`, prueba de humo de solo lectura, redespliegue y vuelta atrás), sin credenciales ni datos que el usuario no haya confirmado; enlazarlo desde la sección «Despliegue» del README. Verificar que cada comando local del documento (`dig`, `sh despliegue/comprobar.sh`) se ejecuta tal como está escrito contra el contenedor local y que el documento no pide al agente ninguna acción en el VPS
+- [ ] 4.1 Escribir `despliegue/DESPLIEGUE.md` con los pasos de design D5 (integrar los PR #1 a #6 en `main`, DNS, App `web` en el proyecto `libreria`, fuente Git y rama `main`, compilación Dockerfile, entorno vacío, dominio con HTTPS al puerto 8080, Implementar y `healthy`, comprobación del nombre interno con `wget` desde la consola, prueba de humo de solo lectura, cambio al destino público y regreso, la escritura del sexto libro con pasos exactos y qué comprobar, redespliegue y vuelta atrás), sin credenciales ni datos que el usuario no haya confirmado; enlazarlo desde la sección «Despliegue» del README. Verificar que cada comando local del documento (`dig`, `sh despliegue/comprobar.sh`) se ejecuta tal como está escrito contra el contenedor local y que el documento no pide al agente ninguna acción en el VPS
 - [ ] 4.2 Actualizar `CLAUDE.md` y `AGENTS.md`: comando `npm run entrega`, fila de despliegue en el stack (contenedor nginx, `API_UPSTREAM`, `libreria.ismaelsuarez.me`) y, en la regla 4, que la verificación local del contenedor también escribe solo en el backend local. Verificar con `diff CLAUDE.md AGENTS.md` vacío
 
 ## 5. Verificación integrada en el navegador
 
 - [ ] 5.1 Con el contenedor apuntado al backend local (`http://127.0.0.1:8081`), en Chrome: la raíz lleva al login; ingreso del administrador de demostración; un usuario `client` no llega a `/admin/`; Catálogo con los libros del backend local; alta de un cliente que aparece en el listado; consola sin violaciones de CSP ni errores en el login, el registro y las cinco vistas, a 320 px y a 1280 px. Verificar registrando lo observado
-- [ ] 5.2 Con el contenedor apuntado a producción (`http://127.0.0.1:8080`): solo entrada, ingreso y Catálogo con los libros de producción; ninguna escritura. Verificar registrando lo observado y las solicitudes de red (todas al mismo origen)
+- [ ] 5.2 Con el contenedor apuntado a producción con `API_UPSTREAM=https://api.ismaelsuarez.me` (`http://127.0.0.1:8080`): solo entrada, ingreso y Catálogo con los libros de producción; ninguna escritura. Verificar registrando lo observado y las solicitudes de red (todas al mismo origen)
 - [ ] 5.3 Registrar los resultados observados en el README como casos manuales nuevos (CM-25 en adelante), con el comportamiento real si alguno falla (regla dura 10); actualizar «Estructura de carpetas» con `Dockerfile` y `despliegue/`. Verificar que cada caso registrado corresponde a una observación de 5.1 o 5.2
 
 ## 6. Cierre del apply
@@ -76,11 +76,11 @@ Datos de prueba y carpetas temporales: siempre en `mktemp -d` fuera del reposito
 
 El agente no marca estas tareas por su cuenta: las marca solo cuando el usuario informa el resultado observado.
 
-- [ ] 7.1 [usuario] Integrar los PR de la pila en la rama aprobada en 0.1 (por defecto `main`)
+- [ ] 7.1 [usuario] Integrar los PR #1 a #6, en orden, en `main`
 - [ ] 7.2 [usuario] Crear el registro DNS `A` de `libreria.ismaelsuarez.me` y comprobar con `dig +short` que devuelve la IP del VPS
-- [ ] 7.3 [usuario] Crear y configurar la App en Easypanel según `despliegue/DESPLIEGUE.md` (fuente, Dockerfile, entorno, dominio con HTTPS al puerto 8080) y pulsar Implementar; verificar estado `healthy` y registros sin errores
-- [ ] 7.4 [usuario] Prueba de humo de solo lectura: `sh despliegue/comprobar.sh https://libreria.ismaelsuarez.me` en verde y, en el navegador, entrada, ingreso y Catálogo; si el reenvío a la API pública falla, pasar a la red interna (D2) solo con `API_UPSTREAM`
-- [ ] 7.5 [usuario, opcional, solo si se aprobó en 0.1] Escritura real desde la aplicación publicada (por ejemplo el sexto libro de PA-15); registrar el resultado
+- [ ] 7.3 [usuario] Crear y configurar la App `web` en el proyecto `libreria` de Easypanel según `despliegue/DESPLIEGUE.md` (fuente, rama `main`, Dockerfile, entorno vacío, dominio con HTTPS al puerto 8080) y pulsar Implementar; verificar estado `healthy` y registros sin errores; comprobar con `wget` desde su consola que `libreria_api:8000` resuelve
+- [ ] 7.4 [usuario] Prueba de humo de solo lectura: `sh despliegue/comprobar.sh https://libreria.ismaelsuarez.me` en verde y, en el navegador, entrada, ingreso y Catálogo; si `/api/health/ready` responde 502 y el nombre interno no resuelve, corregir `API_UPSTREAM` o pasar a la API pública (`API_UPSTREAM=https://api.ismaelsuarez.me`)
+- [ ] 7.5 [usuario] Registrar el sexto libro desde la aplicación publicada (PA-15), con los pasos y comprobaciones de `despliegue/DESPLIEGUE.md`; registrar el resultado
 - [ ] 7.6 Registrar en el README la dirección publicada, la fecha del despliegue y el resultado de la prueba de humo informados por el usuario; verificar que el README no contiene credenciales ni datos privados
 
 ## Workflow follow-up
