@@ -133,7 +133,7 @@ El listado de libros SHALL generarse con JavaScript a partir de los datos del Al
 
 ### Requirement: Efecto del alta de libro
 
-Al registrar un libro válido, el sistema SHALL persistirlo en el Almacén, actualizar el listado sin recargar la página, limpiar el formulario para un nuevo registro y mostrar un mensaje de operación correcta. El libro quedará visible en las demás páginas (por ejemplo el Catálogo) cuando éstas se abran.
+Al registrar un libro válido, el sistema SHALL persistirlo en el Almacén, actualizar el listado sin recargar la página, limpiar el formulario para un nuevo registro y mostrar un mensaje de operación correcta. El libro quedará visible en las demás vistas que leen el Almacén (por ejemplo, el selector de libros de Ventas) cuando éstas se abran. Mientras el Catálogo lea los libros de la API, el libro registrado en el Almacén no SHALL aparecer en el Catálogo.
 
 #### Scenario: Alta correcta en la página
 
@@ -142,8 +142,13 @@ Al registrar un libro válido, el sistema SHALL persistirlo en el Almacén, actu
 
 #### Scenario: Libro nuevo en el Catálogo
 
-- **WHEN** el operador registra un libro y después abre el Catálogo
-- **THEN** el catálogo incluye el libro recién registrado
+- **WHEN** el operador registra un libro y después abre el Catálogo, mientras el Catálogo lee los libros de la API
+- **THEN** el Catálogo muestra solo los libros de la API de producción, sin el libro registrado en el Almacén
+
+#### Scenario: Libro nuevo en la venta
+
+- **WHEN** el operador registra un libro y después abre Ventas
+- **THEN** el selector de libros de la venta incluye el libro recién registrado
 
 #### Scenario: Duplicado dentro de la misma sesión
 

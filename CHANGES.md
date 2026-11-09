@@ -66,7 +66,7 @@ T-02 y T-03 son independientes entre sí y pueden avanzar en paralelo una vez ar
   - `knowledge-base/08_arquitectura_propuesta.md` y `knowledge-base/09_decisiones_y_supuestos.md` (DD-16 a DD-20)
 
 ### [T-02] `cliente-http-y-catalogo`
-- **Estado**: `[ ]`
+- **Estado**: `[x]` archivado el 2026-11-09 (`openspec/changes/archive/2026-11-09-cliente-http-y-catalogo/`)
 - **Scope**:
   - Cliente `fetch` tipado sobre la base `/api` (`obtenerBaseApi`), con manejo de `ErrorApi`, estados de carga y mensajes de error en texto.
   - Adaptadores HTTP de `RepositorioLibros` (lectura), `RepositorioEditoriales` y `RepositorioGeneros` que reemplazan a los locales sin tocar las vistas; el Catálogo pasa a leer de la API.

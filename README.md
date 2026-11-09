@@ -32,10 +32,10 @@ TypeScript estricto y compilado con Vite.
 > [!NOTE]
 > **Estado de la migración**: las vistas acceden a los datos solo mediante
 > repositorios con la forma de la API de producción
-> (`https://api.ismaelsuarez.me`). Por ahora esos repositorios guardan los datos
-> en `localStorage`; los changes `cliente-http-y-catalogo` y
-> `operaciones-contra-api` los conectarán con la API a través de la base `/api`
-> del mismo origen. El registro y el inicio de sesión ya existen
+> (`https://api.ismaelsuarez.me`). El **Catálogo ya lee los libros de la API**
+> por la base `/api` del mismo origen (`cliente-http-y-catalogo`); Libros,
+> Clientes, Ventas e Historial siguen guardando en `localStorage` hasta
+> `operaciones-contra-api` (ver [Origen de los datos](#origen-de-los-datos)). El registro y el inicio de sesión ya existen
 > (`registro-login-y-sesion`); la protección de las páginas según el rol llega
 > con `proteccion-de-rutas-y-roles`. Todo vive solo en el navegador: la API no
 > tiene usuarios y queda abierta (ver [Usuarios de demostración y
@@ -53,6 +53,7 @@ TypeScript estricto y compilado con Vite.
 - [Funcionalidades implementadas](#funcionalidades-implementadas)
 - [Funcionalidades pendientes](#funcionalidades-pendientes)
 - [Usuarios de demostración y seguridad](#usuarios-de-demostración-y-seguridad)
+- [Origen de los datos](#origen-de-los-datos)
 - [Datos y almacenamiento](#datos-y-almacenamiento)
 - [Casos manuales: resultado observado](#casos-manuales-resultado-observado)
 - [Imágenes y recursos](#imágenes-y-recursos)
@@ -121,14 +122,19 @@ muestran y se enlazan entre sí.
 
 ### Catálogo
 
-- Tarjetas generadas desde los datos: título, ISBN, editorial, género, autores
-  y precio. Un libro sin género muestra «Sin clasificar».
+- Tarjetas generadas desde los libros que entrega la API de producción: título,
+  ISBN, editorial, género, autores y precio. Un libro sin género muestra «Sin
+  clasificar». Mientras llegan los datos se ve «Cargando libros…»; si la API no
+  responde, un mensaje de error en texto con el motivo.
 - Filtro por título: no distingue mayúsculas de minúsculas, admite
   coincidencias parciales e ignora los espacios de los extremos. Una búsqueda
-  vacía muestra todo el catálogo; una sin coincidencias muestra un mensaje.
+  vacía muestra todo el catálogo; una sin coincidencias muestra un mensaje. El
+  filtro se aplica en el navegador sobre la lista ya cargada.
 - **Ficha de lectura**: el botón «Ver sinopsis» de cada tarjeta abre un
   diálogo con portada, datos y sinopsis. Las sinopsis de los seis libros de
-  ejemplo son ilustrativas y la ficha lo aclara.
+  ejemplo son ilustrativas y la ficha lo aclara; los libros de producción no
+  tienen portada ni sinopsis de muestra, así que ven la cubierta textual y «Este
+  libro todavía no tiene una sinopsis cargada.».
 
 ### Libros
 
@@ -236,6 +242,25 @@ con el rol `client` y llega al Catálogo; la página no ofrece elegir el rol.
 > real. Si se borra `users` del navegador, el administrador de demostración se
 > vuelve a crear al abrir cualquier página; los demás usuarios se pierden.
 
+## Origen de los datos
+
+Durante la transición a la API conviven dos orígenes, cada vista con uno solo:
+
+| Vistas | Origen | Detalle |
+|---|---|---|
+| Catálogo | API de producción, solo lectura | `GET /api/libros/` (todas las páginas de 100) y `GET /api/libros/{id}` por cada libro para traer sus autores, con a lo sumo 4 consultas a la vez; tiempo límite de 10 s por solicitud |
+| Libros, Clientes, Ventas e Historial | `localStorage` del navegador | Sin ninguna solicitud a `/api`; pasan a la API en `operaciones-contra-api` |
+
+Consecuencias que conviene conocer (no hay aviso en la interfaz):
+
+- Un libro dado de alta en Libros **no aparece en el Catálogo** (sí en el
+  selector de Ventas), y los libros del Catálogo no son los de ejemplo de
+  Libros: los identificadores y los datos difieren hasta `operaciones-contra-api`.
+- Sin el reenvío de `/api` (por ejemplo, si se sirve `dist/` con otro servidor)
+  o con la API caída, el Catálogo no muestra libros: informa «No se pudieron
+  cargar los datos.» y el motivo. No hay respaldo local, a propósito.
+- La aplicación nunca escribe en la API: solo se envían solicitudes `GET`.
+
 ## Datos y almacenamiento
 
 ### Datos iniciales
@@ -245,9 +270,10 @@ Viven en `src/datos/local/datos-iniciales.ts`: 6 libros, 2 editoriales, 2 géner
 `edi-01`, `gen-01`, `aut-01`, `cli-01`…). Editoriales, géneros y autores
 **no se guardan** en `localStorage`: se leen siempre de ese archivo. Las
 vistas no lo importan: piden los datos a los repositorios
-(`src/datos/repositorios.ts`), que hoy implementa un adaptador sobre
-`localStorage` y que `cliente-http-y-catalogo` y `operaciones-contra-api`
-reemplazarán por la API de producción sin tocar las vistas.
+(`src/datos/repositorios.ts`), que para las vistas de gestión implementa un
+adaptador sobre `localStorage`; el Catálogo ya usa la API
+(`cliente-http-y-catalogo`) y `operaciones-contra-api` reemplazará el resto sin
+tocar las vistas.
 
 ### Cómo funciona `localStorage`
 
@@ -322,12 +348,12 @@ auditoría con lector de pantalla.
 
 | Caso | Resultado esperado | Resultado observado | Estado |
 |---|---|---|---|
-| **CM-1** Búsqueda en mayúsculas, vacía e inexistente | Coincidencias sin distinguir mayúsculas; catálogo completo; mensaje sin resultados | `FARO` → 1 tarjeta; `   faro   ` → 1; vacía → 6; `zzzz` → 0 con «No se encontraron libros cuyo título coincida con la búsqueda.»; «Sin clasificar» solo en «La casa del río»; un título con `<i>&</i>` se muestra como texto; la ficha de lectura abre con su portada | ✅ Aprobado |
-| **CM-2** Alta de libro con ISBN existente y luego nuevo | El duplicado se rechaza; el válido aparece en catálogo y en la venta | `978 987 000 001 1` rechazado con «Ese ISBN ya está registrado.»; el libro nuevo aparece en la tabla (7 filas), en el Catálogo (7) y en el selector de Ventas (7 libros) | ✅ Aprobado |
+| **CM-1** Búsqueda en mayúsculas, vacía e inexistente | Coincidencias sin distinguir mayúsculas; catálogo completo; mensaje sin resultados | Reejecutado el 2026-11-09 con los libros de producción (`cliente-http-y-catalogo`; 5 libros ese día): `RAYUELA` → 1 tarjeta; `   rayuela   ` → 1; vacía → 5; `ISIDRO` → 1; `zzzz` → 0 con «No se encontraron libros cuyo título coincida con la búsqueda.»; «Sin clasificar» solo en «La invención de Morel»; la ficha de «Rayuela» abre con su cubierta textual y la sinopsis «Este libro todavía no tiene una sinopsis cargada.». No ejecutado con datos de producción: un título con `<i>&</i>` (ningún libro lo trae; el código usa `textContent`, verificado en la ejecución anterior con los datos locales) | ✅ Aprobado |
+| **CM-2** Alta de libro con ISBN existente y luego nuevo | El duplicado se rechaza; el válido aparece en la tabla de Libros y en la venta; su aparición en el Catálogo queda **pendiente hasta `operaciones-contra-api`** | Parte de gestión reejecutada el 2026-11-09: `978 987 000 001 1` rechazado con «Ese ISBN ya está registrado.»; el libro nuevo aparece en la tabla (7 filas) y en el selector de Ventas (7 libros); repetirlo sin recargar se rechaza. Parte del Catálogo: el libro **no aparece** (el Catálogo lee la API de producción: 5 tarjetas) | ✅ Aprobado (gestión) · ⏳ Pendiente (Catálogo) |
 | **CM-3** Alta de cliente con email inválido, existente en mayúsculas y nuevo | Se rechazan los dos primeros; el nuevo aparece en listado y selección | `ana@` rechazado con «El email no tiene un formato válido.»; `  LAURA.MENDOZA@CORREO.TEST ` rechazado con «Ese email ya está registrado.»; el cliente nuevo se registra sin recargar (4 filas) y aparece en el selector de Ventas; editar conservando el email propio se acepta y usar el de otro cliente se rechaza | ✅ Aprobado |
 | **CM-4** Venta sin cliente, cantidad 0, negativa o decimal; libro repetido | No se confirma; el duplicado no crea otro renglón | Sin cliente: «Seleccione un cliente existente.»; `0`, `-2`, `1.5` y vacía rechazadas con «La cantidad debe ser un entero positivo seguro.»; un renglón editado a `0` bloquea la confirmación; el libro repetido suma en la misma fila (1 + 1 → 2); el borrador se conserva ante cada error | ✅ Aprobado |
 | **CM-5** Dos unidades a 1500 y una a 2000 | Subtotales 3000 y 2000; total 5000; detalle en el historial | $ 3000,00 y $ 2000,00; total $ 5000,00; comprobante `ven-01` y venta guardada con el mismo detalle en Historial | ✅ Aprobado |
-| **CM-6** Cambio exclusivo del precio en el catálogo guardado | El historial conserva los importes confirmados | Precio de `lib-01` cambiado a 9999 y página recargada: el detalle conserva $ 1500,00 / $ 2000,00, $ 3000,00 / $ 2000,00 y $ 5000,00; el Catálogo muestra $ 9999,00; con `libreria.ventas` ilegible el Historial informa el error y no modifica lo guardado | ✅ Aprobado |
+| **CM-6** Cambio exclusivo del precio en el catálogo guardado | El historial conserva los importes confirmados; que el Catálogo muestre el precio nuevo queda **pendiente hasta `operaciones-contra-api`** | Parte de gestión reejecutada el 2026-11-09: precio del primer libro guardado cambiado a 9999 y página recargada: el detalle de la venta conserva $ 1500,00 / $ 4500,00, $ 2000,00 / $ 2000,00 y total $ 6500,00; Libros muestra $ 9999,00; con `libreria.ventas` ilegible el Historial informa «No se pudo consultar el historial. Los datos guardados no se modificaron…» y la clave queda intacta. Parte del Catálogo: no refleja el cambio porque lee los precios de la API (no el almacén local) | ✅ Aprobado (gestión) · ⏳ Pendiente (Catálogo) |
 | **CM-7** Recarga después de altas y venta | Se recuperan los datos sin duplicar | Tras dos recargas de las cinco vistas: 7 libros, 4 clientes y 1 venta, sin duplicar ejemplos ni ventas | ✅ Aprobado |
 | **CM-8** Teclado y anchos de 320 px y 1280 px | Foco visible, controles utilizables y tablas con desplazamiento propio | Sin desplazamiento horizontal de la página en las cinco vistas ni con los diálogos abiertos (ficha, edición de cliente, comprobante y detalle de venta); foco visible en todas las paradas de Tab y foco contenido dentro de los diálogos | ✅ Aprobado |
 
@@ -384,6 +410,34 @@ responde 200 por el reenvío. En las cinco vistas todas las solicitudes
 observadas fueron `GET` al mismo origen de la aplicación; no se escribe en la
 API de producción.
 
+### Casos manuales del Catálogo desde la API (`cliente-http-y-catalogo`)
+
+**Ejecución del 2026-11-09**: recorrido automatizado en Google Chrome (modo
+headless, por el protocolo de herramientas de desarrollo) contra `npm run dev` y
+`npm run preview`, con la API de producción real y solo solicitudes `GET`; los
+estados de carga y de falla se provocaron reteniendo o fallando las solicitudes
+`/api/libros*` desde el protocolo del navegador, y con un reenvío apuntado a un
+destino inexistente (`API_PROXY_TARGET=http://127.0.0.1:9`). Los libros de
+producción pueden cambiar: lo registrado es lo observado ese día. No reemplaza
+una auditoría con lector de pantalla (no ejecutada).
+
+| Caso | Resultado esperado | Resultado observado | Estado |
+|---|---|---|---|
+| **CM-A1** Catálogo con libros de producción | Tarjetas con autores, editorial, género y precio con dos decimales | 5 libros: «Rayuela» (Julio Cortázar, Sudamericana, Novela, $ 25000,00), «Ficciones» (Jorge Luis Borges, Emecé, Cuento, $ 18000,00), «La invención de Morel» (Adolfo Bioy Casares, Emecé, Sin clasificar, $ 16500,00), «Respiración artificial» (Ricardo Piglia, Anagrama, Novela, $ 27000,00) y «Seis problemas para don Isidro Parodi» (Jorge Luis Borges y Adolfo Bioy Casares, Sudamericana, Policial, $ 19500,00) | ✅ Aprobado |
+| **CM-A2** Estado de carga | «Cargando libros…» anunciado como estado; ni tarjetas ni mensaje de lista vacía | Con las solicitudes retenidas: mensaje visible (`role="status"`), lista oculta, mensajes de lista vacía y de búsqueda sin resultados ocultos; al liberarlas se oculta y aparecen las 5 tarjetas | ✅ Aprobado |
+| **CM-A3** API caída, sin reenvío o sin respuesta | Mensaje de error en texto con el motivo, sin lista vacía, buscador presente, sin rechazos sin controlar | Reenvío a destino inexistente (HTTP 500 del reenvío): «No se pudieron cargar los datos. El servidor respondió con un error (500).»; solicitud fallada de red: «No se pudieron cargar los datos. No se pudo conectar con el servidor.»; sin respuesta: a los 10 s «No se pudieron cargar los datos. El servidor tardó demasiado en responder.». En los tres, mensaje de carga y lista vacía ocultos y buscador presente; la consola solo registra la línea propia del navegador por la solicitud fallida, sin excepciones | ✅ Aprobado |
+| **CM-A4** Solo `GET` al mismo origen | Catálogo: solicitudes `GET /api/libros/…`; gestión: ninguna a `/api` | Catálogo: `GET /api/libros/?limit=100&offset=0` y `GET /api/libros/1` a `/5`, sin origen externo (también con `npm run preview`); Libros, Clientes, Ventas e Historial: 0 solicitudes a `/api` | ✅ Aprobado |
+| **CM-A5** 320 px y 1280 px, teclado y foco | Sin desplazamiento horizontal; foco visible | 320 px: ancho del documento 320 px; 1280 px: 1265 px (descontada la barra de desplazamiento); Tab recorre navegación, buscador y botones «Ver sinopsis» con contorno de 3 px | ✅ Aprobado |
+| **CM-A6** Compatibilidad con el acceso y la sesión | La raíz lleva al login; el Catálogo muestra el encabezado de sesión | Raíz → login; con `admin@libreria.test` el Catálogo muestra el email y «Cerrar sesión» devuelve al login | ✅ Aprobado |
+| **CM-A7** Servir `dist/` sin reenvío de `/api` | Error «La respuesta del servidor no tiene el formato esperado.» o el error HTTP | No ejecutado | ⬜ No ejecutado |
+
+**Comparación con la versión anterior** (vistas de gestión): el mismo guion de
+CM-2 a CM-6 (alta de libro con ISBN existente y nuevo, altas de cliente, venta
+con cantidades inválidas y confirmada, Historial, cambio de precio y clave de
+ventas ilegible) se corrió contra una copia del commit anterior al change y
+contra la versión nueva, con perfiles nuevos: las salidas son idénticas (fechas
+normalizadas).
+
 ---
 
 ## Imágenes y recursos
@@ -409,7 +463,8 @@ src/
 │   ├── client/catalogo/    Catálogo y ficha de lectura
 │   └── admin/              libros, clientes, ventas (con comprobante) e historial
 ├── logica/                 funciones puras sin DOM: texto, dinero, fecha, catálogo, libros, clientes, ventas, usuarios, sesión
-├── datos/                  repositorios, raíz de composición (proveedor), base /api y adaptador local
+├── datos/                  repositorios, raíz de composición (proveedor), base /api, cliente HTTP y adaptador local
+│   ├── api/                base /api, cliente HTTP de solo lectura, errores de la API, paginación y repositorios sobre la API
 │   └── local/              almacén local (único que nombra localStorage), datos iniciales, repositorios locales,
 │                           almacén de usuarios y sesión, contraseñas (PBKDF2) y usuario administrador inicial
 ├── types/                  tipos de dominio alineados con la API de producción

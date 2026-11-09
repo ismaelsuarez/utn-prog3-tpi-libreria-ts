@@ -1,6 +1,7 @@
-// Vista Catálogo: tarjetas de libros desde el repositorio, con filtro por título.
+// Vista Catálogo: tarjetas con los libros que entrega el repositorio de lectura
+// (la API de producción), con estado de carga y filtro local por título.
 import "../../../main";
-import { repositorioLibros } from "../../../datos/proveedor";
+import { repositorioCatalogo } from "../../../datos/proveedor";
 import { estadoDelListado, filtrarPorTitulo, nombreGenero, nombresAutores } from "../../../logica/catalogo";
 import { formatearImporte } from "../../../logica/dinero";
 import type { LibroDetalle } from "../../../types/libro";
@@ -14,9 +15,17 @@ async function iniciar(): Promise<void> {
   const lista = elementoPorId("lista-catalogo", HTMLElement);
   const mensajeVacio = elementoPorId("catalogo-vacio", HTMLElement);
   const mensajeSinResultados = elementoPorId("catalogo-sin-resultados", HTMLElement);
+  const mensajeCargando = elementoPorId("catalogo-cargando", HTMLElement);
   const plantilla = elementoPorId("plantilla-tarjeta-libro", HTMLTemplateElement);
 
-  const libros = await repositorioLibros.listar();
+  // Un error de carga sigue su camino hasta `arrancar`, que lo muestra como texto;
+  // en cualquier caso el mensaje de carga se oculta.
+  let libros: LibroDetalle[];
+  try {
+    libros = await repositorioCatalogo.listar();
+  } finally {
+    mensajeCargando.hidden = true;
+  }
   const abrirFicha = iniciarFicha();
 
   function pintarLibro(libro: LibroDetalle): void {

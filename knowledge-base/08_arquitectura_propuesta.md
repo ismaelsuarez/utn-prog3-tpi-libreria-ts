@@ -49,6 +49,10 @@ proyecto/
 │   │   ├── autenticacion.ts    # ServicioAutenticacion: registrar, ingresar, obtenerSesion, cerrarSesion
 │   │   ├── errores.ts          # ErrorDeRepositorio, ErrorDeAlmacenamiento, ErrorDeCriptografia
 │   │   ├── api/base.ts         # obtenerBaseApi: base `/api` del mismo origen
+│   │   ├── api/cliente-http.ts # crearClienteHttp: solo `obtener` (GET), tiempo límite de 10 s, fetch inyectable
+│   │   ├── api/errores-api.ts  # ErrorDeApi (http, red, tiempo, formato) e interpretarCuerpoDeError
+│   │   ├── api/paginacion.ts   # recorrerPaginas (limit 100) y mapearConLimite (concurrencia acotada)
+│   │   ├── api/repositorios-api.ts # crearRepositoriosApi: libros (con autores), editoriales y géneros, solo lectura
 │   │   └── local/              # Adaptador local: almacen-local.ts (único que nombra localStorage),
 │   │                           # datos-iniciales.ts, repositorios-locales.ts, tipos-locales.ts;
 │   │                           # almacen-usuarios.ts (claves `users` y `userData`, almacenamiento
@@ -93,10 +97,21 @@ proyecto/
 - Operaciones **sin endpoint** en la API (listado de clientes y de autores,
   edición del teléfono) están marcadas en las interfaces; las resuelve el change
   `operaciones-contra-api`.
-- Hoy los implementa el adaptador local sobre `localStorage` (claves
+- Durante la transición conviven dos orígenes (`cliente-http-y-catalogo`): el
+  Catálogo usa `repositorioCatalogo` (`RepositorioLecturaLibros`, solo lectura),
+  que `proveedor.ts` crea sobre la API por la base `/api`; Libros, Clientes,
+  Ventas e Historial siguen en el adaptador local sobre `localStorage` (claves
   `libreria.libros`, `libreria.clientes`, `libreria.ventas`, mismo formato que
-  antes). `cliente-http-y-catalogo` y `operaciones-contra-api` los reemplazan
-  por adaptadores HTTP.
+  antes) hasta `operaciones-contra-api`. Un alta local no aparece en el Catálogo.
+- **Cliente HTTP** (`src/datos/api/`): solo `GET` con `Accept: application/json`
+  y rutas con barra final (`/libros/`) para evitar la redirección 307 a otro
+  origen. Toda falla se rechaza como `ErrorDeApi` (subclase de
+  `ErrorDeRepositorio`, con `tipo` `http`, `red`, `tiempo` o `formato` y `estado`)
+  con mensaje en texto: el `detail` de la API, la lista de validación del 422
+  unida con «; » y un `ErrorDeCampo` por elemento, o un texto fijo. Los listados
+  completos recorren páginas de 100 hasta una página corta (tope de 100 páginas);
+  el listado de libros se completa con `GET /libros/{id}` para traer los autores,
+  con a lo sumo 4 consultas a la vez. Los importes quedan como texto.
 - **Usuarios y sesión** (`registro-login-y-sesion`): nunca van a la API. Los
   atiende `src/datos/local/almacen-usuarios.ts`, separado del almacén local
   porque es permanente, con el mismo almacenamiento inyectado y las claves

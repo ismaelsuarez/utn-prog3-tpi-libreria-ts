@@ -71,10 +71,12 @@
         No se encontraron libros cuyo título coincida con la búsqueda.
       </p>
 
+      <p id="catalogo-cargando" class="mensaje" role="status">Cargando libros…</p>
+
       <p id="catalogo-error" class="mensaje mensaje--error" role="alert" hidden></p>
 
-      <!-- La lista se genera desde el repositorio de libros con la plantilla de abajo. -->
-      <ul id="lista-catalogo" class="lista-tarjetas"></ul>
+      <!-- La lista se genera desde el repositorio de libros con la plantilla de abajo; permanece oculta hasta que llegan los datos. -->
+      <ul id="lista-catalogo" class="lista-tarjetas" hidden></ul>
     </section>
 
     <!-- Plantilla usada para generar tarjetas mediante JavaScript. -->
