@@ -171,7 +171,7 @@ los tres integrantes y sus agentes compartan decisiones y hallazgos.
 
 - La lógica pura se escribe con pruebas primero (Vitest, `npm test`); el DOM se
   verifica con los casos manuales.
-- Repositorio: copia local de `utn-prog3-tpi-libreria` (versión JavaScript entregada); el remoto propio de la versión TypeScript todavía no está creado.
+- Repositorio: <https://github.com/ismaelsuarez/utn-prog3-tpi-libreria-ts> (público). Nace como copia de `utn-prog3-tpi-libreria`, la versión JavaScript entregada, que sigue en su propio repositorio.
 - No forman parte de la entrega: `node_modules/`, `dist/`, `tests/`, `docs/`, `discovery/`,
   `knowledge-base/`, `openspec/`, `.atl/`, `.claude/`, `CHANGES.md`,
   `AGENTS.md`, `CLAUDE.md` y `.active-orchestrator-state.json`.
