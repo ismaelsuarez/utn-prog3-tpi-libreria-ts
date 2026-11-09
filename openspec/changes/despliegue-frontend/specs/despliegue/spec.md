@@ -87,7 +87,7 @@ El servidor SHALL comprimir con gzip las respuestas HTML, CSS, JavaScript y JSON
 
 #### Scenario: Cliente que acepta gzip
 
-- **WHEN** se pide un archivo JavaScript de `/assets/` con `Accept-Encoding: gzip`
+- **WHEN** se pide un archivo JavaScript de `/assets/` de 1 KiB o más (los más chicos se sirven sin comprimir: `gzip_min_length 1024`) con `Accept-Encoding: gzip`
 - **THEN** la respuesta lleva `Content-Encoding: gzip` y `Vary: Accept-Encoding`
 
 ### Requirement: Cabeceras de seguridad

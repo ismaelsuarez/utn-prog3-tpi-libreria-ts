@@ -30,7 +30,7 @@
 **Contexto**: el equipo trabaja con desarrollo guiado por pruebas, pero la consigna prohíbe dependencias y herramientas de compilación en la entrega.
 **Alternativas consideradas**: verificar solo con los casos manuales.
 **Justificación**: decisión del equipo; obliga a separar la lógica del DOM, que la consigna valora, y da una red de seguridad sin instalar nada.
-**Trade-offs aceptados**: Node es un requisito de desarrollo (no de uso); la carpeta `tests/` se excluye de la entrega; el DOM y `localStorage` quedan cubiertos solo por los casos manuales.
+**Trade-offs aceptados**: Node es un requisito de desarrollo (no de uso); la carpeta `tests/` se excluía de la entrega hasta `despliegue-frontend`, que la incluye (DD-33); el DOM y `localStorage` quedan cubiertos solo por los casos manuales.
 
 ### DD-05 — Identidad visual con CSS propio y local
 **Decisión**: estilos escritos por el equipo, sin librerías externas; tipografías e imágenes incluidas en el proyecto.
