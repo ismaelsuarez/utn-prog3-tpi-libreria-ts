@@ -1,3 +1,6 @@
+import type { Autor } from "../../src/types/autor";
+import type { Editorial } from "../../src/types/editorial";
+import type { Genero } from "../../src/types/genero";
 import type { LibroDetalle } from "../../src/types/libro";
 
 const puerto = { id: 1, nombre: "Ediciones del Puerto" };
@@ -16,4 +19,21 @@ export const librosDeEjemplo: LibroDetalle[] = [
   { id: 4, titulo: "La casa del río", isbn: "978-987-000-004-2", precio: "1800.00", stock: 0, editorial: puerto, genero: null, autores: [ibanez] },
   { id: 5, titulo: "Breve historia del silencio", isbn: "978-987-000-005-9", precio: "2750.00", stock: 0, editorial: puerto, genero: ensayo, autores: [varela] },
   { id: 6, titulo: "Los días contados", isbn: "978-987-000-006-6", precio: "1990.90", stock: 0, editorial: brujula, genero: novela, autores: [quiroga] },
+];
+
+/** Catálogos de ejemplo con la forma de la API (los mismos de los datos iniciales). */
+export const editorialesDeEjemplo: Editorial[] = [
+  { id: 1, nombre: "Ediciones del Puerto", pais: "Argentina" },
+  { id: 2, nombre: "Editorial Brújula", pais: "Argentina" },
+];
+
+export const generosDeEjemplo: Genero[] = [
+  { id: 1, nombre: "Novela" },
+  { id: 2, nombre: "Ensayo" },
+];
+
+export const autoresDeEjemplo: Autor[] = [
+  { id: 1, nombre: "Marta Ibáñez", nacionalidad: "Argentina" },
+  { id: 2, nombre: "Tomás Quiroga", nacionalidad: "Argentina" },
+  { id: 3, nombre: "Elena Varela", nacionalidad: "Argentina" },
 ];
