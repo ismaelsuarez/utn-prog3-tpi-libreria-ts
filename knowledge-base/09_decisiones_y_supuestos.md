@@ -145,7 +145,7 @@
 **Alternativas consideradas**: autenticación en el servidor (no es posible).
 **Justificación**: cumple la consigna con lo que el frontend puede hacer.
 **Trade-offs aceptados**: la API queda abierta; quien conozca su dirección puede llamarla sin sesión. Se documenta como limitación conocida y no es una medida de seguridad real.
-**Origen**: change `migracion-vite-typescript`, decisiones D3 y D13; se implementa en `registro-login-y-sesion` y `proteccion-de-rutas-y-roles`.
+**Origen**: change `migracion-vite-typescript`, decisiones D3 y D13; el registro, el login y la sesión se implementan en `registro-login-y-sesion` (DD-21 y DD-22) y la protección de rutas en `proteccion-de-rutas-y-roles`.
 
 ### DD-20 — Frontera de repositorios con la forma de la API
 **Decisión**: las vistas acceden a los datos solo por interfaces de repositorio asíncronas (`src/datos/repositorios.ts`) tipadas con los tipos de dominio alineados con la API; `src/datos/proveedor.ts` es la raíz de composición. Hoy los implementa un adaptador sobre el almacén local (mismas claves y formato de `localStorage`) que traduce entre la forma local y la de la API.
@@ -154,6 +154,22 @@
 **Justificación**: un solo modelo de datos en las vistas durante toda la serie; el reemplazo se limita a `proveedor.ts` y a los adaptadores.
 **Trade-offs aceptados**: el adaptador local fija datos de transición (`stock: 0`, `rol: "autor"`, `pais` y `nacionalidad` ficticios) que no se muestran ni se persisten; las operaciones sin endpoint en la API (listado de clientes y de autores, edición del teléfono) se marcan en la interfaz.
 **Origen**: change `migracion-vite-typescript`, decisiones D6 y D7.
+
+### DD-21 — Contraseña protegida con PBKDF2-SHA-256 y sal
+**Decisión**: la contraseña se guarda en `users` solo como una huella PBKDF2-SHA-256 de la Web Crypto API (100 000 iteraciones, sal aleatoria de 16 bytes por usuario, huella de 32 bytes, ambas en hexadecimal) junto con el algoritmo y los parámetros; nunca en texto plano. El administrador de demostración (`admin@libreria.test`) se siembra con su huella precalculada y su contraseña figura solo en el README.
+**Contexto**: la consigna pide guardar los usuarios en `localStorage` y comparar email y contraseña; no exige texto plano, y `localStorage` es legible por quien tenga acceso al navegador. El usuario aceptó esta recomendación el 2026-11-09.
+**Alternativas consideradas**: texto plano (lo más simple, expone contraseñas reutilizadas); SHA-256 con sal (una sola pasada, rápido de forzar).
+**Justificación**: es la derivación nativa del navegador (bcrypt y argon2 requieren una librería, prohibida por la regla dura 1) y su costo es ajustable.
+**Trade-offs aceptados**: `crypto.subtle` solo existe en contextos seguros (`localhost` o HTTPS); no es seguridad real, porque `userData` es editable. Verificar tarda decenas de milisegundos.
+**Origen**: change `registro-login-y-sesion`, decisión D1.
+
+### DD-22 — Almacén de usuarios separado y regla dura 7 reformulada
+**Decisión**: los usuarios y la sesión los guarda `src/datos/local/almacen-usuarios.ts`, que recibe el almacenamiento inyectado, y no el almacén local. La regla dura 7 pasa a decir que `almacen-local.ts` es el único archivo que nombra `localStorage` y que los almacenes de `src/datos/local/` lo reciben inyectado.
+**Contexto**: el almacén local es transitorio (lo reemplaza la API); los usuarios y la sesión se quedan en el navegador para siempre.
+**Alternativas consideradas**: sumar usuarios y sesión a `almacen-local.ts` (cumple la letra de la regla, pero acopla datos permanentes a un adaptador que se retira).
+**Justificación**: el sentido de la regla (un único punto de acceso al almacenamiento y almacenes probables con un almacenamiento simulado) se conserva.
+**Trade-offs aceptados**: sin almacenamiento no hay reserva en memoria para la sesión; el registro y el ingreso muestran un error en lugar de fingir una sesión que se perdería al navegar.
+**Origen**: change `registro-login-y-sesion`, decisión D3.
 
 ## Supuestos inferidos
 

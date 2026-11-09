@@ -11,10 +11,25 @@
 El docente evaluador y el equipo no son roles dentro de la aplicación: la
 usan con las mismas capacidades que el operador.
 
+## Usuarios y roles (serie TypeScript)
+
+Desde `registro-login-y-sesion`, la aplicación distingue dos roles, guardados
+solo en el navegador (la API de producción no tiene usuarios y queda abierta):
+
+| Rol | Origen | Destino al iniciar sesión | Capacidades |
+|---|---|---|---|
+| `admin` | Sembrado en el primer inicio; credenciales de demostración en el README | Libros | Las de la matriz siguiente: las cinco vistas |
+| `client` | Se registra desde el formulario, sin selector de rol | Catálogo | Solo consulta el Catálogo con su buscador |
+
+El docente evaluador ingresa con el administrador de demostración o registra
+un usuario `client`. El bloqueo de las vistas `admin` para usuarios sin permiso
+lo implementa `proteccion-de-rutas-y-roles` (T-04); esta protección es solo del
+lado del cliente.
+
 ## RBAC — Matriz de permisos
 
-No hay autenticación, sesiones ni roles. La consigna excluye expresamente un
-inicio de sesión real. Existe un único perfil de uso con estas capacidades:
+La matriz describe las capacidades del rol `admin` (antes, el único perfil de
+uso de la serie JavaScript, sin autenticación):
 
 | Recurso | Crear | Leer | Actualizar | Eliminar |
 |---|---|---|---|---|
@@ -29,16 +44,22 @@ iniciales.
 
 ## Rutas públicas
 
-Todas las páginas son accesibles sin autenticación:
+Páginas sin sesión requerida (zona `auth`):
 
-- `index.html` (entrada)
-- Página de Libros
-- Página de Clientes
-- Página de Ventas
-- Página de Historial
+- `index.html` (entrada): redirige a la página de login.
+- `src/pages/auth/login/login.html`
+- `src/pages/auth/registro/registro.html`
 
-Los nombres de archivo de las páginas distintas de `index.html` y la vista que
-ocupa `index.html` están propuestos en `08_arquitectura_propuesta.md`.
+Si ya hay una sesión iniciada, login y registro redirigen al destino del rol.
+
+Páginas que requieren sesión, según la zona:
+
+- Zona `client` (`client` y `admin`): Catálogo.
+- Zona `admin` (solo `admin`): Libros, Clientes, Ventas e Historial.
+
+Hasta que `proteccion-de-rutas-y-roles` (T-04) agregue la intercepción en
+`src/main.ts`, estas páginas todavía se abren por su dirección sin sesión. La
+estructura de archivos está en `08_arquitectura_propuesta.md`.
 
 ## Consideraciones de accesibilidad para el operador
 

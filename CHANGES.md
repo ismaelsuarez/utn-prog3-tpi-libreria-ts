@@ -79,7 +79,7 @@ T-02 y T-03 son independientes entre sí y pueden avanzar en paralelo una vez ar
   - `knowledge-base/09_decisiones_y_supuestos.md` (DD-16 a DD-20)
 
 ### [T-03] `registro-login-y-sesion`
-- **Estado**: `[ ]`
+- **Estado**: `[x]` archivado el 2026-11-09 (`openspec/changes/archive/2026-11-09-registro-login-y-sesion/`)
 - **Scope**:
   - Vistas `login` y `registro` en la zona `auth`; usuarios en `localStorage` (`users`, `userData`) con una semilla `admin`; sesión con `IUser` y `Rol`. `index.html` de la raíz pasa a apuntar al login.
   - Decide cómo se suma la contraseña al arreglo `"users"` del repositorio base.

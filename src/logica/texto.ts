@@ -9,3 +9,6 @@ export function normalizarIsbn(isbn: string): string {
 export function normalizarEmail(email: string): string {
   return String(email).trim().toLowerCase();
 }
+
+/** Formato simple de email, que se aplica tras normalizar (SU-07 / PA-11). */
+export const FORMATO_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

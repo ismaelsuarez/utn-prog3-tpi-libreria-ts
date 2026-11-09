@@ -3,9 +3,8 @@
 // simple tras normalizar (SU-07 / PA-11).
 import type { ErrorDeCampo } from "../types/formulario";
 import type { Id } from "../types/primitivos";
-import { normalizarEmail } from "./texto";
+import { FORMATO_EMAIL, normalizarEmail } from "./texto";
 
-const FORMATO_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const FORMATO_TELEFONO = /^\+?[\d\s().-]+$/;
 
 /** Datos de un cliente tal como los arma un formulario antes de validarlos. */

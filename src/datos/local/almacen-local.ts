@@ -31,8 +31,14 @@ export const CLAVE_LIBROS = "libreria.libros";
 export const CLAVE_CLIENTES = "libreria.clientes";
 export const CLAVE_VENTAS = "libreria.ventas";
 
-/** Lo que el almacén necesita de `Storage`; una interfaz incompleta cuenta como ausente. */
-export type AlmacenamientoInyectable = Partial<Pick<Storage, "getItem" | "setItem">>;
+/**
+ * Lo que los almacenes necesitan de `Storage`; una interfaz sin `getItem` o sin
+ * `setItem` cuenta como ausente. `removeItem` lo usa solo el almacén de usuarios
+ * para cerrar la sesión.
+ */
+export type AlmacenamientoInyectable = Partial<
+  Pick<Storage, "getItem" | "setItem" | "removeItem">
+>;
 
 type AlmacenamientoUtilizable = Pick<Storage, "getItem" | "setItem">;
 

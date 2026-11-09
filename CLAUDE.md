@@ -16,12 +16,12 @@ Integrantes: Avalos Pablo, Blangetti Sofia, Suarez Ismael.
 
 | Capa | Tecnologías | Observaciones |
 |---|---|---|
-| Estructura | HTML5 semántico | Una página por vista en `src/pages/<zona>/<vista>/`; `index.html` de la raíz redirige al Catálogo |
+| Estructura | HTML5 semántico | Una página por vista en `src/pages/<zona>/<vista>/`; `index.html` de la raíz redirige al login (`src/pages/auth/login/login.html`) |
 | Presentación | CSS propio en archivos externos (`src/styles/`) | Flexbox o Grid; sin frameworks ni CDNs; tipografías e imágenes locales |
 | Comportamiento | TypeScript estricto, módulos ES (`<script type="module">`) | Sin librerías de ejecución; Vite 7 compila y sirve |
 | Datos | Repositorios asíncronos (`src/datos/repositorios.ts`) con forma de la API de producción | Hoy los implementa un adaptador sobre `localStorage`; la API `https://api.ismaelsuarez.me` se consume por la base `/api` del mismo origen (`VITE_API_BASE`) con reenvío en `npm run dev` y `npm run preview` |
 | Verificación de desarrollo | Vitest (`npm test`) y `tsc` | Las pruebas viven en `tests/`, fuera de la entrega |
-| Verificación de entrega | Casos manuales en el navegador | Ocho casos (CM-1 a CM-8) registrados en el README |
+| Verificación de entrega | Casos manuales en el navegador | Doce casos (CM-1 a CM-12) registrados en el README |
 
 Requiere Node 20.19+ o 22.12+ (exigencia de Vite 7) y npm. La aplicación ya no se
 abre desde `file://`: se ejecuta con `npm run dev` o con la compilación servida.
@@ -124,7 +124,7 @@ la API de producción).
 4. **NUNCA** acceder a datos o a la red fuera de los repositorios → las vistas usan solo `src/datos/proveedor.ts`; la red se dirige únicamente a la base del mismo origen (`/api`), nunca a `https://api.ismaelsuarez.me` en forma directa.
 5. **NUNCA** insertar datos de usuario con `innerHTML` → usar `textContent` o creación de nodos.
 6. **NUNCA** tocar el DOM dentro de `src/logica/` → allí solo funciones puras; el DOM vive en los módulos de `src/pages/` y en `src/utils/dom.ts`.
-7. **NUNCA** acceder a `localStorage` fuera de `src/datos/local/almacen-local.ts` → toda lectura y escritura pasa por el almacén local, que implementa los repositorios.
+7. **NUNCA** nombrar `localStorage` fuera de `src/datos/local/almacen-local.ts` → ese archivo es el único que obtiene el almacenamiento del navegador; los almacenes de `src/datos/local/` (datos de negocio, usuarios y sesión) lo reciben inyectado y son la única vía de lectura y escritura.
 8. **NUNCA** leer del catálogo el precio de una venta confirmada → la venta guarda copia del precio unitario y de los datos descriptivos.
 9. **NUNCA** agregar edición o borrado de registros, gestión de stock ni cobros → el alcance es el de la consigna.
 10. **NUNCA** marcar un caso manual como aprobado sin ejecutarlo → el README registra el resultado realmente observado; si falla o queda pendiente, se registra el comportamiento real.

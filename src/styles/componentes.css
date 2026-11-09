@@ -922,3 +922,41 @@ output {
     width: 100%;
   }
 }
+
+/* ========== SESIÓN Y ACCESO ========== */
+/* Bloque del encabezado con el usuario en curso; `hidden` lo oculta sin sesión. */
+.encabezado__sesion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-width: 0;
+  margin: 0;
+  font-size: var(--tamano-texto-pequeno);
+}
+
+.encabezado__usuario {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Páginas de login y registro: un único panel angosto y centrado. */
+.seccion--acceso {
+  max-width: 34rem;
+  margin-inline: auto;
+}
+
+/* Una sola columna en cualquier ancho, aunque `.formulario` pase a grilla. */
+.seccion--acceso .formulario {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.seccion--acceso .formulario > .boton {
+  align-self: flex-start;
+}
+
+.acceso__alternativa {
+  margin-top: var(--espacio-3);
+}

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Crear cuenta · Librería El Faro</title>
+    <link rel="icon" href="data:," />
+    <link href="../../../styles/base.css" rel="stylesheet" />
+    <link href="../../../styles/disposicion.css" rel="stylesheet" />
+    <link href="../../../styles/componentes.css" rel="stylesheet" />
+    <link href="../../../styles/vista-inmersiva.css" rel="stylesheet" />
+    <script type="module" src="./registro.ts"></script>
+</head>
+
+<body>
+    <header class="encabezado">
+        <div class="encabezado__interior">
+            <div class="encabezado__marca">
+                <span aria-hidden="true" class="encabezado__simbolo">✦</span>
+                <p class="encabezado__nombre">Librería El Faro</p>
+            </div>
+            <nav aria-label="Acceso" class="navegacion">
+                <ul class="navegacion__lista">
+                    <li><a class="navegacion__enlace" href="../login/login.html">Ingresar</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    <!-- Oculto hasta comprobar que no hay una sesión: con sesión se redirige sin mostrar el formulario. -->
+    <main class="contenido" hidden id="contenido-acceso">
+        <div class="contenido__introduccion">
+            <p class="contenido__ruta">Acceso / Crear cuenta</p>
+            <h1>Crear cuenta</h1>
+            <p class="contenido__descripcion">Registrate con tu email y una contraseña para usar la librería.</p>
+        </div>
+        <section aria-labelledby="titulo-registro" class="seccion seccion--panel seccion--acceso">
+            <div class="seccion__cabecera">
+                <p class="seccion__eyebrow">01 · REGISTRO</p>
+                <h2 id="titulo-registro">Tus datos</h2>
+            </div>
+
+            <p class="mensaje mensaje--error" id="mensaje-error" role="alert"></p>
+            <form class="formulario formulario--panel" id="form-registro" novalidate="">
+                <div class="campo">
+                    <label class="campo__etiqueta" for="registro-email">Email</label>
+                    <input aria-describedby="error-registro-email" autocomplete="email" class="campo__control"
+                        id="registro-email" name="email" type="email" />
+                    <p class="campo__error" id="error-registro-email"></p>
+                </div>
+                <div class="campo">
+                    <label class="campo__etiqueta" for="registro-contrasena">Contraseña</label>
+                    <input aria-describedby="ayuda-registro-contrasena error-registro-contrasena"
+                        autocomplete="new-password" class="campo__control" id="registro-contrasena" name="contrasena"
+                        type="password" />
+                    <small class="campo__ayuda" id="ayuda-registro-contrasena">Entre 8 y 64 caracteres. Los espacios
+                        cuentan.</small>
+                    <p class="campo__error" id="error-registro-contrasena"></p>
+                </div>
+                <div class="campo">
+                    <label class="campo__etiqueta" for="registro-repeticion">Repetir contraseña</label>
+                    <input aria-describedby="error-registro-repeticion" autocomplete="new-password"
+                        class="campo__control" id="registro-repeticion" name="repeticion" type="password" />
+                    <p class="campo__error" id="error-registro-repeticion"></p>
+                </div>
+                <button class="boton boton--primario" type="submit">Crear cuenta</button>
+            </form>
+            <p class="acceso__alternativa">¿Ya tenés cuenta? <a href="../login/login.html">Ingresá</a></p>
+        </section>
+    </main>
+    <footer class="pie">
+        <p>Trabajo Práctico Integrador · Programación III · UTN</p>
+        <p>Avalos Pablo, Blangetti Sofia, Suarez Ismael. Los datos son ficticios.</p>
+    </footer>
+</body>
+
+</html>

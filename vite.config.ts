@@ -29,6 +29,8 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         input: {
           index: desdeRaiz("./index.html"),
+          login: desdeRaiz("./src/pages/auth/login/login.html"),
+          registro: desdeRaiz("./src/pages/auth/registro/registro.html"),
           catalogo: desdeRaiz("./src/pages/client/catalogo/catalogo.html"),
           libros: desdeRaiz("./src/pages/admin/libros/libros.html"),
           clientes: desdeRaiz("./src/pages/admin/clientes/clientes.html"),
