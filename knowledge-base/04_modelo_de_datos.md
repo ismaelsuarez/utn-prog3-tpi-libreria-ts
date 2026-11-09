@@ -110,6 +110,32 @@ modifican y permanecen como datos iniciales en el código.
   README, porque el docente modifica el precio de un libro allí para
   comprobar el precio histórico.
 
+### Usuarios y sesión (serie TypeScript, `registro-login-y-sesion`)
+
+La API de producción no tiene usuarios, por lo que el registro, el inicio de
+sesión y los roles se guardan solo en el navegador, con las claves que fija la
+consigna del TPI. Las lee y escribe únicamente
+`src/datos/local/almacen-usuarios.ts`, que recibe el almacenamiento inyectado.
+
+| Clave | Contenido |
+|---|---|
+| `users` | Array de `UsuarioRegistrado` (`src/types/usuario.ts`) |
+| `userData` | Un `IUser` (`src/types/IUser.ts`): la sesión iniciada |
+
+- `UsuarioRegistrado`: `email` (normalizado: recortado y en minúsculas; es la
+  identidad y no se repite), `role` (`"client"` o `"admin"`), `contrasena` y
+  `creadoEn` (fecha ISO).
+- `contrasena` nunca guarda el texto: es una `ContrasenaGuardada` con
+  `algoritmo: "PBKDF2-SHA-256"`, `iteraciones` (100 000 por defecto), `sal`
+  (16 bytes aleatorios por usuario, en hexadecimal) y `huella` (32 bytes, en
+  hexadecimal).
+- `userData` guarda exactamente `{ email, loggedIn, role }`, nunca la
+  contraseña ni su huella.
+- **Semilla**: en el primer inicio, si la clave `users` no existe, se guarda un
+  único administrador (`src/datos/local/usuarios-iniciales.ts`) con su huella
+  ya calculada. Sus credenciales de demostración figuran solo en el README.
+  Los usuarios que se registran desde el formulario son siempre `client`.
+
 ## Seed data inicial
 
 Mínimos exigidos por la consigna:
