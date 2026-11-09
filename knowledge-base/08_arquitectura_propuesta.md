@@ -64,8 +64,10 @@ proyecto/
 │   └── assets/                 # estanteria.webp, portadas/, LEEME.txt
 ├── README.md
 │
+├── tests/                      # Pruebas con Vitest (tests/**/*.test.ts) y fixtures de la API (van en la entrega)
+├── Dockerfile, .dockerignore, despliegue/   # imagen de producción, plantilla de nginx, comprobar.sh y DESPLIEGUE.md
+│
 │   # Fuera de la entrega (solo desarrollo)
-├── tests/                      # Pruebas con Vitest (tests/**/*.test.ts) y fixtures de la API
 ├── node_modules/, dist/
 ├── docs/, discovery/, knowledge-base/, openspec/
 ```
@@ -199,7 +201,7 @@ proyecto/
 - Las pruebas automatizadas no reemplazan los casos manuales.
 - El DOM no se prueba con un runner automático; se cubre con los casos
   manuales.
-- `tests/`, `node_modules/` y `dist/` no forman parte de la entrega.
+- `tests/` va en la entrega (`npm test` funciona desde el `.zip`); `node_modules/` y `dist/` no.
 
 ## Seguridad
 

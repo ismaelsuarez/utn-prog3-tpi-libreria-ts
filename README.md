@@ -654,14 +654,31 @@ Antes de escribir se comprueba siempre el destino (la segunda y la tercera líne
 
 ## Entrega
 
-Se entrega el código fuente del proyecto: `index.html`, `src/`, `package.json`,
-`package-lock.json`, `tsconfig.json`, `vite.config.ts`, `.env.example` y
-`README.md`; la compilación (`npm run build`) genera `dist/`, que se sirve desde
-cualquier subruta. No incluye `node_modules/` ni `dist/`.
+La entrega es un archivo `.zip` que genera un comando, a partir del **último
+commit** (los cambios sin commit no entran):
 
-Quedan fuera: `tests/`, `docs/`, `discovery/`, `knowledge-base/`, `openspec/`,
-`.atl/`, `.claude/`, `.engram/`, `.githooks/`, `.git/`, `.gitignore`,
-`CHANGES.md`, `AGENTS.md`, `CLAUDE.md` y `.active-orchestrator-state.json`.
+```bash
+npm run entrega     # deja utn-prog3-tpi-libreria-ts.zip en la raíz (requiere Git)
+```
+
+El `.zip` tiene una única carpeta raíz, `utn-prog3-tpi-libreria-ts/`, con la
+estructura de carpetas del repositorio. Contiene: `index.html`, `src/`, `tests/`,
+`package.json`, `package-lock.json`, `tsconfig.json`, `vite.config.ts`,
+`.env.example`, `README.md`, `Dockerfile`, `.dockerignore` y `despliegue/`. Con
+`tests/` dentro, `npm test` funciona también desde el `.zip`; la compilación
+(`npm run build`) genera `dist/`, que se sirve desde cualquier subruta.
+
+Quedan fuera: `node_modules/`, `dist/`, `.git/`, `.engram/`, `.githooks/`,
+`.claude/`, `.atl/`, `openspec/`, `knowledge-base/`, `discovery/`, `docs/`,
+`CHANGES.md`, `AGENTS.md`, `CLAUDE.md`, `.gitignore` y todo archivo `.zip`.
+
+Cómo se comprueba (en una carpeta vacía fuera del repositorio):
+
+```bash
+unzip -l utn-prog3-tpi-libreria-ts.zip      # una sola carpeta raíz y la lista de arriba
+unzip -q utn-prog3-tpi-libreria-ts.zip -d "$(mktemp -d)"   # luego, dentro de esa carpeta:
+npm ci && npm run build && npm test         # los tres terminan con código 0
+```
 
 ---
 

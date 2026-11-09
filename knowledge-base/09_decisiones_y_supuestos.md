@@ -253,6 +253,14 @@
 El reenvío de `/api` de producción lo tomó la misma entrega (decisión del usuario, 2026-11-09): nginx reenvía al destino de `API_UPSTREAM` (por defecto `http://libreria_api:8000`, la API por la red interna de Easypanel; alternativa `https://api.ismaelsuarez.me`), con el nombre resuelto en cada solicitud para que el contenedor arranque aunque el destino no exista; sin reintentos; con reescritura de las `Location` del destino; con límite de cuerpo de 64 KiB; y **reenviando las escrituras**, porque la guarda de desarrollo vive en el servidor de Vite. Las pruebas de escritura del contenedor van solo contra un backend local. **Alternativas descartadas**: fallar al arrancar con un nombre literal (reinicios en bucle que ocultan la causa), la API pública por defecto (salto TLS y vuelta por el proxy del propio VPS).
 **Trade-offs aceptados**: el nombre `libreria_api` está inferido del patrón `<proyecto>_<servicio>` y debe comprobarse en Easypanel; un nombre mal escrito se ve como `502` en `/api/health/ready`, no como un contenedor caído.
 
+### DD-33 — Paquete de entrega con `git archive`
+**Decisión**: `npm run entrega` genera `utn-prog3-tpi-libreria-ts.zip` con `git archive` del último commit, bajo una única carpeta raíz, con una lista explícita de rutas incluidas (`index.html`, `src/`, `tests/`, `package.json`, `package-lock.json`, `tsconfig.json`, `vite.config.ts`, `.env.example`, `README.md`, `Dockerfile`, `.dockerignore`, `despliegue/`). `tests/` va dentro, para que `npm test` funcione desde el `.zip` (decisión del usuario, 2026-11-09, que cambia la lista de entrega anterior); el nombre del archivo es un supuesto hasta conocer el canal y el formato de entrega (PA-02).
+**Contexto**: la consigna califica un `.zip` «correctamente comprimido y con estructura de carpetas respetada» y un proyecto que ejecuta.
+**Alternativas consideradas**: `zip -r` con exclusiones (no viene en Windows y toma archivos no versionados); un script de Node con una librería de compresión (dependencia nueva, regla dura 1); «Download ZIP» de GitHub (incluye todo); `export-ignore` en `.gitattributes` (cambia también las descargas de GitHub).
+**Justificación**: toma solo lo versionado, nunca `node_modules/`, `dist/` ni `.env` reales; funciona igual en Linux, macOS y Windows con Git; sin dependencias nuevas.
+**Trade-offs aceptados**: lo que no está en un commit no entra al `.zip`; el `.zip` generado no está ignorado por Git hasta que se agregue `*.zip` a `.gitignore`.
+**Origen**: change `despliegue-frontend`, decisión D7.
+
 ## Supuestos inferidos
 
 ### SU-01 — Cada consigna equivale a un change autocontenido
