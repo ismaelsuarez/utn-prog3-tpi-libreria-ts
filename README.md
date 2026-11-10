@@ -611,11 +611,18 @@ La aplicación se publica como un contenedor: una imagen de varias etapas
 TLS: lo termina el proxy de la plataforma). La imagen se construye sin variables
 de entorno ni secretos y no contiene el código fuente ni `node_modules/`.
 
-**Dirección prevista**: `https://libreria.ismaelsuarez.me` (VPS con Easypanel, App
-`web` del proyecto `libreria`, rama `main`). Todavía **no está publicada**: los
-pasos que ejecuta una persona en Easypanel y en el DNS, la comprobación del nombre
-interno de la API, la prueba de humo y el registro del sexto libro están en
-[`despliegue/DESPLIEGUE.md`](despliegue/DESPLIEGUE.md).
+**Publicada en** `https://libreria.ismaelsuarez.me` desde el 2026-11-09 (VPS con
+Easypanel, App `web` del proyecto `libreria`, rama `main`, `/api` reenviado por la
+red interna a `libreria_api:8000`, sin variables de entorno). Los pasos están en
+[`despliegue/DESPLIEGUE.md`](despliegue/DESPLIEGUE.md). Resultado del despliegue:
+
+| Comprobación | Resultado observado (2026-11-09) |
+|---|---|
+| DNS | `libreria.ismaelsuarez.me` ya resolvía a la IP del VPS (comodín); no hizo falta un registro nuevo |
+| Estado de `web` | `healthy` después de Implementar |
+| `sh despliegue/comprobar.sh https://libreria.ismaelsuarez.me` | 44 de 44 casos correctos, con `/api/health/ready` respondido por la red interna |
+| Sexto libro (PA-15) | Registrado desde la aplicación publicada, a la primera: #6 «La furia» (Silvina Ocampo, Sudamericana, Cuento, ISBN 978-950-00-0006-6); el listado de producción tiene 6 libros |
+| Incidente | Durante la compilación de `web` el servicio `api` dejó de correr (sin error en sus registros; probablemente falta de memoria en el VPS de 2 GB). Se recuperó con **Reiniciar** (no Implementar), sin pérdida de datos. Después de implementar `web`, comprobar que `api` siga en verde |
 
 Construir y probar en local (requiere Docker):
 

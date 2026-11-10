@@ -76,12 +76,12 @@ Datos de prueba y carpetas temporales: siempre en `mktemp -d` fuera del reposito
 
 El agente no marca estas tareas por su cuenta: las marca solo cuando el usuario informa el resultado observado.
 
-- [ ] 7.1 [usuario] Integrar los PR #1 a #6, en orden, en `main`
-- [ ] 7.2 [usuario] Crear el registro DNS `A` de `libreria.ismaelsuarez.me` y comprobar con `dig +short` que devuelve la IP del VPS
-- [ ] 7.3 [usuario] Crear y configurar la App `web` en el proyecto `libreria` de Easypanel según `despliegue/DESPLIEGUE.md` (fuente, rama `main`, Dockerfile, entorno vacío, dominio con HTTPS al puerto 8080) y pulsar Implementar; verificar estado `healthy` y registros sin errores; comprobar con `wget` desde su consola que `libreria_api:8000` resuelve
-- [ ] 7.4 [usuario] Prueba de humo de solo lectura: `sh despliegue/comprobar.sh https://libreria.ismaelsuarez.me` en verde y, en el navegador, entrada, ingreso y Catálogo; si `/api/health/ready` responde 502 y el nombre interno no resuelve, corregir `API_UPSTREAM` o pasar a la API pública (`API_UPSTREAM=https://api.ismaelsuarez.me`)
-- [ ] 7.5 [usuario] Registrar el sexto libro desde la aplicación publicada (PA-15), con los pasos y comprobaciones de `despliegue/DESPLIEGUE.md`; registrar el resultado
-- [ ] 7.6 Registrar en el README la dirección publicada, la fecha del despliegue y el resultado de la prueba de humo informados por el usuario; verificar que el README no contiene credenciales ni datos privados
+- [x] 7.1 [usuario] Integrar los PR #1 a #6, en orden, en `main`
+- [x] 7.2 [usuario] (No hizo falta: el comodín ya resolvía `libreria.ismaelsuarez.me` a la IP del VPS) Crear el registro DNS `A` de `libreria.ismaelsuarez.me` y comprobar con `dig +short` que devuelve la IP del VPS
+- [x] 7.3 [usuario] Crear y configurar la App `web` en el proyecto `libreria` de Easypanel según `despliegue/DESPLIEGUE.md` (fuente, rama `main`, Dockerfile, entorno vacío, dominio con HTTPS al puerto 8080) y pulsar Implementar; verificar estado `healthy` y registros sin errores; comprobar con `wget` desde su consola que `libreria_api:8000` resuelve
+- [x] 7.4 [usuario] Prueba de humo de solo lectura: `sh despliegue/comprobar.sh https://libreria.ismaelsuarez.me` en verde y, en el navegador, entrada, ingreso y Catálogo; si `/api/health/ready` responde 502 y el nombre interno no resuelve, corregir `API_UPSTREAM` o pasar a la API pública (`API_UPSTREAM=https://api.ismaelsuarez.me`)
+- [x] 7.5 [usuario] Registrar el sexto libro desde la aplicación publicada (PA-15), con los pasos y comprobaciones de `despliegue/DESPLIEGUE.md`; registrar el resultado
+- [x] 7.6 Registrar en el README la dirección publicada, la fecha del despliegue y el resultado de la prueba de humo informados por el usuario; verificar que el README no contiene credenciales ni datos privados
 
 ## Workflow follow-up
 
