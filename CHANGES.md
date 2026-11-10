@@ -114,7 +114,7 @@ T-02 y T-03 son independientes entre sí y pueden avanzar en paralelo una vez ar
   - `knowledge-base/04_modelo_de_datos.md` y `knowledge-base/05_reglas_de_negocio.md`
 
 ### [T-06] `despliegue-frontend`
-- **Estado**: `[ ]`
+- **Estado**: `[x]` archivado el 2026-11-09 (`openspec/changes/archive/2026-11-09-despliegue-frontend/`); publicado en `https://libreria.ismaelsuarez.me`
 - **Scope**:
   - Contenedor `nginx` que sirve la compilación y reenvía `/api` a la API de producción, desplegado en Easypanel en `libreria.ismaelsuarez.me`.
   - README final y armado de la entrega (zip).
