@@ -42,15 +42,13 @@ server {
         return 200 "ok\n";
     }
 
-    # Entrada al login hecha por el servidor: con script-src 'self' el script en
-    # línea de index.html no se ejecutaría. 302 y no 301: no se fija en caché.
+    # La entrada es la portada pública (index.html, HTML estático sin scripts):
+    # se entrega con 200, sin redirigir. `/index.html` cae en `location /`. Con
+    # `add_header` en el bloque se pierden los del servidor, por eso el include.
     location = / {
+        add_header Cache-Control "no-cache";
         include /etc/nginx/cabeceras-seguridad.conf;
-        return 302 /src/pages/auth/login/login.html;
-    }
-    location = /index.html {
-        include /etc/nginx/cabeceras-seguridad.conf;
-        return 302 /src/pages/auth/login/login.html;
+        try_files /index.html =404;
     }
 
     # Reenvío de la API: solo las rutas que empiezan exactamente con /api/

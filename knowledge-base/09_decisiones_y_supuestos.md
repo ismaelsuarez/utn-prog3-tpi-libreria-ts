@@ -261,6 +261,14 @@ El reenvío de `/api` de producción lo tomó la misma entrega (decisión del us
 **Trade-offs aceptados**: lo que no está en un commit no entra al `.zip`; el `.zip` generado no está ignorado por Git hasta que se agregue `*.zip` a `.gitignore`.
 **Origen**: change `despliegue-frontend`, decisión D7.
 
+### DD-34 — Portada pública estática sin scripts ni datos
+**Decisión**: el `index.html` de la raíz es la portada pública de la librería: HTML estático sin ningún `<script>`, sin datos de negocio y sin solicitudes a `/api`, con los accesos «Ingresar» y «Crear cuenta» como enlaces relativos al login y al registro. La protección de rutas (`src/main.ts`, `src/logica/sesion.ts`) no cambia. Con una sesión vigente la portada se ve igual (los accesos llevan al login o al registro, cuya protección existente redirige al destino del rol) y la marca del encabezado de login y registro enlaza a la portada. En el contenedor, nginx entrega la portada en `/` y `/index.html` con `200`, `no-cache` y las cabeceras de seguridad, en lugar del `302` al login de DD-32. Aprobado por el usuario el 2026-11-09.
+**Contexto**: la raíz solo redirigía al login; se pidió una página de presentación pública. La consigna prohíbe mostrar datos sin sesión y la política de contenido estricta bloquea scripts y estilos en línea.
+**Alternativas consideradas**: una portada en `src/pages/publica/` con una zona nueva permitida en la guarda (abre una celda nueva en `decidirAcceso`, riesgo alto); una portada con módulo que lee la sesión para mostrar «Ir a la librería» (importa repositorios y siembra `users`).
+**Justificación**: sin código no hay grafo de módulos: la portada no puede cargar datos, leer `localStorage` ni pedir `/api`, y se comprueba con un `grep`; y no se toca la decisión de acceso.
+**Trade-offs aceptados**: con sesión, «Ingresar» equivale a «ir a la librería» pero la portada no lo dice; el texto de presentación es fijo.
+**Origen**: change `portada-publica`, decisiones D1 a D6.
+
 ## Supuestos inferidos
 
 ### SU-01 — Cada consigna equivale a un change autocontenido

@@ -16,13 +16,13 @@ Integrantes: Avalos Pablo, Blangetti Sofia, Suarez Ismael.
 
 | Capa | Tecnologías | Observaciones |
 |---|---|---|
-| Estructura | HTML5 semántico | Una página por vista en `src/pages/<zona>/<vista>/`; `index.html` de la raíz redirige al login (`src/pages/auth/login/login.html`) |
+| Estructura | HTML5 semántico | Una página por vista en `src/pages/<zona>/<vista>/`; `index.html` de la raíz es la portada pública, HTML estático sin script ni datos, con accesos al login y al registro |
 | Presentación | CSS propio en archivos externos (`src/styles/`) | Flexbox o Grid; sin frameworks ni CDNs; tipografías e imágenes locales |
 | Comportamiento | TypeScript estricto, módulos ES (`<script type="module">`) | Sin librerías de ejecución; Vite 7 compila y sirve |
 | Datos | Repositorios asíncronos (`src/datos/repositorios.ts`) con forma de la API de producción | Todos los datos de negocio (libros, editoriales, géneros, autores, clientes y ventas) salen de la API `https://api.ismaelsuarez.me` por la base `/api` del mismo origen (`VITE_API_BASE`), con el cliente HTTP de `src/datos/api/` (solo `GET` y `POST`, sin reintentos). `npm run dev` y `npm run preview` reenvían `/api` pero **rechazan con `403` toda escritura hacia producción**; las escrituras se prueban con un backend local en Docker (`API_PROXY_TARGET`, ver README). Usuarios y sesión (`users`, `userData`) siguen en `localStorage` |
 | Despliegue | Contenedor: `Dockerfile` multietapa (Node 22 compila, nginx sin privilegios sirve en el puerto 8080) | Publicado en `https://libreria.ismaelsuarez.me` desde el 2026-11-09 (Easypanel, proyecto `libreria`, App `web`, rama `main`). nginx reenvía `/api/` a `API_UPSTREAM` (por defecto `http://libreria_api:8000`; alternativa `https://api.ismaelsuarez.me`) **y sí reenvía las escrituras**. Pasos del humano en `despliegue/DESPLIEGUE.md`; comprobación de solo lectura con `sh despliegue/comprobar.sh <base>` |
 | Verificación de desarrollo | Vitest (`npm test`) y `tsc` | Las pruebas viven en `tests/` y van en la entrega (`npm test` funciona desde el `.zip`) |
-| Verificación de entrega | Casos manuales en el navegador | Treinta casos (CM-1 a CM-30) registrados en el README |
+| Verificación de entrega | Casos manuales en el navegador | Treinta y siete casos (CM-1 a CM-37) registrados en el README |
 
 Requiere Node 20.19+ o 22.12+ (exigencia de Vite 7) y npm. La aplicación ya no se
 abre desde `file://`: se ejecuta con `npm run dev` o con la compilación servida.
@@ -95,7 +95,7 @@ Cargar la skill correspondiente al contexto ANTES de escribir código.
 
 El plan de implementación completo está en [CHANGES.md](CHANGES.md). Resumen:
 
-- **Serie vigente (TypeScript)**: 6 changes, `T-01` a `T-06`. Camino crítico: `T-01 → T-03 → T-04 → T-05 → T-06`; `T-02` avanza en paralelo con `T-03` y se une en `T-05`.
+- **Serie vigente (TypeScript)**: 7 changes, `T-01` a `T-07`. Camino crítico: `T-01 → T-03 → T-04 → T-05 → T-06 → T-07`; `T-02` avanza en paralelo con `T-03` y se une en `T-05`.
 - **Serie JavaScript** (`C-01` a `C-06`, uno por ejercicio de la consigna original): archivada; se conserva en `CHANGES.md` como historial.
 - **Primer change de la serie vigente**: `T-01` (`migracion-vite-typescript`).
 
@@ -107,6 +107,7 @@ El plan de implementación completo está en [CHANGES.md](CHANGES.md). Resumen:
 | T-04 | `proteccion-de-rutas-y-roles` | T-03 | Intercepción en `src/main.ts` y roles `client` y `admin` |
 | T-05 | `operaciones-contra-api` | T-02, T-04 | Altas, ventas e historial contra la API |
 | T-06 | `despliegue-frontend` | T-05 | Contenedor con proxy `/api` en Easypanel, README final y entrega |
+| T-07 | `portada-publica` | T-06 | Portada pública estática en la raíz, entrada del contenedor y marca enlazada |
 
 **Antes de cualquier `/opsx:propose`**: leer [CHANGES.md](CHANGES.md), identificar las dependencias del change y los archivos de «Leer antes».
 

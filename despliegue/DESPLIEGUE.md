@@ -86,9 +86,10 @@ Debe terminar con `N de N casos correctos`. Si fallan los casos de `/api`, ver e
 
 Y en el navegador, en `https://libreria.ismaelsuarez.me`:
 
-1. La raíz lleva al formulario de ingreso (`/src/pages/auth/login/login.html`).
-2. Ingresar con el administrador de demostración del `README.md` (sección «Usuarios de
-   demostración y seguridad»).
+1. La raíz muestra la portada pública, con los accesos «Ingresar» y «Crear cuenta».
+2. «Ingresar» lleva al formulario de ingreso (`/src/pages/auth/login/login.html`);
+   allí, ingresar con el administrador de demostración del `README.md` (sección
+   «Usuarios de demostración y seguridad»).
 3. Libros y Catálogo muestran los libros de producción.
 4. La consola del navegador no informa violaciones de la política de seguridad de
    contenido.
@@ -119,6 +120,10 @@ publicada.
 ## Redesplegar y volver atrás
 
 - **Redesplegar**: llevar los cambios a `main` y pulsar **Implementar** en la App `web`.
+  En el VPS de 2 GB, implementar `web` ya detuvo una vez el servicio `api` (probablemente
+  por memoria durante la compilación). Después de **Implementar** `web`, comprobar que el
+  servicio `api` sigue en verde y, si se detuvo, **reiniciarlo** (no Implementar) y esperar
+  que vuelva a verde antes de la prueba de humo.
 - **Volver atrás**: `git revert` del commit problemático en `main` y **Implementar**
   (camino seguro y documentado). Si Easypanel ofrece volver a una implementación
   anterior en su historial sirve también, pero no está comprobado aquí.

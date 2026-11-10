@@ -83,7 +83,7 @@ espera_seguridad() {
 }
 
 # ---------------------------------------------------------------------------
-# Servicio estático, salud, entrada, caché y cabeceras
+# Servicio estático, salud, portada de entrada, caché y cabeceras
 # ---------------------------------------------------------------------------
 estaticos() {
   h=$(cabeceras /healthz)
@@ -93,10 +93,26 @@ estaticos() {
   caso "/healthz cuerpo 'ok'" $? "cuerpo '$(printf '%s' "$cuerpo" | head -c 40 | tr '\n' ' ')'"
   espera_seguridad "/healthz" "$h"
 
+  # La entrada es la portada: se entrega con 200, sin redirigir, sin caché fija y
+  # con las cabeceras de seguridad; enlaza al login y no lleva scripts.
   for entrada in / /index.html; do
     h=$(cabeceras "$entrada")
-    espera_estado "$entrada redirige 302" "$h" 302
-    espera_valor "$entrada Location relativo al login" "$h" location /src/pages/auth/login/login.html
+    espera_estado "$entrada responde 200" "$h" 200
+    espera_contiene "$entrada text/html" "$h" content-type text/html
+    espera_valor "$entrada Cache-Control no-cache" "$h" cache-control no-cache
+    espera_valor "$entrada sin Location (no redirige)" "$h" location ""
+    espera_seguridad "$entrada" "$h"
+    cuerpo=$(curl -sS --max-time 15 "$BASE$entrada" 2>/dev/null)
+    case "$cuerpo" in
+      *'href="src/pages/auth/login/login.html"'*) ok=0 ;;
+      *) ok=1 ;;
+    esac
+    caso "$entrada enlaza al login" "$ok" "no aparece href=\"src/pages/auth/login/login.html\""
+    case "$cuerpo" in
+      *'<script'*) ok=1 ;;
+      *) ok=0 ;;
+    esac
+    caso "$entrada sin <script" "$ok" "el cuerpo contiene <script"
   done
 
   login=/src/pages/auth/login/login.html
