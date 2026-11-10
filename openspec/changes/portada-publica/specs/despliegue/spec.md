@@ -26,7 +26,7 @@ El servidor SHALL responder `GET /` y `GET /index.html` con estado 200 y la port
 - **WHEN** se pide `GET /`
 - **THEN** la respuesta lleva `Content-Security-Policy` con `default-src 'self'` y `frame-ancestors 'none'`, `X-Content-Type-Options: nosniff` y `Referrer-Policy: no-referrer`
 
-#### Scenario: Portada detrás del proxy
+#### Scenario: Redirección detrás del proxy
 
-- **WHEN** se abre `https://libreria.ismaelsuarez.me/` en el navegador y se elige «Ingresar»
+- **WHEN** se abre `https://libreria.ismaelsuarez.me/` en el navegador (ya no hay redirección en la raíz) y se elige «Ingresar»
 - **THEN** se ve la portada sin violaciones de la política de seguridad de contenido y el navegador llega a `https://libreria.ismaelsuarez.me/src/pages/auth/login/login.html`, sin pasar por `http://` ni por el puerto interno
