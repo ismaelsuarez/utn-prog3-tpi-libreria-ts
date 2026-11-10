@@ -135,4 +135,9 @@ Alternativa descartada: *`try_files $uri $uri/ =404` en `location /` con `index 
 
 ## Open Questions
 
-- Texto definitivo del título y de la presentación (D4): el borrador se puede ajustar durante la implementación sin cambiar specs ni tareas.
+- ~~Texto definitivo del título y de la presentación (D4)~~ Resuelta el 2026-11-09: el usuario aprobó la propuesta tal como está.
+  - La portada es el `index.html` de la raíz, sin ningún script (D1, D2).
+  - El texto es el borrador de D4 sin cambios: título «Libros con historia, a un paso», el párrafo de presentación, los botones «Ingresar» y «Crear cuenta» y la nota «Para ver el catálogo necesitás ingresar con tu cuenta.».
+  - Con sesión la portada se ve igual que sin ella, sin «Ir a la librería» (D3).
+  - La marca del login y del registro enlaza a la portada (D5).
+  - No se modifican `src/main.ts` ni `src/logica/sesion.ts`.

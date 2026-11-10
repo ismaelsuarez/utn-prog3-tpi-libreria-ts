@@ -960,6 +960,18 @@ output {
   overflow-wrap: anywhere;
 }
 
+/* Marca del encabezado de login y registro: vuelve a la portada. Hereda color y
+   tipografía de la marca; el foco visible viene de `.encabezado :focus-visible`.
+   No usa `navegacion__enlace`: la guarda de rutas quita esos enlaces. */
+.encabezado__enlace-marca {
+  color: inherit;
+  text-decoration: none;
+}
+
+.encabezado__enlace-marca:hover {
+  text-decoration: underline;
+}
+
 /* Páginas de login y registro: un único panel angosto y centrado. */
 .seccion--acceso {
   max-width: 34rem;

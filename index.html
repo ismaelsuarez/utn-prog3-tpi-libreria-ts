@@ -4,19 +4,44 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Librería El Faro</title>
+  <title>Inicio · Librería El Faro</title>
   <link rel="icon" href="data:,">
-  <!-- Redirección relativa: funciona servida desde la raíz o desde una subruta. -->
-  <script>
-    window.location.replace("src/pages/auth/login/login.html");
-  </script>
-  <noscript>
-    <meta http-equiv="refresh" content="0; url=src/pages/auth/login/login.html">
-  </noscript>
+  <link href="src/styles/base.css" rel="stylesheet">
+  <link href="src/styles/disposicion.css" rel="stylesheet">
+  <link href="src/styles/componentes.css" rel="stylesheet">
+  <link href="src/styles/vista-inmersiva.css" rel="stylesheet">
+  <link href="src/styles/portada.css" rel="stylesheet">
 </head>
 
+<!-- Portada pública: HTML estático, sin scripts ni datos. Los accesos son enlaces relativos. -->
+
 <body>
-  <p><a href="src/pages/auth/login/login.html">Ir a ingresar</a></p>
+  <header class="encabezado">
+    <div class="encabezado__interior">
+      <div class="encabezado__marca">
+        <span aria-hidden="true" class="encabezado__simbolo">✦</span>
+        <p class="encabezado__nombre">Librería El Faro</p>
+      </div>
+    </div>
+  </header>
+  <main class="contenido">
+    <section aria-labelledby="titulo-portada" class="contenido__introduccion portada__presentacion">
+      <p class="contenido__ruta">Bienvenida</p>
+      <h1 id="titulo-portada">Libros con historia, a un paso</h1>
+      <p class="contenido__descripcion">Librería El Faro es una librería de barrio con libros de editoriales y autores seleccionados. Desde esta aplicación, quienes tienen cuenta consultan el catálogo, y el equipo de la librería registra libros y clientes, realiza ventas y revisa el historial.</p>
+      <nav aria-label="Acceso" class="portada__acceso">
+        <ul class="portada__accesos">
+          <li><a class="boton boton--primario" href="src/pages/auth/login/login.html">Ingresar</a></li>
+          <li><a class="boton boton--secundario" href="src/pages/auth/registro/registro.html">Crear cuenta</a></li>
+        </ul>
+      </nav>
+      <p class="portada__nota">Para ver el catálogo necesitás ingresar con tu cuenta.</p>
+    </section>
+  </main>
+  <footer class="pie">
+    <p>Trabajo Práctico Integrador · Programación III · UTN</p>
+    <p>Avalos Pablo, Blangetti Sofia, Suarez Ismael. Los datos son ficticios.</p>
+  </footer>
 </body>
 
 </html>

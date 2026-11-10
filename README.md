@@ -80,8 +80,8 @@ npm test           # corre la suite de Vitest una sola vez
 
 1. Ejecutar `npm install` y luego `npm run dev`.
 2. Abrir la dirección que informa el servidor (por defecto `http://localhost:5173`):
-   la página de entrada lleva al login.
-3. Ingresar con un usuario de demostración (ver [Usuarios de demostración y
+   se ve la portada pública, con los accesos «Ingresar» y «Crear cuenta».
+3. Elegir «Ingresar» y entrar con un usuario de demostración (ver [Usuarios de demostración y
    seguridad](#usuarios-de-demostración-y-seguridad)) o crear una cuenta; el
    administrador llega a Libros y el cliente al Catálogo.
 4. Navegar entre las vistas con la barra superior.
@@ -113,7 +113,8 @@ Las cinco páginas de la librería comparten la misma barra de navegación, que
 indica la vista actual, y muestran en el encabezado el email del usuario en curso
 con el botón «Cerrar sesión». La barra ofrece solo las vistas que el rol puede
 abrir: el administrador ve las cinco y el cliente solo el Catálogo. Las páginas
-de acceso (login y registro) no la muestran y se enlazan entre sí.
+de acceso (login y registro) no la muestran, se enlazan entre sí y su marca
+«Librería El Faro» vuelve a la portada.
 
 **Quién puede abrir cada página** (lo decide `src/main.ts` al cargar cada página,
 por la carpeta de zona de su dirección y la sesión vigente):
@@ -130,7 +131,8 @@ repite al recargar y al volver atrás con el historial. La sesión solo vale si
 
 | Vista | Archivo | Qué se hace |
 |---|---|---|
-| Ingresar | `src/pages/auth/login/login.html` (`index.html` redirige aquí) | Iniciar sesión con email y contraseña; lleva a Libros (administrador) o al Catálogo (cliente) |
+| Portada | `index.html` (la raíz) | Presentar la librería y ofrecer «Ingresar» y «Crear cuenta»; HTML estático, sin scripts, sin datos y sin solicitudes a `/api`; se ve igual con o sin sesión |
+| Ingresar | `src/pages/auth/login/login.html` | Iniciar sesión con email y contraseña; lleva a Libros (administrador) o al Catálogo (cliente) |
 | Crear cuenta | `src/pages/auth/registro/registro.html` | Registrarse con email y contraseña (siempre como cliente) |
 | Catálogo | `src/pages/client/catalogo/catalogo.html` | Buscar por título y ver los libros en tarjetas, con su ficha de lectura |
 | Libros | `src/pages/admin/libros/libros.html` | Registrar un libro y consultar la tabla de libros |
@@ -581,7 +583,7 @@ cubierta de respaldo con el título.
 ## Estructura de carpetas
 
 ```text
-index.html                  redirige al login (ruta relativa)
+index.html                  portada pública estática (sin script ni datos), con enlaces relativos al login y al registro
 package.json, tsconfig.json, vite.config.ts, .env.example
 Dockerfile, .dockerignore   imagen de producción (Node compila, nginx sirve en el puerto 8080)
 despliegue/                 nginx/ (plantilla y cabeceras), comprobar.sh (solo lectura) y DESPLIEGUE.md (pasos de Easypanel)
@@ -598,7 +600,7 @@ src/
 │                           almacén de usuarios y sesión, contraseñas (PBKDF2) y usuario administrador inicial
 ├── types/                  tipos de dominio alineados con la API de producción
 ├── utils/                  dom.ts (mensajes, errores de campo, cierre de sesión), auth.ts y navigate.ts (sesión y navegación)
-├── styles/                 estilos: base, disposición, componentes y uno por función
+├── styles/                 estilos: base, disposición, componentes y uno por función (portada.css es el de index.html)
 └── assets/                 estanteria.webp y portadas/
 tests/                      pruebas de Vitest (lógica, almacén, repositorios, fixtures de la API); van en la entrega
 ```
