@@ -127,7 +127,7 @@ T-02 y T-03 son independientes entre sí y pueden avanzar en paralelo una vez ar
   - `knowledge-base/08_arquitectura_propuesta.md`
 
 ### [T-07] `portada-publica`
-- **Estado**: `[ ]` (implementado en la rama `feat/portada-publica`; pendiente del redespliegue en Easypanel y del archivo)
+- **Estado**: `[x]` archivado el 2026-11-09 (`openspec/changes/archive/2026-11-09-portada-publica/`); publicada en `https://libreria.ismaelsuarez.me/`
 - **Scope**:
   - Portada pública estática en la raíz (`index.html`): presentación de la librería y accesos «Ingresar» y «Crear cuenta», sin scripts, sin datos de negocio y sin solicitudes a `/api`; se ve igual con o sin sesión.
   - Entrada del contenedor: nginx entrega la portada en `/` y `/index.html` (antes redirigía al login), con `no-cache` y las cabeceras de seguridad.

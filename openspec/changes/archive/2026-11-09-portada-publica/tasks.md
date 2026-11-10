@@ -75,11 +75,11 @@ Carpetas temporales siempre en `mktemp -d` fuera del repositorio; los contenedor
 
 El agente no marca estas tareas por su cuenta: las marca solo cuando el usuario informa el resultado observado.
 
-- [ ] 5.1 [usuario] Integrar el PR de `feat/portada-publica` en `main`
-- [ ] 5.2 [usuario] En la App `web` del proyecto `libreria`, pulsar **Implementar** y esperar el estado `healthy`
-- [ ] 5.3 [usuario] Comprobar que el servicio `api` sigue en verde; si se detuvo durante la implementación de `web` (ya ocurrió una vez en el VPS de 2 GB, probablemente por memoria), **reiniciarlo** (no Implementar) y esperar que vuelva a verde
-- [ ] 5.4 [usuario] Prueba de humo: `sh despliegue/comprobar.sh https://libreria.ismaelsuarez.me` en verde y, en el navegador, la raíz muestra la portada, «Ingresar» lleva al login y el Catálogo sin sesión lleva al login
-- [ ] 5.5 Registrar en el README la fecha del redespliegue y el resultado de la prueba de humo informados por el usuario; verificar que no contiene credenciales ni datos privados
+- [x] 5.1 [usuario] Integrar el PR de `feat/portada-publica` en `main`
+- [x] 5.2 [usuario] En la App `web` del proyecto `libreria`, pulsar **Implementar** y esperar el estado `healthy`
+- [x] 5.3 [usuario] Comprobar que el servicio `api` sigue en verde; si se detuvo durante la implementación de `web` (ya ocurrió una vez en el VPS de 2 GB, probablemente por memoria), **reiniciarlo** (no Implementar) y esperar que vuelva a verde
+- [x] 5.4 [usuario] Prueba de humo: `sh despliegue/comprobar.sh https://libreria.ismaelsuarez.me` en verde y, en el navegador, la raíz muestra la portada, «Ingresar» lleva al login y el Catálogo sin sesión lleva al login
+- [x] 5.5 Registrar en el README la fecha del redespliegue y el resultado de la prueba de humo informados por el usuario; verificar que no contiene credenciales ni datos privados
 
 ## Workflow follow-up
 
