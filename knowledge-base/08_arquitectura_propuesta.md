@@ -25,7 +25,7 @@
 
 ```
 proyecto/
-├── index.html                  # Entrada: redirige al login (ruta relativa)
+├── index.html                  # Portada pública estática (sin script ni datos); enlaces relativos al login y al registro
 ├── package.json, tsconfig.json, vite.config.ts, .env.example
 ├── src/
 │   ├── main.ts                 # Entrada común: todas las vistas la importan primero
@@ -60,7 +60,7 @@ proyecto/
 │   ├── types/                  # Id, Dinero, Libro, LibroDetalle, Cliente, Venta, ErrorApi, IUser, Rol…
 │   ├── utils/                  # dom.ts (mensajes, búsqueda tipada, errores de campo, cierre de sesión),
 │   │                           # auth.ts (sesión y destino por rol) y navigate.ts (navegación)
-│   ├── styles/                 # base, disposición, componentes y una hoja por función
+│   ├── styles/                 # base, disposición, componentes y una hoja por función (portada.css, la de index.html)
 │   └── assets/                 # estanteria.webp, portadas/, LEEME.txt
 ├── README.md
 │
@@ -162,10 +162,10 @@ proyecto/
   (uid 101), puerto 8080, sin TLS ni secretos; solo `dist/` en
   `/usr/share/nginx/html`. `HEALTHCHECK` sobre `/healthz`.
 - **Servicio estático**: páginas múltiples sin respaldo de SPA
-  (`try_files $uri =404`); `/` y `/index.html` redirigen con `302` a
-  `/src/pages/auth/login/login.html` porque el script en línea de `index.html` no
-  se ejecuta bajo `script-src 'self'`; `absolute_redirect off` mantiene las
-  redirecciones como rutas relativas detrás del proxy HTTPS.
+  (`try_files $uri =404`); `/` y `/index.html` responden `200` con la portada
+  (`index.html`, HTML estático sin script, con `no-cache` y las cabeceras de
+  seguridad, sin redirigir; ver DD-34); `absolute_redirect off` mantiene las
+  redirecciones que arma nginx como rutas relativas detrás del proxy HTTPS.
 - **Caché y compresión**: `assets/` (nombres con huella) un año e `immutable`; el
   HTML `no-cache`; gzip para texto.
 - **Cabeceras** (`despliegue/nginx/cabeceras-seguridad.conf`, con `always` e

@@ -1,7 +1,7 @@
 # CHANGES — Secuencia de Implementación
 
 > Índice canónico de los changes del proyecto **TPI: frontend de una librería** (UTN, Programación III).
-> Hay dos series. La **serie TypeScript (T-01 a T-06)** es la vigente: migra el proyecto a Vite + TypeScript estricto y lo conecta con la API de producción. La **serie JavaScript (C-01 a C-06)**, uno por ejercicio de la consigna original (100 puntos), está **archivada** y se conserva como historial.
+> Hay dos series. La **serie TypeScript (T-01 a T-07)** es la vigente: migra el proyecto a Vite + TypeScript estricto y lo conecta con la API de producción. La **serie JavaScript (C-01 a C-06)**, uno por ejercicio de la consigna original (100 puntos), está **archivada** y se conserva como historial.
 > Cada change se recorre con el ciclo `/opsx:explore` → `/opsx:propose` → `/opsx:apply` → `/opsx:archive`.
 > **Leer este archivo antes de ejecutar cualquier `/opsx:propose`.**
 
@@ -39,6 +39,7 @@ T-01 migracion-vite-typescript
         └── T-04 proteccion-de-rutas-y-roles    │
               └── T-05 operaciones-contra-api ◄─┘ (depende de T-02 y T-04)
                     └── T-06 despliegue-frontend
+                          └── T-07 portada-publica
 ```
 
 | Change | Depende de |
@@ -49,8 +50,9 @@ T-01 migracion-vite-typescript
 | T-04 | T-03 |
 | T-05 | T-02, T-04 |
 | T-06 | T-05 |
+| T-07 | T-06 |
 
-T-02 y T-03 son independientes entre sí y pueden avanzar en paralelo una vez archivado T-01. Camino crítico: `T-01 → T-03 → T-04 → T-05 → T-06`.
+T-02 y T-03 son independientes entre sí y pueden avanzar en paralelo una vez archivado T-01. Camino crítico: `T-01 → T-03 → T-04 → T-05 → T-06 → T-07`.
 
 ### [T-01] `migracion-vite-typescript`
 - **Estado**: `[x]` archivado el 2026-11-09 (`openspec/changes/archive/2026-11-09-migracion-vite-typescript/`)
@@ -122,6 +124,19 @@ T-02 y T-03 son independientes entre sí y pueden avanzar en paralelo una vez ar
 - **Governance**: ALTO (entrega y entorno)
 - **Leer antes**:
   - `openspec/changes/migracion-vite-typescript/design.md` (D10)
+  - `knowledge-base/08_arquitectura_propuesta.md`
+
+### [T-07] `portada-publica`
+- **Estado**: `[ ]` (implementado en la rama `feat/portada-publica`; pendiente del redespliegue en Easypanel y del archivo)
+- **Scope**:
+  - Portada pública estática en la raíz (`index.html`): presentación de la librería y accesos «Ingresar» y «Crear cuenta», sin scripts, sin datos de negocio y sin solicitudes a `/api`; se ve igual con o sin sesión.
+  - Entrada del contenedor: nginx entrega la portada en `/` y `/index.html` (antes redirigía al login), con `no-cache` y las cabeceras de seguridad.
+  - La marca del encabezado de login y registro enlaza a la portada.
+  - La protección de rutas (`src/main.ts`, `src/logica/sesion.ts`) no cambia.
+- **Dependencias**: `T-06`
+- **Governance**: MEDIO (interfaz y página estática); la unidad del contenedor, ALTO (entorno de despliegue)
+- **Leer antes**:
+  - `openspec/changes/portada-publica/design.md`
   - `knowledge-base/08_arquitectura_propuesta.md`
 
 ---

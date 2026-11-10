@@ -390,6 +390,12 @@ El navegador guarda únicamente dos claves, ambas de acceso y sesión (ver
 
 ## Casos manuales: resultado observado
 
+> **Desde `portada-publica` (T-07) la raíz muestra la portada pública, no el login.**
+> Los casos CM-12, CM-13, CM-25, CM-28, CM-29 y CM-A6 de abajo dicen «la raíz lleva al
+> login» o «`/` y `/index.html` redirigen al login»: eso es lo que se observó cuando
+> se ejecutaron y se conserva tal cual (regla dura 10). Hoy la raíz es la portada
+> y su acceso «Ingresar» lleva al login; ver CM-31 en adelante.
+
 **Ejecución del 2026-11-09** (change `operaciones-contra-api`): recorrido
 automatizado en Google Chrome 157 (modo headless, mediante el protocolo de
 herramientas de desarrollo), con un perfil nuevo por pasada, **contra el backend
@@ -567,6 +573,27 @@ y una auditoría con lector de pantalla.
 | **CM-29** Contenedor en el navegador, con lecturas de producción | Entrada, ingreso y Catálogo con los libros de producción; ninguna escritura; todo al mismo origen | 8 de 8 comprobaciones con `API_UPSTREAM=https://api.ismaelsuarez.me`: raíz → login, administrador → Libros, Catálogo con 5 tarjetas, sin errores ni violaciones de CSP, 6 solicitudes a `/api` todas `GET` y al mismo origen | Aprobado |
 | **CM-30** Paquete de entrega | `npm run entrega` deja un `.zip` con una sola carpeta raíz, lo incluido y nada de lo excluido; los cambios sin commit no entran; desde el `.zip` corren `npm ci`, `npm run build` y `npm test` y la imagen se construye | Código 0; una única carpeta raíz `utn-prog3-tpi-libreria-ts/` (149 archivos: `index.html`, `src/`, `tests/`, los archivos de configuración, `.env.example`, `README.md`, `Dockerfile`, `.dockerignore` y `despliegue/`); ninguno de `node_modules/`, `dist/`, `.git/`, `.engram/`, `.githooks/`, `.claude/`, `.atl/`, `openspec/`, `knowledge-base/`, `discovery/`, `docs/`, `CHANGES.md`, `AGENTS.md`, `CLAUDE.md` ni `.zip`. Un cambio en `index.html` sin commit no apareció en el `.zip`. Descomprimido en una carpeta vacía: `npm ci` 0, `npm run build` 0 (`dist/` con la entrada y las vistas), `npm test` 626 de 626 y `docker build` 0 | Aprobado |
 
+### Casos manuales de la portada pública (`portada-publica`)
+
+**Ejecución del 2026-11-09**: la imagen construida con el `Dockerfile` desde un clon
+limpio de la rama, corrida en Docker local con `API_UPSTREAM=https://api.ismaelsuarez.me`
+(el destino de producción, **solo con `GET`**: no se levantó el backend local porque
+ninguna comprobación escribe en la API; el único alta, un usuario de prueba, solo toca
+`localStorage` del perfil del navegador). Recorridos automatizados en Google Chrome 157
+(modo headless, protocolo de herramientas de desarrollo), con un perfil nuevo, a través
+del contenedor: 54 comprobaciones, todas correctas. Los contrastes se calcularon sobre
+los colores computados y un fondo oscuro aproximado (`#10302a`) para el degradado.
+
+| Caso | Resultado esperado | Resultado observado | Estado |
+|---|---|---|---|
+| **CM-31** Portada sin sesión | Se ve la marca, el título, el texto de presentación y el pie con los tres integrantes; un solo `h1`, encabezado, navegación, contenido principal y pie; sin scripts ni solicitudes a `/api` ni a otro origen; sin errores ni violaciones de CSP | Título de pestaña «Inicio · Librería El Faro»; `h1` «Libros con historia, a un paso»; 0 elementos `script` y 0 manejadores; las solicitudes fueron `/`, una hoja de estilo `index-<huella>.css`, `vista-inmersiva-<huella>.css` y `estanteria-<huella>.webp` (todas del mismo origen, ninguna a `/api`); consola sin errores ni violaciones de la política de seguridad de contenido; sin respuestas 4xx ni 5xx; `localStorage` vacío tras abrirla | Aprobado |
+| **CM-32** Portada a 320, 768 y 1280 px, con teclado | Sin desplazamiento horizontal; los dos accesos completos y usables; Tab recorre los enlaces con foco visible; texto legible | `scrollWidth` igual a `clientWidth` en los tres anchos (320, 768 y 1280); a 320 px los accesos se apilan (252 px de ancho, 48 px de alto) y a 768 y 1280 px van en fila; Tab: «Ingresar», «Crear cuenta», con contorno sólido de 3 px (`#efd5a3`) en ambos; contraste calculado: texto de botones 8,9:1 y 13,5:1, título 13,5:1, presentación 11,4:1, nota 9,7:1, contorno de foco 10:1 | Aprobado |
+| **CM-33** Accesos sin sesión y regreso desde login y registro | «Ingresar» abre el login, «Crear cuenta» el registro; la marca de ambos lleva a la portada, con foco visible | «Ingresar» → `/src/pages/auth/login/login.html` con su formulario; «Crear cuenta» → `/src/pages/auth/registro/registro.html` con su formulario; la marca «Librería El Faro» de cada una (`href="../../../../index.html"`) vuelve a `/index.html` y se ve la portada; la marca sigue siendo un enlace tras correr la guarda y recibe foco visible por teclado (contorno de 3 px) | Aprobado |
+| **CM-34** Portada con sesión | Se ve igual que sin sesión, no modifica `users` ni `userData`; los accesos terminan en el destino del rol | Con un `client` (cuenta `portada@prueba.test`, registrada e ingresada en la misma prueba): la portada se ve igual, sin `/api`, `users` y `userData` idénticos antes y después, «Crear cuenta» e «Ingresar» terminan en el Catálogo sin mostrar el registro. Con el `admin`: igual, y «Ingresar» termina en Libros | Aprobado |
+| **CM-35** Protección de rutas sin cambios | Sin sesión, las cinco páginas protegidas llevan al login (también al escribir la dirección después de abrir la portada) y el Catálogo no pide `/api`; cada rol conserva sus páginas | Sin sesión: Catálogo, Libros, Clientes, Ventas e Historial → `login.html`, 0 solicitudes a `/api`. `client`: las cuatro páginas de `admin` → Catálogo. `admin`: las cinco se muestran y el login con sesión redirige a Libros. `src/main.ts` y `src/logica/sesion.ts` sin cambios (`git diff` contra `main`) y `tests/logica/sesion.test.ts` 95 de 95 | Aprobado |
+| **CM-36** Contenedor: la raíz es la portada | `/` y `/index.html` responden 200 con la portada, sin `Location`, `no-cache` y las cabeceras de seguridad; ninguna otra ruta cambia respecto de `main` | `sh despliegue/comprobar.sh` en verde (60 de 60 casos) contra la imagen de un clon limpio de la rama; contra una imagen de `main` el mismo script falla solo los 8 casos de la entrada (estado 302, sin `no-cache`, con `Location`, sin enlace) y las cabeceras de `/healthz`, login, registro, `assets/`, 404, `/api`, `/apiclientes/` y `/src/pages/auth/login` son idénticas en ambas imágenes; contenedor `healthy`, `id -u` 101; `/` y `/index.html` entregan el mismo cuerpo | Aprobado |
+| **CM-37** Portada bajo la subruta `/libreria/` | La portada, sus estilos e imagen y sus accesos funcionan dentro de la subruta, sin 404 | `dist/` copiada a `/libreria/` de un servidor estático: portada con su imagen de fondo, «Ingresar» → `/libreria/src/pages/auth/login/login.html`, «Crear cuenta» → `/libreria/src/pages/auth/registro/registro.html` y la marca de cada una → `/libreria/index.html`; 0 respuestas 404 | Aprobado |
+
 ---
 
 ## Imágenes y recursos
@@ -638,7 +665,8 @@ docker rm -f tpi-libreria-web
 `despliegue/comprobar.sh <base>` solo envía `GET` y `HEAD`, de modo que sirve igual
 contra el contenedor local y contra el sitio publicado. Comprueba la salud
 (`/healthz`, respondida por nginx sin consultar la API), la entrada (`/` y
-`/index.html` redirigen al login con una ruta relativa al origen), las cabeceras
+`/index.html` responden `200` con la portada pública, sin redirigir, con
+`no-cache`, las cabeceras de seguridad, el enlace al login y sin `<script`), las cabeceras
 de seguridad (política de contenido estricta, `nosniff`, `Referrer-Policy`), la
 caché (`no-cache` para el HTML, un año e `immutable` para `assets/`), gzip y el
 404 de toda ruta que no sea un archivo (la aplicación es multipágina, sin
@@ -816,7 +844,7 @@ npx tsc          # comprobación de tipos de src/ y tests/
 ```
 
 Las pruebas no necesitan navegador y no sustituyen los recorridos manuales
-(CM-1 a CM-30).
+(CM-1 a CM-37).
 
 ### Memoria compartida (Engram)
 

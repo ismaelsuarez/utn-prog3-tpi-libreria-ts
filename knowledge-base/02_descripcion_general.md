@@ -4,7 +4,7 @@
 
 | Capa | Tecnologías | Observaciones |
 |---|---|---|
-| Estructura | HTML5 semántico | Varias páginas, una por vista; `index.html` es la entrada |
+| Estructura | HTML5 semántico | Varias páginas, una por vista; `index.html` es la portada pública (HTML estático, sin script ni datos) |
 | Presentación | CSS propio en archivos externos | Flexbox o Grid; sin frameworks ni CDNs; tipografías e imágenes locales |
 | Comportamiento | JavaScript nativo (scripts clásicos) | Sin librerías; sin `type="module"` (ver DD-03 en `09`) |
 | Persistencia | API de producción por `/api`; `localStorage` solo para usuarios y sesión | Libros, editoriales, géneros, autores, clientes y ventas viven en la API |
