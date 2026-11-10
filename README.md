@@ -652,6 +652,7 @@ red interna a `libreria_api:8000`, sin variables de entorno). Los pasos están e
 | `sh despliegue/comprobar.sh https://libreria.ismaelsuarez.me` | 44 de 44 casos correctos, con `/api/health/ready` respondido por la red interna |
 | Sexto libro (PA-15) | Registrado desde la aplicación publicada, a la primera: #6 «La furia» (Silvina Ocampo, Sudamericana, Cuento, ISBN 978-950-00-0006-6); el listado de producción tiene 6 libros |
 | Incidente | Durante la compilación de `web` el servicio `api` dejó de correr (sin error en sus registros; probablemente falta de memoria en el VPS de 2 GB). Se recuperó con **Reiniciar** (no Implementar), sin pérdida de datos. Después de implementar `web`, comprobar que `api` siga en verde |
+| Redespliegue con la portada (T-07) | `web` implementada de nuevo el 2026-11-09 y en `healthy`; `api` en verde y `/api/health/ready` 200. `comprobar.sh` 60 de 60: la raíz responde 200 con la portada (sin `<script>`, `Cache-Control: no-cache`) y el listado sigue con 6 libros |
 
 Construir y probar en local (requiere Docker):
 

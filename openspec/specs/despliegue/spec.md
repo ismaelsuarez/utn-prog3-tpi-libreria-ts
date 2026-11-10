@@ -38,19 +38,29 @@ El servidor SHALL responder `GET /healthz` con estado 200 y un cuerpo de texto c
 - **WHEN** el destino de `/api` no responde y se pide `GET /healthz`
 - **THEN** la respuesta sigue siendo 200 y el estado de salud del contenedor es `healthy`
 
-### Requirement: Entrada al login servida por el servidor
+### Requirement: Portada servida en la entrada
 
-El servidor SHALL redirigir `GET /` y `GET /index.html` a la página de login con una redirección cuya cabecera `Location` es una ruta relativa al origen (sin esquema, anfitrión ni puerto internos), de modo que funcione detrás del proxy HTTPS de la plataforma.
+El servidor SHALL responder `GET /` y `GET /index.html` con estado 200 y la portada de la compilación (`index.html`), sin redirigir, con `Cache-Control: no-cache` y las mismas cabeceras de seguridad que el resto de las páginas.
 
 #### Scenario: Apertura de la raíz
 
 - **WHEN** se pide `GET /` al servidor
-- **THEN** la respuesta es una redirección con `Location: /src/pages/auth/login/login.html` y, al seguirla, el navegador muestra el formulario de inicio de sesión
+- **THEN** la respuesta es 200 con `Content-Type: text/html`, `Cache-Control: no-cache` y el contenido de la portada, sin cabecera `Location`
+
+#### Scenario: Entrada por index.html
+
+- **WHEN** se pide `GET /index.html` al servidor
+- **THEN** la respuesta es 200 con el mismo contenido que `GET /`
+
+#### Scenario: Cabeceras de seguridad en la portada
+
+- **WHEN** se pide `GET /`
+- **THEN** la respuesta lleva `Content-Security-Policy` con `default-src 'self'` y `frame-ancestors 'none'`, `X-Content-Type-Options: nosniff` y `Referrer-Policy: no-referrer`
 
 #### Scenario: Redirección detrás del proxy
 
-- **WHEN** se pide `GET /` a través de `https://libreria.ismaelsuarez.me`
-- **THEN** el navegador termina en `https://libreria.ismaelsuarez.me/src/pages/auth/login/login.html`, sin pasar por `http://` ni por el puerto interno
+- **WHEN** se abre `https://libreria.ismaelsuarez.me/` en el navegador (ya no hay redirección en la raíz) y se elige «Ingresar»
+- **THEN** se ve la portada sin violaciones de la política de seguridad de contenido y el navegador llega a `https://libreria.ismaelsuarez.me/src/pages/auth/login/login.html`, sin pasar por `http://` ni por el puerto interno
 
 ### Requirement: Páginas y recursos de la compilación
 
